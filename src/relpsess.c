@@ -479,6 +479,9 @@ relpSessWaitState(relpSess_t *pThis, relpSessState_t stateExpected, int timeout)
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
 
+if(pThis->sessState == stateExpected || pThis->sessState == eRelpSessState_BROKEN) {
+	FINALIZE;
+}
 	/* first read any outstanding data and process the packets. Note that this
 	 * call DOES NOT block.
 	 */
