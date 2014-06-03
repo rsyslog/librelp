@@ -469,7 +469,8 @@ relpEngineSetOnGenericErr(relpEngine_t *pThis, void (*pCB)(char *objinfo, char*e
 relpRetVal
 relpEngineAddListner2(relpEngine_t *pThis, unsigned char *pLstnPort, void *pUsr)
 {
-	relpSrv_t *pSrv;
+	relpSrv_t *pSrv = NULL;
+
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Engine);
 	CHKRet(relpEngineListnerConstruct(pThis, &pSrv));
@@ -477,6 +478,10 @@ relpEngineAddListner2(relpEngine_t *pThis, unsigned char *pLstnPort, void *pUsr)
 	CHKRet(relpSrvSetLstnPort(pSrv, pLstnPort));
 	CHKRet(relpEngineListnerConstructFinalize(pThis, pSrv));
 finalize_it:
+	if(iRet != RELP_RET_OK) {
+		if(pSrv != NULL)
+			relpSrvDestruct(&pSrv);
+	}
 	LEAVE_RELPFUNC;
 }
 /* a dummy for callbacks not set by the caller */
@@ -506,13 +511,18 @@ relpEngineSetSyslogRcv(relpEngine_t *pThis, relpRetVal (*pCB)(unsigned char*, un
 relpRetVal
 relpEngineAddListner(relpEngine_t *pThis, unsigned char *pLstnPort)
 {
-	relpSrv_t *pSrv;
+	relpSrv_t *pSrv = NULL;
+
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Engine);
 	CHKRet(relpEngineListnerConstruct(pThis, &pSrv));
 	CHKRet(relpSrvSetLstnPort(pSrv, pLstnPort));
 	CHKRet(relpEngineListnerConstructFinalize(pThis, pSrv));
 finalize_it:
+	if(iRet != RELP_RET_OK) {
+		if(pSrv != NULL)
+			relpSrvDestruct(&pSrv);
+	}
 	LEAVE_RELPFUNC;
 }
 

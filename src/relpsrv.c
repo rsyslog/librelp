@@ -336,7 +336,7 @@ relpSrvSetKeepAlive(relpSrv_t *pThis,
 relpRetVal
 relpSrvRun(relpSrv_t *pThis)
 {
-	relpTcp_t *pTcp;
+	relpTcp_t *pTcp = NULL;
 
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Srv);
@@ -362,7 +362,7 @@ relpSrvRun(relpSrv_t *pThis)
 
 finalize_it:
 	if(iRet != RELP_RET_OK) {
-		if(pThis->pTcp != NULL)
+		if(pTcp != NULL)
 			relpTcpDestruct(&pTcp);
 	}
 
