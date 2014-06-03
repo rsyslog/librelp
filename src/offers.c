@@ -330,9 +330,9 @@ relpOffersToString(relpOffers_t *pThis, unsigned char *pszHdr, size_t lenHdr,
 
 			if((tmp = realloc(pszOffers, currSize + iAlloc)) == NULL) {
 				ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
-				currSize += iAlloc;
 			}
 			pszOffers = tmp;
+			currSize += iAlloc;
 		}
 		strcpy((char*)pszOffers+iStr, (char*)pOffer->szName);
 		iStr += strlen((char*)pOffer->szName);
@@ -343,9 +343,9 @@ relpOffersToString(relpOffers_t *pThis, unsigned char *pszHdr, size_t lenHdr,
 
 				if((tmp = realloc(pszOffers, currSize + iAlloc)) == NULL) {
 					ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
-					currSize += iAlloc;
 				}
 				pszOffers = tmp;
+				currSize += iAlloc;
 			}
 			strcpy((char*)pszOffers+iStr, (char*)pOfferVal->szVal);
 			iStr += strlen((char*)pOfferVal->szVal);
