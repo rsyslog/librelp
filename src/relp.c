@@ -644,7 +644,7 @@ engineEventLoopInit(relpEngine_t __attribute__((unused)) *pThis)
 	 */
 	for(pSrvEtry = pThis->pSrvLstRoot ; pSrvEtry != NULL ; pSrvEtry = pSrvEtry->pNext) {
 		nLstn = relpSrvGetNumLstnSocks(pSrvEtry->pSrv);
-		CHKmalloc(pSrvEtry->epevts = malloc(sizeof(epolld_t) * nLstn));
+		CHKmalloc(pSrvEtry->epevts = malloc(sizeof(epolld_t *) * nLstn));
 		for(i = 0 ; i < nLstn ; ++i) {
 			sock = relpSrvGetLstnSock(pSrvEtry->pSrv, i+1);
 			addToEpollSet(pThis, epolld_lstn, pSrvEtry->pSrv, sock, &(pSrvEtry->epevts[i]));
