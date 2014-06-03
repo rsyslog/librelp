@@ -326,20 +326,26 @@ relpOffersToString(relpOffers_t *pThis, unsigned char *pszHdr, size_t lenHdr,
 	for(pOffer = pThis->pRoot ; pOffer != NULL ; pOffer = pOffer->pNext) {
 		/* we use -3 in the realloc-guard ifs so that we have space for constants following! */
 		if(currSize - iStr - 3 < strlen((char*)pOffer->szName)) {
-			if((pszOffers = realloc(pszOffers, currSize + iAlloc)) == NULL) {
+			unsigned char *tmp;
+
+			if((tmp = realloc(pszOffers, currSize + iAlloc)) == NULL) {
 				ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
 				currSize += iAlloc;
 			}
+			pszOffers = tmp;
 		}
 		strcpy((char*)pszOffers+iStr, (char*)pOffer->szName);
 		iStr += strlen((char*)pOffer->szName);
 		pszOffers[iStr++] = '=';
 		for(pOfferVal = pOffer->pValueRoot ; pOfferVal != NULL ; pOfferVal = pOfferVal->pNext) {
 			if(currSize - iStr - 3 < strlen((char*)pOfferVal->szVal)) {
-				if((pszOffers = realloc(pszOffers, currSize + iAlloc)) == NULL) {
+				unsigned char *tmp;
+
+				if((tmp = realloc(pszOffers, currSize + iAlloc)) == NULL) {
 					ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
 					currSize += iAlloc;
 				}
+				pszOffers = tmp;
 			}
 			strcpy((char*)pszOffers+iStr, (char*)pOfferVal->szVal);
 			iStr += strlen((char*)pOfferVal->szVal);
