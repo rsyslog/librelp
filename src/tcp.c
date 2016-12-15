@@ -796,48 +796,126 @@ finalize_it:
 #ifdef ENABLE_TLS
 #ifdef HAVE_GNUTLS_CERTIFICATE_SET_VERIFY_FUNCTION
 /* Convert a fingerprint to printable data. The function must be provided a
- * sufficiently large buffer. 512 bytes shall always do.
+ * sufficiently large buffer. 2048 bytes shall always do (for sha512 and future).
+ * To the size of the hexadecimal fingerprint, we must add the name of the fingerprint, and the separators.
+ * Warn : if the size of the buffer isn't sufficient, then the data is truncated.
  */
 static void
-GenFingerprintStr(char *pFingerprint, int sizeFingerprint, char *fpBuf)
+GenFingerprintStr(char *pFingerprint, int sizeFingerprint, char *fpBuf,gnutls_digest_algorithm_t type,relpEngine_t * pEngine)
 {
 	int iSrc, iDst;
 
-	fpBuf[0] = 'S', fpBuf[1] = 'H', fpBuf[2] = 'A'; fpBuf[3] = '1';
-	// TODO: length check fo fpBuf (but far from being urgent...)
-	for(iSrc = 0, iDst = 4 ; iSrc < sizeFingerprint ; ++iSrc, iDst += 3) {
-		sprintf(fpBuf+iDst, ":%2.2X", (unsigned char) pFingerprint[iSrc]);
+	size_t bufLen=sizeof(fpBuf);
+	size_t sizeTotal=0,sizeDigest=0;
+	//statically assigned char*, no free.
+	const char* digestType=gnutls_digest_get_name(type);
+	if (NULL==digestType)
+	{
+		if (pEngine!=NULL) pEngine->dbgprint("warn : the signature type %d is unknown",type);
+		digestType="0000";
 	}
+
+	sizeDigest=strlen(digestType);
+	sizeTotal=sizeDigest+(bufLen*3)+1;//digestname + 3 char by byte (:xx) + last '\0' 
+	if (sizeTotal <bufLen)
+	{
+		strncpy(fpBuf,digestType,sizeDigest);
+		iDst=sizeDigest;
+		for(iSrc = 0, iDst = 4 ; iSrc < sizeFingerprint ; ++iSrc, iDst += 3) {
+			sprintf(fpBuf+iDst, ":%2.2X", (unsigned char) pFingerprint[iSrc]);
+		}
+	}else if(bufLen>=1){
+		if (pEngine!=NULL)pEngine->dbgprint("warn: buffer overflow for %s signature\n", digestType);
+		fpBuf[0]='\0';//an empty string
+	}else{
+		if (pEngine!=NULL) pEngine->dbgprint("warn: buffer empty to print the signature\n");
+	};
 }
 
+#define MAX_DIGEST_PEER 10
+static size_t ListDigestPeer(gnutls_digest_algorithm_t* listSigPeer,tcpPermittedPeers_t* listPeers,relpEngine_t* pEngine)
+{
+	int i;
+	int maxDigest=0;
+	char digest[32];//No signature name of more than 32 bytes. Most take 4 or 6.
+	if (NULL==listPeers || listPeers->nmemb<=0 )
+	{
+		if (pEngine!=NULL) pEngine->dbgprint("warn: no PermittedPeer listed\n");
+		return 0;
+	}
+	for (i=0; i<listPeers->nmemb;++i)
+	{
+		if ((listPeers->peer[i].name)!=NULL)
+		{
+			char*eow=strchr(listPeers->peer[i].name,':');//The first separator
+			if (eow!=NULL)
+			{
+				int sizeDigest=(int)(eow-(listPeers->peer[i].name));
+				sizeDigest = sizeDigest > 31 ? 31: sizeDigest;//31= sizeof(digest)-1;
+				strncpy(digest,listPeers->peer[i].name,sizeDigest);
+				digest[31]='\0';
+				gnutls_digest_algorithm_t actualDigest=gnutls_digest_get_id(digest);
+				if (actualDigest!=GNUTLS_DIG_UNKNOWN)
+				{
+					int alreadyExist=0;
+					for (int j=0;j<maxDigest && alreadyExist==0 && j <MAX_DIGEST_PEER;++j)
+					{
+						if (listSigPeer[j]==actualDigest)
+							alreadyExist=1;
+						
+					}
+					
+					if (maxDigest<(MAX_DIGEST_PEER+1) && alreadyExist==0)
+					{
+						listSigPeer[maxDigest++]=actualDigest;
+					}
+				}
+			}
+		}	
+	}
+	return maxDigest;
+	
+}
 /* Check the peer's ID in fingerprint auth mode. */
 static int
 relpTcpChkPeerFingerprint(relpTcp_t *pThis, gnutls_x509_crt_t cert)
 {
 	int r = 0;
 	int i;
-	char fingerprint[20];
-	char fpPrintable[512];
+	char fingerprint[126];
+	char fpPrintable[2048];
+	gnutls_digest_algorithm_t listSigPeer[MAX_DIGEST_PEER];
+	size_t maxDigest;
 	size_t size;
 	int8_t found;
 
+
+	/* List which digest we have in our permittedPeer list. We verify only the first MAX_DIGEST_PEER.*/
+	maxDigest=ListDigestPeer(listSigPeer,&(pThis->permittedPeers),pThis->pEngine);
+
 	/* obtain the SHA1 fingerprint */
 	size = sizeof(fingerprint);
-	r = gnutls_x509_crt_get_fingerprint(cert, GNUTLS_DIG_SHA1, fingerprint, &size);
-	if(chkGnutlsCode(pThis, "Failed to obtain fingerprint from certificate", RELP_RET_ERR_TLS, r)) {
-		r = GNUTLS_E_CERTIFICATE_ERROR; goto done;
-	}
-	GenFingerprintStr(fingerprint, (int) size, fpPrintable);
-	pThis->pEngine->dbgprint("DDDD: peer's certificate SHA1 fingerprint: %s\n", fpPrintable);
-
-	/* now search through the permitted peers to see if we can find a permitted one */
 	found = 0;
-	pThis->pEngine->dbgprint("DDDD: n peers %d\n", pThis->permittedPeers.nmemb);
-	for(i = 0 ; i < pThis->permittedPeers.nmemb ; ++i) {
-	pThis->pEngine->dbgprint("DDDD: checking peer '%s','%s'\n", fpPrintable, pThis->permittedPeers.peer[i].name);
-		if(!strcmp(fpPrintable, pThis->permittedPeers.peer[i].name)) {
-			found = 1;
-			break;
+	for(size_t k=0; k<maxDigest && found==0;++k)
+	{
+		gnutls_digest_algorithm_t digest=listSigPeer[k];
+
+		r = gnutls_x509_crt_get_fingerprint(cert, digest, fingerprint, &size);
+		if(chkGnutlsCode(pThis, "Failed to obtain fingerprint from certificate", RELP_RET_ERR_TLS, r)) {
+			r = GNUTLS_E_CERTIFICATE_ERROR; goto done;
+		}
+
+		GenFingerprintStr(fingerprint, (int) size, fpPrintable,digest,pThis->pEngine);
+		pThis->pEngine->dbgprint("DDDD: peer's certificate %s fingerprint: %s\n",gnutls_digest_get_name(digest), fpPrintable);
+
+		/* now search through the permitted peers to see if we can find a permitted one */
+		pThis->pEngine->dbgprint("DDDD: n peers %d\n", pThis->permittedPeers.nmemb);
+		for(i = 0 ; i < pThis->permittedPeers.nmemb ; ++i) {
+		pThis->pEngine->dbgprint("DDDD: checking peer '%s','%s'\n", fpPrintable, pThis->permittedPeers.peer[i].name);
+			if(!strcmp(fpPrintable, pThis->permittedPeers.peer[i].name)) {
+				found = 1;
+				break;
+			}
 		}
 	}
 	if(!found) {
