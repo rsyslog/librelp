@@ -57,7 +57,7 @@ AC_ARG_ENABLE(tls,
         [enable_tls="yes"]
 )
 if test "$enable_tls" = "yes"; then
-	PKG_CHECK_MODULES(GNUTLS, gnutls >= 3.2.0)
+	PKG_CHECK_MODULES(GNUTLS, gnutls >= 2.0.0)
         AC_DEFINE(ENABLE_TLS, 1, [Defined if TLS support is enabled])
 	# Check if we have support for proper cert validation
 	AC_MSG_CHECKING(if we have gnutls_certificate_set_verify_function)
