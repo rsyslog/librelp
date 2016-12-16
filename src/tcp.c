@@ -798,6 +798,8 @@ finalize_it:
 
 /* Glue to use the right type of function depending of the version */
 #if GNUTLS_VERSION_NUMBER < 0x030202
+	//gnutls_mac_algorithm_t and gnutls_digest_algorithm_t are aligned
+	//So we can use the result to get the fingerprint without trouble
 	typedef  gnutls_mac_algorithm_t digest_id_t;
 	digest_id_t digest_get_id(const char * name){return gnutls_mac_get_id (name);}
 	const char* digest_get_name(digest_id_t id){return gnutls_mac_get_name (id);}
@@ -806,7 +808,7 @@ finalize_it:
 #else
 	typedef  gnutls_digest_algorithm_t digest_id_t;
 	digest_id_t digest_get_id(const char * name){return gnutls_digest_get_id (name);}
-	const char* digest_get_name(digest_id_t id){return gnutls_mac_get_name (id);}
+	const char* digest_get_name(digest_id_t id){return gnutls_digest_get_name (id);}
 #	define UNK_DIGEST GNUTLS_DIG_UNKNOWN
 #endif
 
@@ -888,7 +890,6 @@ static size_t ListDigestPeer(digest_id_t* listSigPeer,
 						if (listSigPeer[j]==actualDigest)
 							alreadyExist=1;
 					}
-					
 					if (maxDigest<MAX_DIGEST_PEER && alreadyExist==0)
 					{
 						if (pEngine!=NULL)
@@ -924,9 +925,8 @@ relpTcpChkPeerFingerprint(relpTcp_t *pThis, gnutls_x509_crt_t cert)
 	for(k=0; k<maxDigest && found==0;++k)
 	{
 		digest_id_t digest=listSigPeer[k];
-
 		size = sizeof(fingerprint);
-		r = gnutls_x509_crt_get_fingerprint(cert, digest, fingerprint, &size);
+		r = gnutls_x509_crt_get_fingerprint(cert, (gnutls_digest_algorithm_t) digest, fingerprint, &size);
 		if(chkGnutlsCode(pThis, "Failed to obtain fingerprint from certificate", RELP_RET_ERR_TLS, r)) {
 			r = GNUTLS_E_CERTIFICATE_ERROR; goto done;
 		}
