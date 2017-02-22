@@ -548,23 +548,13 @@ static relpRetVal
 relpTcpTLSSetPrio(relpTcp_t *pThis)
 {
 	int r;
-	char pristringBuf[4096];
-	char *pristring;
 	ENTER_RELPFUNC;
-	/* Compute priority string (in simple cases where the user does not care...) */
-	if(pThis->pristring == NULL) {
-		if(pThis->bEnableTLSZip) {
-			strncpy(pristringBuf, "NORMAL:+ANON-DH:+COMP-ALL", sizeof(pristringBuf));
-		} else {
-			strncpy(pristringBuf, "NORMAL:+ANON-DH:+COMP-NULL", sizeof(pristringBuf));
-		}
-		pristringBuf[sizeof(pristringBuf)-1] = '\0';
-		pristring = pristringBuf;
+	/* Set default/system priority string (in simple cases where the user does not care...)  */
+	if(pThis->pristring != NULL) {
+		r = gnutls_priority_set_direct(pThis->session, pThis->pristring, NULL);
 	} else {
-		pristring = pThis->pristring;
+		r = gnutls_set_default_priority(pThis->session);
 	}
-
-	r = gnutls_priority_set_direct(pThis->session, pristring, NULL);
 	if(r == GNUTLS_E_INVALID_REQUEST) {
 		ABORT_FINALIZE(RELP_RET_INVLD_TLS_PRIO);
 	} else if(r != GNUTLS_E_SUCCESS) {
