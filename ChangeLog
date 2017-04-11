@@ -1,5 +1,6 @@
 ----------------------------------------------------------------------
 Version 1.2.15 - 2017-??-??
+- made build on Solaris again
 - bugfix: error message on open error was truncated
   The "connection already open" error message when trying to open
   an already open connection was truncated due to too-small size

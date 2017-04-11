@@ -1,6 +1,11 @@
 # Uncomment for debugging
 DEBUG = -g
-PTHREADS_CFLAGS = -pthread
+if OS_SOLARIS
+then
+	PTHREADS_CFLAGS = -pthread
+else
+	PTHREADS_CFLAGS = -mt
+endif
 
 #CFLAGS += $(DEBUG)
 
