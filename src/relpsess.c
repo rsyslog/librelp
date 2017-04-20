@@ -197,6 +197,7 @@ relpSessAcceptAndConstruct(relpSess_t **ppThis, relpSrv_t *pSrv, int sock)
 
 	CHKRet(relpSessConstruct(&pThis, pSrv->pEngine, RELP_SRV_CONN, pSrv));
 	CHKRet(relpTcpAcceptConnReq(&pThis->pTcp, sock, pSrv));
+	CHKRet(relpSessSetMaxDataSize(pThis, pSrv->maxDataSize));
 
 	*ppThis = pThis;
 
@@ -987,6 +988,13 @@ relpSessSetUsrPtr(relpSess_t *pThis, void *pUsr)
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
 	pThis->pUsr = pUsr;
+	LEAVE_RELPFUNC;
+}
+
+relpRetVal relpSessSetMaxDataSize(relpSess_t *pThis, size_t maxSize) {
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Sess);
+	pThis->maxDataSize = maxSize;
 	LEAVE_RELPFUNC;
 }
 

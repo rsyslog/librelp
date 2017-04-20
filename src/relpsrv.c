@@ -69,6 +69,7 @@ relpSrvConstruct(relpSrv_t **ppThis, relpEngine_t *pEngine)
 	pThis->ownCertFile = NULL;
 	pThis->privKey = NULL;
 	pThis->permittedPeers.nmemb = 0;
+	pThis->maxDataSize = RELP_DFLT_MAX_DATA_SIZE;
 
 	*ppThis = pThis;
 
@@ -156,6 +157,12 @@ relpSrvSetUsrPtr(relpSrv_t *pThis, void *pUsr)
 	LEAVE_RELPFUNC;
 }
 
+relpRetVal relpSrvSetMaxDataSize(relpSrv_t *pThis, size_t maxSize) {
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Srv);
+	pThis->maxDataSize = maxSize;
+	LEAVE_RELPFUNC;
+}
 
 /* set the listen port inside the relp server. If NULL is provided, the default port
  * is used. The provided string is always copied, it is the caller's duty to
