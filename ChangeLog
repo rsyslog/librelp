@@ -1,11 +1,7 @@
 ----------------------------------------------------------------------
-Version 1.2.14 - 2017-0?-??
+Version 1.2.14 - 2017-05-29
 - API extension: add relpSrvSetMaxDataSize()
-
-NOTE: WE NEED TO CHANGE THE SONAME!
-
-
-
+  Thanks to Nathan Brown for the patch.
 ----------------------------------------------------------------------
 Version 1.2.13 - 2017-02-20
 - make build under BSD
