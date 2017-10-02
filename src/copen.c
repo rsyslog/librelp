@@ -134,7 +134,9 @@ BEGINcommand(S, Init)
 	pSess->pEngine->dbgprint("in open command handler\n");
 
 	if(pSess->bServerConnOpen) {
-		relpSessSendResponse(pSess, pFrame->txnr, (unsigned char*) "500 connection already open", 20);
+		relpSessSendResponse(pSess, pFrame->txnr,
+		(unsigned char*) "500 connection already open",
+		sizeof("500 connection already open") - 1);
 		ABORT_FINALIZE(RELP_RET_SESSION_OPEN);
 	}
 
