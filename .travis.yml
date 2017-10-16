@@ -43,7 +43,7 @@ script:
   - git clone https://github.com/rsyslog/rsyslog.git
   - cd rsyslog
   - autoreconf -fvi
-  - ./configure --enable-testbench --enable-relp --enable-omrelp-default-port=13515 --enable-imdiag
+  - ./configure --enable-testbench --enable-relp --enable-omrelp-default-port=13515 --enable-imdiag --enable-omstdout
   - make
   - cd tests
   - export LD_LIBRARY_PATH=/usr/local/lib
