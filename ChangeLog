@@ -1,5 +1,10 @@
 ----------------------------------------------------------------------
 Version 1.2.15 - 2017-??-??
+- bugfix: error message on open error was truncated
+  The "connection already open" error message when trying to open
+  an already open connection was truncated due to too-small size
+  specified.
+  Thanks to rsyslog forum user AlanR for the problem report.
 ----------------------------------------------------------------------
 Version 1.2.14 - 2017-05-29
 - API extension: add relpSrvSetMaxDataSize()
