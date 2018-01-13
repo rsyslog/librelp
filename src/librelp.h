@@ -133,7 +133,7 @@ typedef enum relpCmdEnaState_e relpCmdEnaState_t;
 #define RELP_RET_CMD_DISABLED	RELPERR_BASE + 23	/**< tried to use a cmd that is disabled in this session */
 #define RELP_RET_INVALID_HDL	RELPERR_BASE + 24	/**< invalid object handle (pointer) provided by caller */
 #define RELP_RET_INCOMPAT_OFFERS RELPERR_BASE + 25	/**< client and server offers are incompatible */
-#define RELP_RET_RQD_FEAT_MISSING RELPERR_BASE + 26	/**< the remote peer does not support a feature required by us */
+#define RELP_RET_RQD_FEAT_MISSING RELPERR_BASE + 26	/**< the remote peer does not support a required feature */
 #define RELP_RET_MALICIOUS_HNAME RELPERR_BASE + 27	/**< remote peer is trying malicious things with its hostname */
 #define RELP_RET_INVALID_HNAME	RELPERR_BASE + 28	/**< remote peer's hostname invalid or unobtainable */
 #define RELP_RET_ADDR_UNKNOWN 	RELPERR_BASE + 29	/**< remote peer's IP address could not be obtained */

@@ -1037,7 +1037,8 @@ relpTcpChkOnePeerWildcard(tcpPermittedPeerWildcardComp_t *pRoot, char *peername,
 				break;
 			case tcpPEER_WILDCARD_AT_END:
 				if(   pWildcard->lenDomainPart > pC - pStart
-				   || strncmp((char*)pStart, (char*)pWildcard->pszDomainPart, pWildcard->lenDomainPart)) {
+				   || strncmp((char*)pStart, (char*)pWildcard->pszDomainPart, 
+							   pWildcard->lenDomainPart)) {
 					goto done;
 				}
 				break;
@@ -1343,7 +1344,8 @@ relpTcpLstnInitTLS(relpTcp_t *pThis)
 			r = gnutls_certificate_set_x509_trust_file(pThis->xcred,
 				pThis->caCertFile, GNUTLS_X509_FMT_PEM);
 			if(r < 0) {
-				chkGnutlsCode(pThis, "Failed to set certificate trust files", RELP_RET_ERR_TLS_SETUP, r);
+				chkGnutlsCode(pThis, "Failed to set certificate trust files", 
+								RELP_RET_ERR_TLS_SETUP, r);
 				ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
 			}
 			pThis->pEngine->dbgprint("librelp: obtained %d certificates from %s\n", r, pThis->caCertFile);
