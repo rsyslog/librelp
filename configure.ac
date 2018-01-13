@@ -46,12 +46,15 @@ case "${host}" in
   *-*-aix*)
     os_type="aix"
     AC_DEFINE([OS_AIX], [1], [Indicator for a AIX OS])
+    CFLAGS="$CFLAGS -D_LINUX_SOURCE_COMPAT"
+    LDFLAGS="$LDFLAGS -brtl"
   ;;
 esac
 AM_CONDITIONAL(OS_APPLE, test x$os_type == xapple)
 AM_CONDITIONAL(xOS_LINUX, test x$os_type == xlinux)
 AM_CONDITIONAL(OS_LINUX, test x$os_type == xlinux)
 AM_CONDITIONAL(OS_SOLARIS, test x$os_type == xsolaris)
+AM_CONDITIONAL(OS_AIX, test "x$os_type" = "xaix")
 
 # Checks for programs.
 AC_PROG_CC

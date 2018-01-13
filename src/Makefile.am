@@ -1,12 +1,16 @@
-# Uncomment for debugging
-DEBUG = -g
 if OS_SOLARIS
 then
 	PTHREADS_CFLAGS = -pthread
 else
+if OS_AIX
+	PTHREADS_CFLAGS = -qthreaded
+else
 	PTHREADS_CFLAGS = -mt
 endif
+endif
 
+DEBUG = -g
+# Uncomment for debugging
 #CFLAGS += $(DEBUG)
 
 lib_LTLIBRARIES = librelp.la

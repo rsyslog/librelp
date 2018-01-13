@@ -68,6 +68,12 @@
 #  define SOL_TCP (getprotobyname("tcp")->p_proto)
 #endif
 
+/*  AIXPORT : MSG_DONTWAIT not supported */
+#if defined(_AIX) && !defined(MSG_DONTWAIT)
+#define MSG_DONTWAIT    MSG_NONBLOCK
+#endif
+
+
 #ifdef ENABLE_TLS
 /* forward definitions */
 #ifdef HAVE_GNUTLS_CERTIFICATE_SET_VERIFY_FUNCTION
@@ -576,9 +582,11 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 
+#ifndef _AIX
 #pragma GCC diagnostic push
 /* per https://lists.gnupg.org/pipermail/gnutls-help/2004-August/000154.html This is expected */
 #pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
+#endif
 static relpRetVal
 relpTcpAcceptConnReqInitTLS(relpTcp_t *pThis, relpSrv_t *pSrv)
 {
@@ -630,7 +638,9 @@ relpTcpAcceptConnReqInitTLS(relpTcp_t *pThis, relpSrv_t *pSrv)
 finalize_it:
 	LEAVE_RELPFUNC;
 }
+#ifndef _AIX
 #pragma GCC diagnostic pop
+#endif
 #endif /* #ifdef ENABLE_TLS */
 
 /* Enable KEEPALIVE handling on the socket.  */
@@ -1631,9 +1641,11 @@ finalize_it:
 }
 
 #ifdef ENABLE_TLS
+#ifndef _AIX
 #pragma GCC diagnostic push /* we need to disable a warning below */
 /* per https://lists.gnupg.org/pipermail/gnutls-help/2004-August/000154.html This is expected */
 #pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
+#endif
 /* this is only called for client-initiated sessions */
 static relpRetVal
 relpTcpConnectTLSInit(relpTcp_t *pThis)
@@ -1747,7 +1759,9 @@ relpTcpConnectTLSInit(relpTcp_t *pThis)
 finalize_it:
 	LEAVE_RELPFUNC;
 }
+#ifndef _AIX
 #pragma GCC diagnostic pop
+#endif
 #endif /* #ifdef ENABLE_TLS */
 
 /* open a connection to a remote host (server).
