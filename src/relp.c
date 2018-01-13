@@ -898,7 +898,7 @@ engineEventLoopRun(relpEngine_t *pThis)
 							localRet = relpTcpRtryHandshake(pSessEtry->pSess->pTcp);
 							if(localRet != RELP_RET_OK) {
 								pThis->dbgprint("relp session %d handshake iRet %d,"
-                								" tearing it down\n",
+												" tearing it down\n",
 										sock, localRet);
 								relpEngineDelSess(pThis, pSessEtry);
 							}

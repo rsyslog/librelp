@@ -400,8 +400,8 @@ relpSessAddUnacked(relpSess_t *pThis, relpSendbuf_t *pSendbuf)
 			pThis->pEngine->dbgprint("Warning: exceeding window size, max %d, curr %d\n",
 						 pThis->lenUnackedLst, pThis->sizeWindow);
 	}
-	pThis->pEngine->dbgprint("ADD sess %p unacked %d, sessState %d\n", pThis, 
-									pThis->lenUnackedLst, pThis->sessState);
+	pThis->pEngine->dbgprint("ADD sess %p unacked %d, sessState %d\n", pThis,
+								pThis->lenUnackedLst, pThis->sessState);
 
 finalize_it:
 	LEAVE_RELPFUNC;
@@ -434,8 +434,8 @@ relpSessDelUnacked(relpSess_t *pThis, relpSessUnacked_t *pUnackedLstEntry)
 
 	free(pUnackedLstEntry);
 
-	pThis->pEngine->dbgprint("DEL sess %p unacked %d, sessState %d\n", pThis, 
-							 pThis->lenUnackedLst, pThis->sessState);
+	pThis->pEngine->dbgprint("DEL sess %p unacked %d, sessState %d\n", pThis,
+							pThis->lenUnackedLst, pThis->sessState);
 	LEAVE_RELPFUNC;
 }
 
