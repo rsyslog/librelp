@@ -1172,9 +1172,35 @@ done:
 	return r;
 }
 
+
+/* helper to consistently add names to error message buffer */
+static int
+relpTcpAddToCertNamesBuffer(relpTcp_t *const pThis,
+	char *const buf,
+	const size_t buflen,
+	int *p_currIdx,
+	const char *const certName)
+{
+	int r = 0;
+	assert(buf != NULL);
+	assert(p_currIdx != NULL);
+	const int currIdx = *p_currIdx;
+	const int n = snprintf(buf + currIdx, buflen - currIdx,
+		"DNSname: %s; ", certName);
+	if(n < 0 || n >= (int) (buflen - currIdx)) {
+		callOnAuthErr(pThis, "", "certificate validation failed, names "
+			"inside certifcate are way to long (> 32KiB)",
+			RELP_RET_AUTH_CERT_INVL);
+		r = GNUTLS_E_CERTIFICATE_ERROR;
+	} else {
+		*p_currIdx += n;
+	}
+	return r;
+}
+
 /* Check the peer's ID in name auth mode. */
 static int
-relpTcpChkPeerName(relpTcp_t *pThis, gnutls_x509_crt_t cert)
+relpTcpChkPeerName(relpTcp_t *const pThis, gnutls_x509_crt_t cert)
 {
 	int r = 0;
 	int ret;
@@ -1213,8 +1239,9 @@ relpTcpChkPeerName(relpTcp_t *pThis, gnutls_x509_crt_t cert)
 			break;
 		else if(gnuRet == GNUTLS_SAN_DNSNAME) {
 			pThis->pEngine->dbgprint("librelp: subject alt dnsName: '%s'\n", szAltName);
-			iAllNames += snprintf(allNames+iAllNames, sizeof(allNames)-iAllNames,
-					      "DNSname: %s; ", szAltName);
+			r = relpTcpAddToCertNamesBuffer(pThis, allNames, sizeof(allNames),
+				&iAllNames, szAltName);
+			if(r != 0) goto done;
 			relpTcpChkOnePeerName(pThis, szAltName, &bFoundPositiveMatch);
 			/* do NOT break, because there may be multiple dNSName's! */
 		}
@@ -1225,8 +1252,9 @@ relpTcpChkPeerName(relpTcp_t *pThis, gnutls_x509_crt_t cert)
 		/* if we did not succeed so far, we try the CN part of the DN... */
 		if(relpTcpGetCN(pThis, cert, cnBuf, sizeof(cnBuf)) == 0) {
 			pThis->pEngine->dbgprint("librelp: relpTcp now checking auth for CN '%s'\n", cnBuf);
-			iAllNames += snprintf(allNames+iAllNames, sizeof(allNames)-iAllNames,
-					      "CN: %s; ", cnBuf);
+			r = relpTcpAddToCertNamesBuffer(pThis, allNames, sizeof(allNames),
+				&iAllNames, cnBuf);
+			if(r != 0) goto done;
 			relpTcpChkOnePeerName(pThis, cnBuf, &bFoundPositiveMatch);
 		}
 	}
