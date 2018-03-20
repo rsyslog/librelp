@@ -1038,7 +1038,7 @@ relpTcpChkOnePeerWildcard(tcpPermittedPeerWildcardComp_t *pRoot, char *peername,
 			case tcpPEER_WILDCARD_AT_END:
 				if(   pWildcard->lenDomainPart > pC - pStart
 				   || strncmp((char*)pStart, (char*)pWildcard->pszDomainPart,
-							   pWildcard->lenDomainPart)) {
+					pWildcard->lenDomainPart)) {
 					goto done;
 				}
 				break;
