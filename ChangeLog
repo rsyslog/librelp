@@ -1,8 +1,15 @@
 ----------------------------------------------------------------------
-Version 1.2.15 - 2017-??-??
+Version 1.2.15 - 2018-03-21
 - made build on Solaris again
 - made build on AIX
   Thanks to Philippe Duveau for providing the patches
+- bugfix: invalid handling of snprintf() return code
+- bugfix: invalid assert predicate
+  an assert could change status variable due to typo, so in debug
+  mode processing could fail.
+  thanks to github user KatMisato for alerting us
+  fixes https://github.com/rsyslog/librelp/issues/66
+- some code cleanup
 - bugfix: error message on open error was truncated
   The "connection already open" error message when trying to open
   an already open connection was truncated due to too-small size
