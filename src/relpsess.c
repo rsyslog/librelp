@@ -648,7 +648,7 @@ relpSessTryReestablish(relpSess_t *pThis)
 
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
-	assert(pThis->sessState = eRelpSessState_BROKEN);
+	assert(pThis->sessState == eRelpSessState_BROKEN);
 
 	CHKRet(relpTcpAbortDestruct(&pThis->pTcp));
 	CHKRet(relpSessConnect(pThis, pThis->protFamily, pThis->srvPort, pThis->srvAddr));
