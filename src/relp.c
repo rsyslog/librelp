@@ -897,14 +897,14 @@ engineEventLoopRun(relpEngine_t *pThis)
 #						ifdef ENABLE_TLS
 							localRet = relpTcpRtryHandshake(pSessEtry->pSess->pTcp);
 							if(localRet != RELP_RET_OK) {
-								pThis->dbgprint("relp session %d handshake iRet %d,"
-												" tearing it down\n",
+								pThis->dbgprint("relp session %d handshake "
+										"iRet %d, tearing it down\n",
 										sock, localRet);
 								relpEngineDelSess(pThis, pSessEtry);
 							}
 #						else
-							pThis->dbgprint("librelp error: handshake retry requested in "
-									"non-TLS mode");
+							pThis->dbgprint("librelp error: handshake retry "
+									"requested in non-TLS mode");
 
 #						endif /* #ifdef ENABLE_TLS */
 					}

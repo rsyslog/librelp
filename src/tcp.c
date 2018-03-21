@@ -1,6 +1,6 @@
 /* This implements the relp mapping onto TCP.
  *
- * Copyright 2008-2016 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2018 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
@@ -83,7 +83,7 @@ static relpRetVal relpTcpPermittedPeerWildcardCompile(tcpPermittedPeerEntry_t *p
 
 /* helper to free permittedPeer structure */
 static inline void
-relpTcpFreePermittedPeers(relpTcp_t *pThis)
+relpTcpFreePermittedPeers(relpTcp_t *const pThis)
 {
 	int i;
 	for(i = 0 ; i < pThis->permittedPeers.nmemb ; ++i)
@@ -99,7 +99,9 @@ relpTcpFreePermittedPeers(relpTcp_t *pThis)
  * to the "parent" client or server object, depending on connType.
  */
 relpRetVal
-relpTcpConstruct(relpTcp_t **ppThis, relpEngine_t *pEngine, int connType, void *pParent)
+relpTcpConstruct(relpTcp_t **ppThis, relpEngine_t *const pEngine,
+	const int connType,
+	void *const pParent)
 {
 	relpTcp_t *pThis;
 
@@ -225,7 +227,7 @@ callOnErr(const relpTcp_t *__restrict__ const pThis,
  * shortcut for error handling (safes doing it twice).
  */
 static int
-chkGnutlsCode(relpTcp_t *pThis, char *emsg, relpRetVal ecode, int gnuRet)
+chkGnutlsCode(relpTcp_t *const pThis, char *emsg, relpRetVal ecode, const int gnuRet)
 {
 	char msgbuf[4096];
 	int r;
@@ -244,7 +246,7 @@ chkGnutlsCode(relpTcp_t *pThis, char *emsg, relpRetVal ecode, int gnuRet)
 
 /* helper to call onAuthErr if set */
 static inline void
-callOnAuthErr(relpTcp_t *pThis, char *authdata, char *emsg, relpRetVal ecode)
+callOnAuthErr(relpTcp_t *const pThis, char *authdata, char *emsg, relpRetVal ecode)
 {
 	pThis->pEngine->dbgprint("librelp: auth error: authdata:'%s', ecode %d, "
 		"emsg '%s'\n", authdata, ecode, emsg);
@@ -297,7 +299,7 @@ static inline size_t SALEN(struct sockaddr *sa) {
  * into a function.
  */
 static inline int8_t
-isAnonAuth(relpTcp_t *pThis)
+isAnonAuth(relpTcp_t *const pThis)
 {
 	return pThis->ownCertFile == NULL;
 }
@@ -312,7 +314,7 @@ isAnonAuth(relpTcp_t *pThis)
  * rgerhards, 2008-03-31
  */
 static relpRetVal
-relpTcpSetRemHost(relpTcp_t *pThis, struct sockaddr *pAddr)
+relpTcpSetRemHost(relpTcp_t *const pThis, struct sockaddr *pAddr)
 {
 	relpEngine_t *pEngine;
 	int error;
@@ -413,7 +415,7 @@ finalize_it:
 }
 
 relpRetVal
-relpTcpSetUsrPtr(relpTcp_t *pThis, void *pUsr)
+relpTcpSetUsrPtr(relpTcp_t *const pThis, void *pUsr)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
@@ -422,7 +424,7 @@ relpTcpSetUsrPtr(relpTcp_t *pThis, void *pUsr)
 }
 
 relpRetVal
-relpTcpSetAuthMode(relpTcp_t *pThis, relpAuthMode_t authmode)
+relpTcpSetAuthMode(relpTcp_t *const pThis, relpAuthMode_t authmode)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
@@ -431,7 +433,7 @@ relpTcpSetAuthMode(relpTcp_t *pThis, relpAuthMode_t authmode)
 }
 
 relpRetVal
-relpTcpSetConnTimeout(relpTcp_t *pThis, int connTimeout)
+relpTcpSetConnTimeout(relpTcp_t *const pThis, const int connTimeout)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
@@ -440,7 +442,7 @@ relpTcpSetConnTimeout(relpTcp_t *pThis, int connTimeout)
 }
 
 relpRetVal
-relpTcpSetGnuTLSPriString(relpTcp_t *pThis, char *pristr)
+relpTcpSetGnuTLSPriString(relpTcp_t *const pThis, char *pristr)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
@@ -457,7 +459,7 @@ finalize_it:
 }
 
 relpRetVal
-relpTcpSetCACert(relpTcp_t *pThis, char *cert)
+relpTcpSetCACert(relpTcp_t *const pThis, char *cert)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
@@ -474,7 +476,7 @@ finalize_it:
 }
 
 relpRetVal
-relpTcpSetOwnCert(relpTcp_t *pThis, char *cert)
+relpTcpSetOwnCert(relpTcp_t *const pThis, char *cert)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
@@ -491,7 +493,7 @@ finalize_it:
 }
 
 relpRetVal
-relpTcpSetPrivKey(relpTcp_t *pThis, char *cert)
+relpTcpSetPrivKey(relpTcp_t *const pThis, char *cert)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
@@ -540,7 +542,7 @@ relpTcpEnableTLSZip(relpTcp_t __attribute__((unused)) *pThis)
 }
 
 relpRetVal
-relpTcpSetDHBits(relpTcp_t *pThis, int bits)
+relpTcpSetDHBits(relpTcp_t *const pThis, const int bits)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
@@ -551,7 +553,7 @@ relpTcpSetDHBits(relpTcp_t *pThis, int bits)
 #ifdef ENABLE_TLS
 /* set TLS priority string, common code both for client and server */
 static relpRetVal
-relpTcpTLSSetPrio(relpTcp_t *pThis)
+relpTcpTLSSetPrio(relpTcp_t *const pThis)
 {
 	int r;
 	char pristringBuf[4096];
@@ -588,7 +590,7 @@ finalize_it:
 #pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
 #endif
 static relpRetVal
-relpTcpAcceptConnReqInitTLS(relpTcp_t *pThis, relpSrv_t *pSrv)
+relpTcpAcceptConnReqInitTLS(relpTcp_t *const pThis, relpSrv_t *const pSrv)
 {
 	int r;
 	ENTER_RELPFUNC;
@@ -721,7 +723,7 @@ done:
  * to be put asleep on some platforms.
  */
 static void
-doSleep(int iSeconds, int iuSeconds)
+doSleep(int iSeconds, const int iuSeconds)
 {
 	struct timeval tvSelectTimeout;
 	tvSelectTimeout.tv_sec = iSeconds;
@@ -734,7 +736,7 @@ doSleep(int iSeconds, int iuSeconds)
  * rgerhards, 2008-03-17
  */
 relpRetVal
-relpTcpAcceptConnReq(relpTcp_t **ppThis, int sock, relpSrv_t *pSrv)
+relpTcpAcceptConnReq(relpTcp_t **ppThis, const int sock, relpSrv_t *const pSrv)
 {
 	relpTcp_t *pThis = NULL;
 	int sockflags;
@@ -809,7 +811,7 @@ finalize_it:
  * sufficiently large buffer. 512 bytes shall always do.
  */
 static void
-GenFingerprintStr(char *pFingerprint, int sizeFingerprint, char *fpBuf)
+GenFingerprintStr(char *pFingerprint, const int sizeFingerprint, char *fpBuf)
 {
 	int iSrc, iDst;
 
@@ -822,7 +824,7 @@ GenFingerprintStr(char *pFingerprint, int sizeFingerprint, char *fpBuf)
 
 /* Check the peer's ID in fingerprint auth mode. */
 static int
-relpTcpChkPeerFingerprint(relpTcp_t *pThis, gnutls_x509_crt_t cert)
+relpTcpChkPeerFingerprint(relpTcp_t *const pThis, gnutls_x509_crt_t cert)
 {
 	int r = 0;
 	int i;
@@ -868,7 +870,7 @@ done:
  * rgerhards, 2008-05-27
  */
 static relpRetVal
-AddPermittedPeerWildcard(tcpPermittedPeerEntry_t *pEtry, char* pszStr, int lenStr)
+AddPermittedPeerWildcard(tcpPermittedPeerEntry_t *pEtry, char* pszStr, const int lenStr)
 {
 	tcpPermittedPeerWildcardComp_t *pNew = NULL;
 	int iSrc;
@@ -1038,7 +1040,7 @@ relpTcpChkOnePeerWildcard(tcpPermittedPeerWildcardComp_t *pRoot, char *peername,
 			case tcpPEER_WILDCARD_AT_END:
 				if(   pWildcard->lenDomainPart > pC - pStart
 				   || strncmp((char*)pStart, (char*)pWildcard->pszDomainPart,
-							   pWildcard->lenDomainPart)) {
+					pWildcard->lenDomainPart)) {
 					goto done;
 				}
 				break;
@@ -1083,7 +1085,7 @@ done:	return;
  * called multiple times).
  */
 static void
-relpTcpChkOnePeerName(relpTcp_t *pThis, char *peername, int *pbFoundPositiveMatch)
+relpTcpChkOnePeerName(relpTcp_t *const pThis, char *peername, int *pbFoundPositiveMatch)
 {
 	int i;
 
@@ -1115,7 +1117,7 @@ relpTcpChkOnePeerName(relpTcp_t *pThis, char *peername, int *pbFoundPositiveMatc
  * Note that non-0 is also returned if no CN is found.
  */
 static int
-relpTcpGetCN(relpTcp_t *pThis, gnutls_x509_crt_t cert, char *namebuf, int lenNamebuf)
+relpTcpGetCN(relpTcp_t *const pThis, gnutls_x509_crt_t cert, char *namebuf, const int lenNamebuf)
 {
 	int r;
 	int gnuRet;
@@ -1172,9 +1174,35 @@ done:
 	return r;
 }
 
+
+/* helper to consistently add names to error message buffer */
+static int
+relpTcpAddToCertNamesBuffer(relpTcp_t *const pThis,
+	char *const buf,
+	const size_t buflen,
+	int *p_currIdx,
+	const char *const certName)
+{
+	int r = 0;
+	assert(buf != NULL);
+	assert(p_currIdx != NULL);
+	const int currIdx = *p_currIdx;
+	const int n = snprintf(buf + currIdx, buflen - currIdx,
+		"DNSname: %s; ", certName);
+	if(n < 0 || n >= (int) (buflen - currIdx)) {
+		callOnAuthErr(pThis, "", "certificate validation failed, names "
+			"inside certifcate are way to long (> 32KiB)",
+			RELP_RET_AUTH_CERT_INVL);
+		r = GNUTLS_E_CERTIFICATE_ERROR;
+	} else {
+		*p_currIdx += n;
+	}
+	return r;
+}
+
 /* Check the peer's ID in name auth mode. */
 static int
-relpTcpChkPeerName(relpTcp_t *pThis, gnutls_x509_crt_t cert)
+relpTcpChkPeerName(relpTcp_t *const pThis, gnutls_x509_crt_t cert)
 {
 	int r = 0;
 	int ret;
@@ -1213,8 +1241,9 @@ relpTcpChkPeerName(relpTcp_t *pThis, gnutls_x509_crt_t cert)
 			break;
 		else if(gnuRet == GNUTLS_SAN_DNSNAME) {
 			pThis->pEngine->dbgprint("librelp: subject alt dnsName: '%s'\n", szAltName);
-			iAllNames += snprintf(allNames+iAllNames, sizeof(allNames)-iAllNames,
-					      "DNSname: %s; ", szAltName);
+			r = relpTcpAddToCertNamesBuffer(pThis, allNames, sizeof(allNames),
+				&iAllNames, szAltName);
+			if(r != 0) goto done;
 			relpTcpChkOnePeerName(pThis, szAltName, &bFoundPositiveMatch);
 			/* do NOT break, because there may be multiple dNSName's! */
 		}
@@ -1225,8 +1254,9 @@ relpTcpChkPeerName(relpTcp_t *pThis, gnutls_x509_crt_t cert)
 		/* if we did not succeed so far, we try the CN part of the DN... */
 		if(relpTcpGetCN(pThis, cert, cnBuf, sizeof(cnBuf)) == 0) {
 			pThis->pEngine->dbgprint("librelp: relpTcp now checking auth for CN '%s'\n", cnBuf);
-			iAllNames += snprintf(allNames+iAllNames, sizeof(allNames)-iAllNames,
-					      "CN: %s; ", cnBuf);
+			r = relpTcpAddToCertNamesBuffer(pThis, allNames, sizeof(allNames),
+				&iAllNames, cnBuf);
+			if(r != 0) goto done;
 			relpTcpChkOnePeerName(pThis, cnBuf, &bFoundPositiveMatch);
 		}
 	}
@@ -1247,13 +1277,12 @@ static int
 relpTcpVerifyCertificateCallback(gnutls_session_t session)
 {
 	int r = 0;
-	relpTcp_t *pThis;
 	const gnutls_datum_t *cert_list;
 	unsigned int list_size = 0;
 	gnutls_x509_crt_t cert;
 	int bMustDeinitCert = 0;
 
-	pThis = (relpTcp_t*) gnutls_session_get_ptr(session);
+	relpTcp_t *const pThis = (relpTcp_t*) gnutls_session_get_ptr(session);
 
 	/* This function only works for X.509 certificates.  */
 	if(gnutls_certificate_type_get(session) != GNUTLS_CRT_X509) {
@@ -1304,7 +1333,7 @@ static void logFunction(int level, const char *msg)
 
 /* initialize the listener for TLS use */
 static relpRetVal
-relpTcpLstnInitTLS(relpTcp_t *pThis)
+relpTcpLstnInitTLS(relpTcp_t *const pThis)
 {
 	int r;
 	ENTER_RELPFUNC;
@@ -1373,7 +1402,7 @@ finalize_it:
  * gerhards, 2008-03-17
  */
 relpRetVal
-relpTcpLstnInit(relpTcp_t *pThis, unsigned char *pLstnPort, int ai_family)
+relpTcpLstnInit(relpTcp_t *const pThis, unsigned char *pLstnPort, const int ai_family)
 {
 	struct addrinfo hints, *res, *r;
 	int error, maxs, *s, on = 1;
@@ -1524,7 +1553,7 @@ finalize_it:
  * rgerhards, 2008-03-17
  */
 relpRetVal
-relpTcpRcv(relpTcp_t *pThis, relpOctet_t *pRcvBuf, ssize_t *pLenBuf)
+relpTcpRcv(relpTcp_t *const pThis, relpOctet_t *pRcvBuf, ssize_t *pLenBuf)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
@@ -1560,7 +1589,7 @@ relpTcpRcv(relpTcp_t *pThis, relpOctet_t *pRcvBuf, ssize_t *pLenBuf)
  * such option is available on the platform in question.
  */
 static inline void
-setCORKopt(int sock, int onOff)
+setCORKopt(int sock, const int onOff)
 {
 #if defined(TCP_CORK)
 	setsockopt(sock, SOL_TCP, TCP_CORK, &onOff, sizeof (onOff));
@@ -1576,13 +1605,13 @@ setCORKopt(int sock, int onOff)
  * does not interfere with normal operations.
  */
 void
-relpTcpHintBurstBegin(relpTcp_t *pThis)
+relpTcpHintBurstBegin(relpTcp_t *const pThis)
 {
 	setCORKopt(pThis->sock, 1);
 }
 /* this is the counterpart to relpTcpHintBurstBegin -- see there for doc */
 void
-relpTcpHintBurstEnd(relpTcp_t *pThis)
+relpTcpHintBurstEnd(relpTcp_t *const pThis)
 {
 	setCORKopt(pThis->sock, 0);
 }
@@ -1595,7 +1624,7 @@ relpTcpHintBurstEnd(relpTcp_t *pThis)
  * rgerhards, 2008-03-19
  */
 relpRetVal
-relpTcpSend(relpTcp_t *pThis, relpOctet_t *pBuf, ssize_t *pLenBuf)
+relpTcpSend(relpTcp_t *const pThis, relpOctet_t *pBuf, ssize_t *pLenBuf)
 {
 	ssize_t written;
 	ENTER_RELPFUNC;
@@ -1650,7 +1679,7 @@ finalize_it:
 #endif
 /* this is only called for client-initiated sessions */
 static relpRetVal
-relpTcpConnectTLSInit(relpTcp_t *pThis)
+relpTcpConnectTLSInit(relpTcp_t *const pThis)
 {
 	int r;
 	int sockflags;
@@ -1771,7 +1800,11 @@ finalize_it:
  * rgerhards, 2008-03-19
  */
 relpRetVal
-relpTcpConnect(relpTcp_t *pThis, int family, unsigned char *port, unsigned char *host, unsigned char *clientIP)
+relpTcpConnect(relpTcp_t *const pThis,
+	const int family,
+	unsigned char *port,
+	unsigned char *host,
+	unsigned char *clientIP)
 {
 	struct addrinfo *res = NULL;
 	struct addrinfo hints;
@@ -1856,13 +1889,13 @@ finalize_it:
  * "0 if trying to read data, 1 if trying to write data."
  */
 int
-relpTcpGetRtryDirection(relpTcp_t *pThis)
+relpTcpGetRtryDirection(relpTcp_t *const pThis)
 {
 	return gnutls_record_get_direction(pThis->session);
 }
 
 relpRetVal
-relpTcpRtryHandshake(relpTcp_t *pThis)
+relpTcpRtryHandshake(relpTcp_t *const pThis)
 {
 	int r;
 	ENTER_RELPFUNC;
