@@ -3,8 +3,8 @@
 
 AC_PREREQ(2.61)
 AC_INIT([librelp], [1.2.15.master], [rgerhards@adiscon.com])
-AM_INIT_AUTOMAKE
-AM_INIT_AUTOMAKE
+#AM_INIT_AUTOMAKE
+AM_INIT_AUTOMAKE(serial-tests)
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 AC_CONFIG_SRCDIR([src/relp.c])
 AC_CONFIG_HEADER([config.h])
