@@ -17,6 +17,7 @@
 
 #include <stddef.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "librelp.h"
 
@@ -24,13 +25,30 @@
 
 static relpEngine_t *pRelpEngine;
 
-static void dbgprintf(char __attribute__((unused)) *fmt, ...) {
-	printf(fmt);
+static void __attribute__((format(printf, 1, 2)))
+dbgprintf(char *fmt, ...)
+{
+	va_list ap;
+	char pszWriteBuf[32*1024+1];
+
+	va_start(ap, fmt);
+	vsnprintf(pszWriteBuf, sizeof(pszWriteBuf), fmt, ap);
+	va_end(ap);
+	printf("receive.c: %s", pszWriteBuf);
 }
 
 static relpRetVal onSyslogRcv(unsigned char *pHostname, unsigned char *pIP, unsigned char *msg, size_t lenMsg) {
-	printf("%s\n", msg);
+
+	char *pMsg;
+
+	pMsg = (char *) malloc((int)lenMsg+1);
+	memset(pMsg, '\0', lenMsg+1);
+	memcpy(pMsg, msg, lenMsg);
+
+	printf("%s\n", pMsg);
 	fflush(stdout);
+
+	free(pMsg);
 
 	return RELP_RET_OK;
 }
