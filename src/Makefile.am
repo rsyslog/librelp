@@ -15,6 +15,8 @@ DEBUG = -g
 
 lib_LTLIBRARIES = librelp.la
 
+EXTRA_DIST = librelp.h
+
 librelp_la_SOURCES = \
 	librelp.h \
 	relp.c \
