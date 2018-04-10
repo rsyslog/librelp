@@ -1404,7 +1404,7 @@ finalize_it:
 relpRetVal
 relpTcpLstnInit(relpTcp_t *const pThis, unsigned char *pLstnPort, const int ai_family)
 {
-	struct addrinfo hints, *res, *r;
+	struct addrinfo hints, *res = NULL, *r;
 	int error, maxs, *s, on = 1;
 	int sockflags;
 	unsigned char *pLstnPt;
@@ -1433,8 +1433,8 @@ relpTcpLstnInit(relpTcp_t *const pThis, unsigned char *pLstnPort, const int ai_f
 		/* EMPTY */;
 	pThis->socks = malloc((maxs+1) * sizeof(int));
 	if (pThis->socks == NULL) {
-	pThis->pEngine->dbgprint("couldn't allocate memory for TCP listen sockets, suspending RELP message reception.");
-		freeaddrinfo(res);
+		pThis->pEngine->dbgprint("couldn't allocate memory for TCP listen sockets, "
+			"suspending RELP message reception.");
 		ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
 	}
 
@@ -1525,9 +1525,6 @@ relpTcpLstnInit(relpTcp_t *const pThis, unsigned char *pLstnPort, const int ai_f
 		s++;
 	}
 
-	if(res != NULL)
-		freeaddrinfo(res);
-
 	if(*pThis->socks != maxs)
 		pThis->pEngine->dbgprint("We could initialize %d RELP TCP listen sockets out of %d we received "
 		 	"- this may or may not be an error indication.\n", *pThis->socks, maxs);
@@ -1540,6 +1537,9 @@ relpTcpLstnInit(relpTcp_t *const pThis, unsigned char *pLstnPort, const int ai_f
 	}
 
 finalize_it:
+	if(res != NULL)
+		freeaddrinfo(res);
+
 	LEAVE_RELPFUNC;
 }
 
