@@ -1,5 +1,12 @@
 ----------------------------------------------------------------------
 Version 1.2.16 - 2018-??-??
+- bugfix: potential memory leak
+  This is very unlikely to occur in practice. Memory can be leaked
+  when TLS initialization fails when the client tries to connect
+  to the server. However, if this actually happens, it can happen
+  frequently and so accumulate to a large leak.
+  No report of such occurence from practice.
+  Detected by Coverity Scan, CID 266008.
 ----------------------------------------------------------------------
 Version 1.2.15 - 2018-03-21
 - made build on Solaris again
