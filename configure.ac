@@ -153,6 +153,7 @@ fi
 AC_CONFIG_FILES([Makefile \
 		relp.pc \
 		doc/Makefile \
+		tests/Makefile \
 		src/Makefile])
 AC_OUTPUT
 

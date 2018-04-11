@@ -24,8 +24,16 @@
 
 static relpEngine_t *pRelpEngine;
 
-static void dbgprintf(char __attribute__((unused)) *fmt, ...) {
-	printf(fmt);
+static void __attribute__((format(printf, 1, 2)))
+dbgprintf(char *fmt, ...)
+{
+	va_list ap;
+	char pszWriteBuf[32*1024+1];
+
+	va_start(ap, fmt);
+	vsnprintf(pszWriteBuf, sizeof(pszWriteBuf), fmt, ap);
+	va_end(ap);
+	printf("send.c: %s", pszWriteBuf);
 }
 
 void print_usage()
