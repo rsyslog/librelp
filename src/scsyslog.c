@@ -2,7 +2,7 @@
  *
  * This command is used to transfer syslog messages.
  *
- * Copyright 2008 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2018 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
@@ -63,6 +63,6 @@ BEGINcommand(S, Syslog)
 	}
 
 	/* send response */
-	CHKRet(relpSessSendResponse(pSess, pFrame->txnr, (unsigned char*) "200 OK", 6));
+	iRet = relpSessSendResponse(pSess, pFrame->txnr, (unsigned char*) "200 OK", 6);
 finalize_it:
 ENDcommand

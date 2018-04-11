@@ -289,7 +289,7 @@ finalize_it:
  * rgerhards, 2008-03-24
  */
 relpRetVal
-relpOffersToString(relpOffers_t *pThis, unsigned char *pszHdr, size_t lenHdr,
+relpOffersToString(relpOffers_t *pThis, unsigned char *pszHdr, const size_t lenHdr,
 		   unsigned char **ppszOffers, size_t *plenStr)
 {
 	unsigned char *pszOffers = NULL;
@@ -328,8 +328,8 @@ relpOffersToString(relpOffers_t *pThis, unsigned char *pszHdr, size_t lenHdr,
 		if(currSize - iStr - 3 < strlen((char*)pOffer->szName)) {
 			if((pszOffers = realloc(pszOffers, currSize + iAlloc)) == NULL) {
 				ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
-				currSize += iAlloc;
 			}
+			currSize += iAlloc;
 		}
 		strcpy((char*)pszOffers+iStr, (char*)pOffer->szName);
 		iStr += strlen((char*)pOffer->szName);
@@ -338,8 +338,8 @@ relpOffersToString(relpOffers_t *pThis, unsigned char *pszHdr, size_t lenHdr,
 			if(currSize - iStr - 3 < strlen((char*)pOfferVal->szVal)) {
 				if((pszOffers = realloc(pszOffers, currSize + iAlloc)) == NULL) {
 					ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
-					currSize += iAlloc;
 				}
+				currSize += iAlloc;
 			}
 			strcpy((char*)pszOffers+iStr, (char*)pOfferVal->szVal);
 			iStr += strlen((char*)pOfferVal->szVal);
