@@ -164,6 +164,9 @@ relpSessDestruct(relpSess_t **ppThis)
 		free(pUnackedToDel);
 	}
 
+	if(pThis->pCurrRcvFrame != NULL)
+		relpFrameDestruct(&pThis->pCurrRcvFrame);
+
 	free(pThis->srvPort);
 	free(pThis->srvAddr);
 	free(pThis->clientIP);
