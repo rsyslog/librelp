@@ -24,7 +24,7 @@
 #include <string.h>
 #include "librelp.h"
 
-#define MAX_EXTRADATA_LEN 100*1024
+#define MAX_MSGDATA_LEN 200*1024
 #define TRY(f) if(f != RELP_RET_OK) { printf("failure in: %s\n", #f); return 1; }
 
 static relpEngine_t *pRelpEngine;
@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
 	int option_index = 0;
 	unsigned char *port = NULL;
 	unsigned char *target = NULL;
-	unsigned char *pMsg = NULL;
+	const char *pMsg = NULL;
 	size_t lenMsg = 0;
 	unsigned timeout = 90;
 	int verbose = 0;
@@ -85,8 +85,8 @@ int main(int argc, char *argv[]) {
 	char *myPrivKeyFile = NULL;
 	char *permittedPeer = NULL;
 	char *authMode = NULL;
-	int extraDataLen = 0;
-	char extraData[MAX_EXTRADATA_LEN + 1];
+	int msgDataLen = 0;
+	char *msgData = NULL;;
 
 	static struct option long_options[] =
 	{
@@ -104,10 +104,10 @@ int main(int argc, char *argv[]) {
 			authMode = optarg;
 			break;
 		case 'd':
-			extraDataLen = atoi(optarg);
-			if(extraDataLen > MAX_EXTRADATA_LEN) {
+			msgDataLen = atoi(optarg);
+			if(msgDataLen > MAX_MSGDATA_LEN) {
 				fprintf(stderr, "-d max is %d!\n",
-					MAX_EXTRADATA_LEN);
+					MAX_MSGDATA_LEN);
 				exit(1);
 			}
 			break;
@@ -115,8 +115,8 @@ int main(int argc, char *argv[]) {
 			verbose = 1;
 			break;
 		case 'm':
-			pMsg = (unsigned char*)optarg;
-			lenMsg = strlen((char*) pMsg);
+			pMsg = (const char*)optarg;
+			lenMsg = strlen(pMsg);
 			break;
 		case 'P':
 			permittedPeer = optarg;
@@ -194,15 +194,20 @@ int main(int argc, char *argv[]) {
 
 	TRY(relpCltConnect(pRelpClt, protFamily, port, target));
 
-	memset(extraData, 'X', extraDataLen);
-	extraData[extraDataLen] = '\0';
+	if(msgDataLen != 0) {
+		msgData = malloc(msgDataLen+1);
+		strcpy(msgData, pMsg);
+		memset(msgData+lenMsg, 'X', msgDataLen-lenMsg);
+		msgData[msgDataLen] = '\0';
+		pMsg = msgData;
+		lenMsg = msgDataLen;
+	}
 
+	TRY(relpCltSendSyslog(pRelpClt, (unsigned char *)pMsg, lenMsg));
 
-	TRY(relpCltSendSyslog(pRelpClt, pMsg, lenMsg));
-
-
-
-
+	if(msgDataLen != 0) {
+		free((char *)pMsg);
+	}
 	TRY(relpEngineCltDestruct(pRelpEngine, &pRelpClt));
 	TRY(relpEngineDestruct(&pRelpEngine));
 

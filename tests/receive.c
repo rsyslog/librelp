@@ -22,6 +22,7 @@
 #include <unistd.h>
 #include <getopt.h>
 #include <string.h>
+#include <limits.h>
 #include "librelp.h"
 
 #define TRY(f) if(f != RELP_RET_OK) { printf("failure in: %s\n", #f); return 1; }
@@ -98,6 +99,7 @@ int main(int argc, char *argv[]) {
 	char *myPrivKeyFile = NULL;
 	char *permittedPeer = NULL;
 	char *authMode = NULL;
+	int maxDataSize = 0;
 
 	static struct option long_options[] =
 	{
@@ -111,7 +113,7 @@ int main(int argc, char *argv[]) {
 	};
 
 
-	while((c = getopt_long(argc, argv, "a:F:P:p:Tvx:y:z:", long_options, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "a:F:m:P:p:Tvx:y:z:", long_options, &option_index)) != -1) {
 		switch(c) {
 		case 'a':
 			authMode = optarg;
@@ -121,6 +123,20 @@ int main(int argc, char *argv[]) {
 			break;
 		case 'F':
 			pidFileName = optarg;
+			break;
+		case 'm':
+			maxDataSize = atoi(optarg);
+			if(maxDataSize < 128) {
+				printf("maxMessageSize tried to set to %d, "
+					"but cannot be less than 128 - set "
+					"to 128 instead\n", maxDataSize);
+				maxDataSize = 128;
+			} else if(maxDataSize > INT_MAX) {
+				printf("maxMessageSize tried to set to %d, "
+					"but cannot be more than INT_MAX - set "
+					"to INT_MAX instead\n", maxDataSize);
+				maxDataSize = INT_MAX;
+			}
 			break;
 		case 'P':
 			permittedPeer = optarg;
@@ -185,6 +201,9 @@ int main(int argc, char *argv[]) {
 
 	TRY(relpEngineListnerConstruct(pRelpEngine, &pRelpSrv));
 	TRY(relpSrvSetLstnPort(pRelpSrv, port));
+	if(maxDataSize != 0) {
+		TRY(relpSrvSetMaxDataSize(pRelpSrv, maxDataSize));
+	}
 
 	if(bEnableTLS) {
 		TRY(relpSrvEnableTLS2(pRelpSrv));

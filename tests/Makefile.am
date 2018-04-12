@@ -17,7 +17,8 @@ TESTS=  relp-basic.sh \
 	relp-tls-wrong-permittedPeer.sh \
 	relp-tls-wrong-authname.sh \
 	relp-tls-missing-param-sender.sh \
-	relp-tls-missing-param-receiver.sh
+	relp-tls-missing-param-receiver.sh \
+	long-msg.sh
 EXTRA_DIST=$(TESTS) \
 	receive.c \
 	send.c \
