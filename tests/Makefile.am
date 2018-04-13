@@ -28,6 +28,7 @@ endif
 
 EXTRA_DIST=$(TESTS) \
 	$(VALGRIND_TESTS) \
+	test-framework.sh \
 	receive.c \
 	send.c \
 	tls-certs/ca.pem \
