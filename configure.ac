@@ -148,6 +148,21 @@ if test "$enable_debug" = "no"; then
         AC_DEFINE(NDEBUG, 1, [Defined if debug mode is disabled.])
 fi
 
+# valgrind
+AC_ARG_ENABLE(valgrind,
+        [AS_HELP_STRING([--enable-valgrind],[Enable valgrind tests@<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) enable_valgrind="yes" ;;
+          no) enable_valgrind="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-valgrind) ;;
+         esac],
+        [enable_valgrind="yes"]
+)
+if test "$enable_valgrind" = "yes"; then
+        AC_CHECK_PROG(VALGRIND, [valgrind], [valgrind], [no])
+fi
+AM_CONDITIONAL([HAVE_VALGRIND], test "$enable_valgrind" == "yes")
+
 
 
 AC_CONFIG_FILES([Makefile \
@@ -161,6 +176,7 @@ AC_OUTPUT
 echo "*****************************************************"
 echo "librelp will be compiled with the following settings:"
 echo
+echo "run valgrind in testbench:     $enable_valgrind"
 echo "Debug mode enabled:            $enable_debug"
 echo "TLS enabled:                   $enable_tls"
 echo "TLS authentication supported:  $have_gnutls_certificate_set_verify_function"
