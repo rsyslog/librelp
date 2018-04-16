@@ -217,6 +217,12 @@ relpFrameProcessOctetRcvd(relpFrame_t **ppThis, relpOctet_t c, relpSess_t *pSess
 
 finalize_it:
 //pSess->pEngine->dbgprint("end relp frame construct, iRet %d\n", iRet);
+// TODO:more cleanup
+	if(iRet != RELP_RET_OK) {
+		if(pThis != NULL) {
+			relpFrameDestruct(&pThis);
+		}
+	}
 	LEAVE_RELPFUNC;
 }
 
