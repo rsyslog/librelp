@@ -306,7 +306,7 @@ relpRetVal
 relpFrameConstructWithData(relpFrame_t **ppThis, relpEngine_t *pEngine, unsigned char *pCmd,
 			   relpOctet_t *pData, size_t lenData, int bHandoverBuffer)
 {
-	relpFrame_t *pThis;
+	relpFrame_t *pThis = NULL;
 
 	ENTER_RELPFUNC;
 	assert(ppThis != NULL);

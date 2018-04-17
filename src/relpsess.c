@@ -191,7 +191,7 @@ relpSessDestruct(relpSess_t **ppThis)
 relpRetVal
 relpSessAcceptAndConstruct(relpSess_t **ppThis, relpSrv_t *pSrv, int sock)
 {
-	relpSess_t *pThis;
+	relpSess_t *pThis = NULL;
 
 	ENTER_RELPFUNC;
 	assert(ppThis != NULL);
