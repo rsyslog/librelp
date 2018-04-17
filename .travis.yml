@@ -2,6 +2,7 @@ language: c
 sudo: true
 compiler: clang
 dist: trusty
+services: docker
 
 addons:
   apt:
@@ -29,13 +30,13 @@ install:
   - sudo apt-get install -qq --force-yes libestr-dev libfastjson-dev liblogging-stdlog-dev
 
 script:
-  - CI/check_codestyle.sh
+  - devtools/travis-run-compile-tests.sh
   - export CFLAGS="-g"
 #  - export CFLAGS="-g -fsanitize=address"
   - autoreconf -fvi
   - ./configure --enable-tls
   - make
-  - make distcheck V=1
+  - make distcheck V=0
 #  - cat /home/travis/build/rsyslog/librelp/librelp-1.2.16.master/_build/tests/test-suite.log
 #  - sudo make install
 # now we use the rsyslog testbench for testing. This also means we need to
