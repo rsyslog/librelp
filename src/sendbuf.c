@@ -1,6 +1,6 @@
 /* The relp send buffer object.
  *
- * Copyright 2008-2016 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2018 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
@@ -76,7 +76,6 @@ relpSendbufDestruct(relpSendbuf_t **ppThis)
 	assert(ppThis != NULL);
 	pThis = *ppThis;
 	RELPOBJ_assert(pThis, Sendbuf);
-pThis->pSess->pEngine->dbgprint("in destructor: sendbuf %p\n", pThis);
 
 	if(pThis->pData != NULL)
 		free(pThis->pData);

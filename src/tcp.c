@@ -994,11 +994,14 @@ finalize_it:
  * operation.
  */
 static void
-relpTcpChkOnePeerWildcard(tcpPermittedPeerWildcardComp_t *pRoot, char *peername, int *pbFoundPositiveMatch)
+relpTcpChkOnePeerWildcard(tcpPermittedPeerWildcardComp_t *pRoot,
+	const char *peername,
+	int *pbFoundPositiveMatch,
+	relpEngine_t *const pEngine)
 {
 	tcpPermittedPeerWildcardComp_t *pWildcard;
-	char *pC;
-	char *pStart; /* start of current domain component */
+	const char *pC;
+	const char *pStart; /* start of current domain component */
 	int iWildcard, iName; /* work indexes for backward comparisons */
 
 	*pbFoundPositiveMatch = 0;
@@ -1053,6 +1056,12 @@ relpTcpChkOnePeerWildcard(tcpPermittedPeerWildcardComp_t *pRoot, char *peername,
 					goto done;
 				}
 				break;
+			default:assert(0); /* make sure we die when debugging */
+				relpEngineCallOnGenericErr(pEngine,
+					"librelp", RELP_RET_ERR_INTERNAL,
+					"invalid wildcardType %d in %s:%d",
+					pWildcard->wildcardType, __FILE__, __LINE__);
+				break;
 		}
 		pWildcard =  pWildcard->pNext; /* we processed this entry */
 
@@ -1098,7 +1107,7 @@ relpTcpChkOnePeerName(relpTcp_t *const pThis, char *peername, int *pbFoundPositi
 			}
 		} else {
 			relpTcpChkOnePeerWildcard(pThis->permittedPeers.peer[i].wildcardRoot,
-			        peername, pbFoundPositiveMatch);
+			        peername, pbFoundPositiveMatch, pThis->pEngine);
 			if (*pbFoundPositiveMatch)
 				break;
 		}

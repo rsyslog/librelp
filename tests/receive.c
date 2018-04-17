@@ -60,7 +60,7 @@ static relpRetVal onSyslogRcv(unsigned char *pHostname __attribute__((unused)),
 	return RELP_RET_OK;
 }
 
-void print_usage()
+void print_usage(void)
 {
 	printf("Usage: ./receive -p <PORTNUM>\n");
 }

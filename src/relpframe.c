@@ -1,6 +1,6 @@
 /* This module implements the relp frame object.
  *
- * Copyright 2008 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2018 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
@@ -210,8 +210,8 @@ relpFrameProcessOctetRcvd(relpFrame_t **const ppThis,
 				}
 				pThis->rcvState = eRelpFrameRcvState_IN_TRAILER;
 				pThis->iRcv = 0;
-				/*FALLTHROUGH*/
 			}
+			/*FALLTHROUGH*/
 		case eRelpFrameRcvState_IN_TRAILER:
 		do_trailer:
 			if(c != '\n')
@@ -233,6 +233,12 @@ relpFrameProcessOctetRcvd(relpFrame_t **const ppThis,
 			break;
 		case eRelpFrameRcvState_FINISHED:
 			assert(0); /* this shall never happen */
+			break;
+		default:assert(0); /* make sure we die when debugging */
+			relpEngineCallOnGenericErr(pSess->pEngine,
+				"librelp", RELP_RET_ERR_INTERNAL,
+				"invalid FrameRcvState %d in %s:%d",
+				pThis->rcvState, __FILE__, __LINE__);
 			break;
 	}
 

@@ -42,7 +42,7 @@ dbgprintf(char *fmt, ...)
 
 
 
-void print_usage()
+void print_usage(void)
 {
 	printf("Usage: send -t <SERVER> -p <PORTNUM> -m <MESSAGE>\n");
 }
