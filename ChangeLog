@@ -7,6 +7,12 @@ Version 1.2.16 - 2018-??-??
   frequently and so accumulate to a large leak.
   No report of such occurence from practice.
   Detected by Coverity Scan, CID 266008.
+- bugfix: memory leak on protocol error
+  Receiving relp frames are not correctly deallocated while handling
+  protocol errors resulting in memory leak of dirty pages.
+  Thanks to github user gleentea for the patch.
+  see also https://github.com/rsyslog/librelp/issues/59
+  closes https://github.com/rsyslog/librelp/issues/60
 - fixed a couple of minor issues:
   * fix memory leak when relp frame construction fails
     detected by clang static analyzer
