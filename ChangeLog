@@ -12,6 +12,13 @@ Version 1.2.16 - 2018-??-??
     detected by clang static analyzer
   * removed unnecessary code
     detected by clang static analyzer
+  * fix memory leak on relpSrvRun() error
+    this is kind of cosmetic, because it can only occur when the
+    run fails, which usually should lead to termination of the
+    calling application
+    deteced by Coverity Scan, CID 266016
+  * fix memory leak on relp listener construction error
+    detected by Coverity Scan, CID 266014, 266015
 - CI
   * added native testbench (formerly used rsyslog for testing)
   * added additional compile tests
