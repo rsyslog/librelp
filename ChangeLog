@@ -18,6 +18,11 @@ Version 1.2.16 - 2018-??-??
     detected by clang static analyzer
   * removed unnecessary code
     detected by clang static analyzer
+  * fix memory leak
+    This leaks occurs if the process is already totally out of memory,
+    a situation that is very rare and will also cuase other troubles.
+    So the practical relevance of this patch looks rather slim.
+    Detected by clang static analyzer.
   * fix memory leak on relpSrvRun() error
     this is kind of cosmetic, because it can only occur when the
     run fails, which usually should lead to termination of the
