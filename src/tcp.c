@@ -1785,7 +1785,7 @@ relpTcpConnectTLSInit(relpTcp_t *const pThis)
 		sockflags |= O_NONBLOCK;
 		/* SETFL could fail too, so get it caught by the subsequent
 		 * error check.  */
-		sockflags = fcntl(pThis->sock, F_SETFL, sockflags);
+		fcntl(pThis->sock, F_SETFL, sockflags);
 	}
 finalize_it:
 	LEAVE_RELPFUNC;

@@ -470,7 +470,7 @@ relpEngineSetOnGenericErr(relpEngine_t *pThis, void (*pCB)(char *objinfo, char*e
 relpRetVal
 relpEngineAddListner2(relpEngine_t *pThis, unsigned char *pLstnPort, void *pUsr)
 {
-	relpSrv_t *pSrv;
+	relpSrv_t *pSrv = NULL;
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Engine);
 	CHKRet(relpEngineListnerConstruct(pThis, &pSrv));
@@ -512,7 +512,7 @@ relpEngineSetSyslogRcv(relpEngine_t *pThis, relpRetVal (*pCB)(unsigned char*, un
 relpRetVal
 relpEngineAddListner(relpEngine_t *pThis, unsigned char *pLstnPort)
 {
-	relpSrv_t *pSrv;
+	relpSrv_t *pSrv = NULL;
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Engine);
 	CHKRet(relpEngineListnerConstruct(pThis, &pSrv));

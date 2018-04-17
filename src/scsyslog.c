@@ -51,12 +51,16 @@ BEGINcommand(S, Syslog)
 		ABORT_FINALIZE(RELP_RET_CMD_DISABLED);
 	}
 
+	/* TODO: right now, the callbacks are called without checking the
+	 * return code. I assume this should at least be optionally done.
+	 * Consider implementing this. rgerhards, 2018-04-17
+	 */
 	/* only highest version callback is called */
 	if(pSess->pEngine->onSyslogRcv2 != NULL) {
-		iRet = pSess->pEngine->onSyslogRcv2(pSess->pSrv->pUsr, pSess->pTcp->pRemHostName,
+		pSess->pEngine->onSyslogRcv2(pSess->pSrv->pUsr, pSess->pTcp->pRemHostName,
 					   	    pSess->pTcp->pRemHostIP, pFrame->pData, pFrame->lenData);
 	} else if(pSess->pEngine->onSyslogRcv != NULL) {
-		iRet = pSess->pEngine->onSyslogRcv(pSess->pTcp->pRemHostName, pSess->pTcp->pRemHostIP,
+		pSess->pEngine->onSyslogRcv(pSess->pTcp->pRemHostName, pSess->pTcp->pRemHostIP,
 						    pFrame->pData, pFrame->lenData);
 	} else {
 		pSess->pEngine->dbgprint("error: no syslog reception callback is set, nothing done\n");
