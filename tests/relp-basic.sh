@@ -1,4 +1,5 @@
 #!/bin/bash
+. ${srcdir}/test-framework.sh
 
 echo 'relp-basic.sh'
 echo '============='
