@@ -10,12 +10,12 @@ DO_IN_CONTAINER="$PROJ_HOME/devtools/devcontainer.sh"
 printf "\n\n============ STEP: check code style ================\n\n\n"
 $DO_IN_CONTAINER devtools/check-codestyle.sh
 
-#printf "\n\n============ STEP: run static analyzer ================\n\n\n"
-#$DO_IN_CONTAINER devtools/run-static-analyzer.sh
+printf "\n\n============ STEP: run static analyzer ================\n\n\n"
+$DO_IN_CONTAINER devtools/run-static-analyzer.sh
 
 # #################### newer compilers ####################
 
-#$DO_IN_CONTAINER make clean
+$DO_IN_CONTAINER make clean
 printf "\n\n============ STEP: gcc-7 compile test ================\n\n\n"
 export CC=gcc-7
 export CFLAGS=
