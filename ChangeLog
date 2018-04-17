@@ -7,8 +7,14 @@ Version 1.2.16 - 2018-??-??
   frequently and so accumulate to a large leak.
   No report of such occurence from practice.
   Detected by Coverity Scan, CID 266008.
+- fixed a couple of minor issues:
+  * fix memory leak when relp frame construction fails
+    detected by clang static analyzer
+  * removed unnecessary code
+    detected by clang static analyzer
 - CI
   * added native testbench (formerly used rsyslog for testing)
+  * added additional compile tests
 ----------------------------------------------------------------------
 Version 1.2.15 - 2018-03-21
 - made build on Solaris again
