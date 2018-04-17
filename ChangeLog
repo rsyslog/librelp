@@ -7,6 +7,8 @@ Version 1.2.16 - 2018-??-??
   frequently and so accumulate to a large leak.
   No report of such occurence from practice.
   Detected by Coverity Scan, CID 266008.
+- CI
+  * added native testbench (formerly used rsyslog for testing)
 ----------------------------------------------------------------------
 Version 1.2.15 - 2018-03-21
 - made build on Solaris again
