@@ -478,6 +478,11 @@ relpEngineAddListner2(relpEngine_t *pThis, unsigned char *pLstnPort, void *pUsr)
 	CHKRet(relpSrvSetLstnPort(pSrv, pLstnPort));
 	CHKRet(relpEngineListnerConstructFinalize(pThis, pSrv));
 finalize_it:
+	if(iRet != RELP_RET_OK) {
+		if(pSrv != NULL) {
+			relpSrvDestruct(&pSrv);
+		}
+	}
 	LEAVE_RELPFUNC;
 }
 /* a dummy for callbacks not set by the caller */
@@ -514,6 +519,11 @@ relpEngineAddListner(relpEngine_t *pThis, unsigned char *pLstnPort)
 	CHKRet(relpSrvSetLstnPort(pSrv, pLstnPort));
 	CHKRet(relpEngineListnerConstructFinalize(pThis, pSrv));
 finalize_it:
+	if(iRet != RELP_RET_OK) {
+		if(pSrv != NULL) {
+			relpSrvDestruct(&pSrv);
+		}
+	}
 	LEAVE_RELPFUNC;
 }
 
