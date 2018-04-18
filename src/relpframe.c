@@ -97,7 +97,7 @@ relpRetVal
 relpFrameProcessOctetRcvd(relpFrame_t **ppThis, relpOctet_t c, relpSess_t *pSess)
 {
 	relpFrame_t *pThis;
-
+	int frame_alloced = 0;
 	ENTER_RELPFUNC;
 	assert(ppThis != NULL);
 	pThis = *ppThis;
@@ -110,6 +110,7 @@ relpFrameProcessOctetRcvd(relpFrame_t **ppThis, relpOctet_t c, relpSess_t *pSess
 	if(pThis == NULL) {
 		CHKRet(relpFrameConstruct(&pThis, pSess->pEngine));
 		pThis->rcvState = eRelpFrameRcvState_BEGIN_FRAME;
+		frame_alloced = 1;
 	}
 
 	switch(pThis->rcvState) {
@@ -216,10 +217,9 @@ relpFrameProcessOctetRcvd(relpFrame_t **ppThis, relpOctet_t c, relpSess_t *pSess
 	*ppThis = pThis;
 
 finalize_it:
-//pSess->pEngine->dbgprint("end relp frame construct, iRet %d\n", iRet);
 // TODO:more cleanup
 	if(iRet != RELP_RET_OK) {
-		if(pThis != NULL) {
+		if(frame_alloced) {
 			relpFrameDestruct(&pThis);
 		}
 	}
