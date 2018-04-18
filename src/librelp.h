@@ -3,7 +3,7 @@
  * This file is meant to be included by applications using the relp library.
  * For relp library files themselves, include "relp.h".
  *
- * Copyright 2008-2016 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2018 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
@@ -157,6 +157,10 @@ typedef enum relpCmdEnaState_e relpCmdEnaState_t;
 #define RELP_RET_ERR_NO_TLS_AUTH RELPERR_BASE + 46	/**< platform does not provide TLS auth support */
 #define RELP_RET_SESSION_OPEN	RELPERR_BASE + 47	/**< RELP session is (already) open */
 
+/* relp frame oversize modes */
+#define RELP_OVERSIZE_ABORT 0				/**< abort connection on oversize frame */
+#define RELP_OVERSIZE_TRUNCATE 1			/**< truncate oversize frame, keep connection active */
+
 /* some macros to work with librelp error codes */
 #define CHKRet(code) if((iRet = code) != RELP_RET_OK) goto finalize_it
 /* macro below is to be used if we need our own handling, eg for cleanup */
@@ -208,6 +212,7 @@ relpRetVal relpSrvSetPrivKey(relpSrv_t *pThis, char *cert);
 relpRetVal relpSrvSetAuthMode(relpSrv_t *pThis, char *mode);
 relpRetVal relpSrvAddPermittedPeer(relpSrv_t *pThis, char *peer);
 relpRetVal relpSrvSetMaxDataSize(relpSrv_t *pThis, size_t maxSize);
+relpRetVal relpSrvSetOversizeMode(relpSrv_t *const pThis, const int oversizeMode);
 
 /* exposed relp client functions */
 relpRetVal relpCltConnect(relpClt_t *pThis, int protFamily, unsigned char *port, unsigned char *host);
