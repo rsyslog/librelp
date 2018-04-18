@@ -181,6 +181,7 @@ relpFrameProcessOctetRcvd(relpFrame_t **const ppThis,
 								"librelp", RELP_RET_DATA_TOO_LONG,
 								"frame too long, size %zu, configured max %zu -"
 								"frame will be truncated, but session continues",
+
 								pThis->lenData, pSess->maxDataSize);
 							alloc_size = pSess->maxDataSize;
 						}
