@@ -100,6 +100,7 @@ int main(int argc, char *argv[]) {
 	char *permittedPeer = NULL;
 	char *authMode = NULL;
 	int maxDataSize = 0;
+	int oversizeMode = 0;
 
 	static struct option long_options[] =
 	{
@@ -113,7 +114,7 @@ int main(int argc, char *argv[]) {
 	};
 
 
-	while((c = getopt_long(argc, argv, "a:F:m:P:p:Tvx:y:z:", long_options, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "a:F:m:o:P:p:Tvx:y:z:", long_options, &option_index)) != -1) {
 		switch(c) {
 		case 'a':
 			authMode = optarg;
@@ -136,6 +137,15 @@ int main(int argc, char *argv[]) {
 					"but cannot be more than INT_MAX - set "
 					"to INT_MAX instead\n", maxDataSize);
 				maxDataSize = INT_MAX;
+			}
+			break;
+		case 'o':
+			if(strcmp("truncate", optarg) == 0) {
+				oversizeMode = RELP_OVERSIZE_TRUNCATE;
+			} else if(strcmp("abort", optarg) == 0) {
+				oversizeMode = RELP_OVERSIZE_ABORT;
+			} else {
+				printf("Wrong oversizeMode, default used.\n");
 			}
 			break;
 		case 'P':
@@ -203,6 +213,9 @@ int main(int argc, char *argv[]) {
 	TRY(relpSrvSetLstnPort(pRelpSrv, port));
 	if(maxDataSize != 0) {
 		TRY(relpSrvSetMaxDataSize(pRelpSrv, maxDataSize));
+	}
+	if(oversizeMode != 0) {
+		TRY(relpSrvSetOversizeMode(pRelpSrv, oversizeMode));
 	}
 
 	if(bEnableTLS) {
