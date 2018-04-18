@@ -20,7 +20,8 @@ TESTS=  relp-basic.sh \
 	relp-tls-wrong-authname.sh \
 	relp-tls-missing-param-sender.sh \
 	relp-tls-missing-param-receiver.sh \
-	long-msg.sh
+	long-msg.sh \
+	sleep.sh
 
 if HAVE_VALGRIND
 TESTS += $(VALGRIND_TESTS)
