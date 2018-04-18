@@ -11,15 +11,15 @@ send_LDADD=../src/.libs/librelp.la
 send_CFLAGS=-I${top_srcdir}/src
 
 VALGRIND_TESTS= \
-	relp-tls-basic-vg.sh
+	tls-basic-vg.sh
 
-TESTS=  relp-basic.sh \
-	relp-tls-basic.sh \
-	relp-tls-basic-anon.sh \
-	relp-tls-wrong-permittedPeer.sh \
-	relp-tls-wrong-authname.sh \
-	relp-tls-missing-param-sender.sh \
-	relp-tls-missing-param-receiver.sh \
+TESTS=  basic.sh \
+	tls-basic.sh \
+	tls-basic-anon.sh \
+	tls-wrong-permittedPeer.sh \
+	tls-wrong-authname.sh \
+	tls-missing-param-sender.sh \
+	tls-missing-param-receiver.sh \
 	long-msg.sh
 
 if HAVE_VALGRIND
