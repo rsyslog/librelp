@@ -193,6 +193,7 @@ relpRetVal relpEngineSetOnGenericErr(relpEngine_t *pThis,
 
 /* exposed server property set functions */
 relpRetVal relpSrvSetLstnPort(relpSrv_t *pThis, unsigned char *pLstnPort);
+relpRetVal relpSrvSetLstnAddr(relpSrv_t *pThis, unsigned char *pLstnAddr);
 relpRetVal relpSrvSetUsrPtr(relpSrv_t *pThis, void *pUsr);
 void relpSrvEnableTLS(relpSrv_t *pThis) __attribute__ ((deprecated));
 void relpSrvEnableTLSZip(relpSrv_t *pThis) __attribute__ ((deprecated));
