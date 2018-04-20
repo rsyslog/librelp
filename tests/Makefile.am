@@ -20,7 +20,9 @@ TESTS=  basic.sh \
 	tls-wrong-authname.sh \
 	tls-missing-param-sender.sh \
 	tls-missing-param-receiver.sh \
-	long-msg.sh
+	long-msg.sh \
+	oversize-msg-abort-errmsg.sh \
+	truncate-oversize-msg.sh
 
 if HAVE_VALGRIND
 TESTS += $(VALGRIND_TESTS)

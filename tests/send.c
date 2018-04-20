@@ -24,7 +24,6 @@
 #include <string.h>
 #include "librelp.h"
 
-#define MAX_MSGDATA_LEN 200*1024
 #define TRY(f) if(f != RELP_RET_OK) { printf("failure in: %s\n", #f); return 1; }
 
 static relpEngine_t *pRelpEngine;
@@ -85,7 +84,8 @@ int main(int argc, char *argv[]) {
 	char *myPrivKeyFile = NULL;
 	char *permittedPeer = NULL;
 	char *authMode = NULL;
-	int msgDataLen = 0;
+	size_t msgDataLen = 0;
+	int len = 0;
 	char *msgData = NULL;;
 
 	static struct option long_options[] =
@@ -104,11 +104,13 @@ int main(int argc, char *argv[]) {
 			authMode = optarg;
 			break;
 		case 'd':
-			msgDataLen = atoi(optarg);
-			if(msgDataLen > MAX_MSGDATA_LEN) {
-				fprintf(stderr, "-d max is %d!\n",
-					MAX_MSGDATA_LEN);
+			len = atoi(optarg);
+			if(len < 128) {
+				fprintf(stderr, "send.c: messageSize has invalid "
+					"value: %d - must be at least 128\n", len);
 				exit(1);
+			} else {
+				msgDataLen = len;
 			}
 			break;
 		case 'v':
@@ -141,8 +143,14 @@ int main(int argc, char *argv[]) {
 			break;
 		default:
 			print_usage();
-			return -1;
+			exit(1);
 		}
+	}
+
+
+	if(msgDataLen != 0 && msgDataLen < lenMsg) {
+		fprintf(stderr, "send.c: message is larger than configured message size!\n");
+		exit(1);
 	}
 
 	if (target == NULL || port == NULL || pMsg == NULL) {
@@ -195,9 +203,15 @@ int main(int argc, char *argv[]) {
 	TRY(relpCltConnect(pRelpClt, protFamily, port, target));
 
 	if(msgDataLen != 0) {
+
 		msgData = malloc(msgDataLen+1);
 		strcpy(msgData, pMsg);
-		memset(msgData+lenMsg, 'X', msgDataLen-lenMsg);
+
+		size_t i;
+		for(i=0; i < (msgDataLen-lenMsg); i++) {
+			*(msgData+lenMsg+i) = i%10 + '0';
+		}
+
 		msgData[msgDataLen] = '\0';
 		pMsg = msgData;
 		lenMsg = msgDataLen;

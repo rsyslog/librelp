@@ -44,19 +44,25 @@ function startup_receiver() {
 function stop_receiver() {
 	kill $(cat receive.pid)
 	wait $(cat receive.pid) &> /dev/null
-	kill $RECEIVE_PID
+	#kill $RECEIVE_PID
 	printf "receiver stopped\n"
 }
 
 # $1 is the value to check for
+# $2 (optinal) is the file to check
 function check_output() {
 	EXPECTED="$1"
-	grep "$EXPECTED" librelp.out.log > /dev/null
+	if [ "$2" == "" ] ; then
+		FILE_TO_CHECK="librelp.out.log"
+	else
+		FILE_TO_CHECK="$2"
+	fi
+	grep "$EXPECTED" $FILE_TO_CHECK > /dev/null
 	if [ $? -ne 0 ]; then
 		printf "\nFAIL: expected message not found. Expected:\n"
 		printf "%s\n" "$EXPECTED"
-		printf "\nlibrelp.out.log actually is:\n"
-		cat librelp.out.log
+		printf "\n$FILE_TO_CHECK actually is:\n"
+		cat $FILE_TO_CHECK
 		exit 1
 	fi
 }
@@ -72,7 +78,7 @@ function cleanup() {
 		pkill -x receive
 		echo pkill result $?
 	fi
-	rm -f receive.pid librelp.out.log
+	rm -f receive.pid librelp.out.log *.err.log
 }
 
 # cleanup at end of regular test run

@@ -1,6 +1,6 @@
 /* The relp server.
  *
- * Copyright 2008-2016 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2018 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
@@ -70,6 +70,7 @@ relpSrvConstruct(relpSrv_t **ppThis, relpEngine_t *pEngine)
 	pThis->privKey = NULL;
 	pThis->permittedPeers.nmemb = 0;
 	pThis->maxDataSize = RELP_DFLT_MAX_DATA_SIZE;
+	pThis->oversizeMode = RELP_DFLT_OVERSIZE_MODE;
 
 	*ppThis = pThis;
 
@@ -161,6 +162,20 @@ relpRetVal relpSrvSetMaxDataSize(relpSrv_t *pThis, size_t maxSize) {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Srv);
 	pThis->maxDataSize = maxSize;
+	LEAVE_RELPFUNC;
+}
+
+relpRetVal ATTR_NONNULL()
+relpSrvSetOversizeMode(relpSrv_t *const pThis, const int oversizeMode)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Srv);
+	if(   oversizeMode != RELP_OVERSIZE_ABORT
+	   && oversizeMode != RELP_OVERSIZE_TRUNCATE) {
+		ABORT_FINALIZE(RELP_RET_PARAM_ERROR);
+	}
+	pThis->oversizeMode = oversizeMode;
+finalize_it:
 	LEAVE_RELPFUNC;
 }
 

@@ -93,8 +93,10 @@ relpFrameDestruct(relpFrame_t **ppThis)
  * caller can pass in a NULL pointer.
  * rgerhards, 2008-03-16
  */
-relpRetVal
-relpFrameProcessOctetRcvd(relpFrame_t **ppThis, relpOctet_t c, relpSess_t *pSess)
+relpRetVal ATTR_NONNULL()
+relpFrameProcessOctetRcvd(relpFrame_t **const ppThis,
+	const relpOctet_t c,
+	relpSess_t *const pSess)
 {
 	relpFrame_t *pThis;
 	int frame_alloced = 0;
@@ -165,13 +167,27 @@ relpFrameProcessOctetRcvd(relpFrame_t **ppThis, relpOctet_t c, relpSess_t *pSess
 				}
 				/* ok, we have data, so now let's do the usual checks... */
 				if(c == ' ') { /* field terminator */
-					/* check if data length is up to limit before actually allocating buffer */
+					size_t alloc_size = pThis->lenData;
 					if(pThis->lenData > pSess->maxDataSize) {
-						ABORT_FINALIZE(RELP_RET_DATA_TOO_LONG);
+						if(pSess->pSrv->oversizeMode == RELP_OVERSIZE_ABORT) {
+							relpEngineCallOnGenericErr(pSess->pEngine,
+								"librelp", RELP_RET_DATA_TOO_LONG,
+								"frame too long, size %zu, configured max %zu -"
+								"session will be closed (aborted)",
+								pThis->lenData, pSess->maxDataSize);
+							ABORT_FINALIZE(RELP_RET_DATA_TOO_LONG);
+						} else {
+							relpEngineCallOnGenericErr(pSess->pEngine,
+								"librelp", RELP_RET_DATA_TOO_LONG,
+								"frame too long, size %zu, configured max %zu -"
+								"frame will be truncated, but session continues",
+								pThis->lenData, pSess->maxDataSize);
+							alloc_size = pSess->maxDataSize;
+						}
 					}
 					/* we now can assign the buffer for our data */
 					if(pThis->lenData > 0) {
-						if((pThis->pData = malloc(pThis->lenData)) == NULL)
+						if((pThis->pData = malloc(alloc_size)) == NULL)
 							ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
 					}
 					pThis->rcvState = eRelpFrameRcvState_IN_DATA;
@@ -183,10 +199,15 @@ relpFrameProcessOctetRcvd(relpFrame_t **ppThis, relpOctet_t c, relpSess_t *pSess
 			break;
 		case eRelpFrameRcvState_IN_DATA:
 			if(pThis->iRcv < pThis->lenData) {
-				pThis->pData[pThis->iRcv] = c;
+				if(pThis->iRcv < pSess->maxDataSize) {
+					pThis->pData[pThis->iRcv] = c;
+				}
 				++pThis->iRcv;
 				break;
 			} else { /* end of data */
+				if(pThis->lenData > pSess->maxDataSize) {
+					pThis->lenData = pSess->maxDataSize;
+				}
 				pThis->rcvState = eRelpFrameRcvState_IN_TRAILER;
 				pThis->iRcv = 0;
 				/*FALLTHROUGH*/

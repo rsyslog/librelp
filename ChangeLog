@@ -1,5 +1,8 @@
 ----------------------------------------------------------------------
 Version 1.2.16 - 2018-??-??
+- API changes
+  * additions
+    . relpEngineSetOversizeMode
 - bugfix: potential memory leak
   This is very unlikely to occur in practice. Memory can be leaked
   when TLS initialization fails when the client tries to connect

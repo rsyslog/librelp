@@ -46,6 +46,7 @@ struct relpSrv_s {
 	int ai_family;
 	relpTcp_t *pTcp; /**< our tcp support object */
 	size_t maxDataSize;  /**< maximum size of a DATA element */
+	int oversizeMode;
 	void *pUsr; /**< user pointer (passed back in to callback) */
 	int bKeepAlive;			/* support keep-alive packets */
 	int iKeepAliveIntvl;

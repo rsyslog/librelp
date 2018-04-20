@@ -1,6 +1,6 @@
 /* The RELP (reliable event logging protocol) core protocol library.
  *
- * Copyright 2008-2016 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2018 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
@@ -32,6 +32,16 @@
  */
 #ifndef RELP_H_INCLUDED
 #define	RELP_H_INCLUDED
+
+#if defined(__GNUC__)
+	#define ATTR_NORETURN __attribute__ ((noreturn))
+	#define ATTR_UNUSED __attribute__((unused))
+	#define ATTR_NONNULL(...) __attribute__((nonnull(__VA_ARGS__)))
+#else
+	#define ATTR_NORETURN
+	#define ATTR_UNUSED
+	#define ATTR_NONNULL(...)
+#endif
 
 #include <pthread.h>
 #if HAVE_SYS_EPOLL_H
@@ -181,6 +191,9 @@ struct relpEngine_s {
 #endif
 #ifndef RELP_DFLT_WINDOW_SIZE
 #	define RELP_DFLT_WINDOW_SIZE 128 /* 128 unacked frames should be fairly good in most cases */
+#endif
+#ifndef RELP_DFLT_OVERSIZE_MODE
+#	define RELP_DFLT_OVERSIZE_MODE RELP_OVERSIZE_ABORT
 #endif
 
 /* set the default receive buffer size if none is externally configured
