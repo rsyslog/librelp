@@ -165,13 +165,14 @@ relpFrameProcessOctetRcvd(relpFrame_t **ppThis, relpOctet_t c, relpSess_t *pSess
 				}
 				/* ok, we have data, so now let's do the usual checks... */
 				if(c == ' ') { /* field terminator */
+					/* check if data length is up to limit before actually allocating buffer */
+					if(pThis->lenData > pSess->maxDataSize) {
+						ABORT_FINALIZE(RELP_RET_DATA_TOO_LONG);
+					}
 					/* we now can assign the buffer for our data */
 					if(pThis->lenData > 0) {
 						if((pThis->pData = malloc(pThis->lenData)) == NULL)
 							ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
-					}
-					if(pThis->lenData > pSess->maxDataSize) {
-						ABORT_FINALIZE(RELP_RET_DATA_TOO_LONG);
 					}
 					pThis->rcvState = eRelpFrameRcvState_IN_DATA;
 					pThis->iRcv = 0;
