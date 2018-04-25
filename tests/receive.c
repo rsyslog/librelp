@@ -144,6 +144,8 @@ int main(int argc, char *argv[]) {
 				oversizeMode = RELP_OVERSIZE_TRUNCATE;
 			} else if(strcmp("abort", optarg) == 0) {
 				oversizeMode = RELP_OVERSIZE_ABORT;
+			} else if(strcmp("accept", optarg) == 0) {
+				oversizeMode = RELP_OVERSIZE_ACCEPT;
 			} else {
 				printf("Wrong oversizeMode, default used.\n");
 			}
