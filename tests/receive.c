@@ -38,7 +38,7 @@ dbgprintf(char *fmt, ...)
 	va_start(ap, fmt);
 	vsnprintf(pszWriteBuf, sizeof(pszWriteBuf), fmt, ap);
 	va_end(ap);
-	fprintf(stderr, "receive.c: %s", pszWriteBuf);
+	fprintf(stderr, "receive.c: %s", pszWriteBuf); fflush(stderr);
 }
 
 static relpRetVal onSyslogRcv(unsigned char *pHostname __attribute__((unused)),

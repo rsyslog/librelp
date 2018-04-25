@@ -167,8 +167,18 @@ relpFrameProcessOctetRcvd(relpFrame_t **const ppThis,
 				}
 				/* ok, we have data, so now let's do the usual checks... */
 				if(c == ' ') { /* field terminator */
-					size_t alloc_size = pThis->lenData;
+					pSess->maxCharsStore = pThis->lenData;
 					if(pThis->lenData > pSess->maxDataSize) {
+						if(pSess->pSrv == NULL) {
+							/* we are a client */
+							relpEngineCallOnGenericErr(pSess->pEngine,
+								"librelp", RELP_RET_DATA_TOO_LONG,
+								"server response frame too long, size %zu, "
+								"configured max %zu -"
+								"session will be closed (aborted)",
+								pThis->lenData, pSess->maxDataSize);
+							ABORT_FINALIZE(RELP_RET_DATA_TOO_LONG);
+						}
 						if(pSess->pSrv->oversizeMode == RELP_OVERSIZE_ABORT) {
 							relpEngineCallOnGenericErr(pSess->pEngine,
 								"librelp", RELP_RET_DATA_TOO_LONG,
@@ -176,18 +186,33 @@ relpFrameProcessOctetRcvd(relpFrame_t **const ppThis,
 								"session will be closed (aborted)",
 								pThis->lenData, pSess->maxDataSize);
 							ABORT_FINALIZE(RELP_RET_DATA_TOO_LONG);
-						} else {
+						} else if(pSess->pSrv->oversizeMode == RELP_OVERSIZE_TRUNCATE) {
 							relpEngineCallOnGenericErr(pSess->pEngine,
 								"librelp", RELP_RET_DATA_TOO_LONG,
 								"frame too long, size %zu, configured max %zu -"
 								"frame will be truncated, but session continues",
 								pThis->lenData, pSess->maxDataSize);
-							alloc_size = pSess->maxDataSize;
+							pSess->maxCharsStore = pSess->maxDataSize;
+						} else if(pSess->pSrv->oversizeMode == RELP_OVERSIZE_ACCEPT) {
+							relpEngineCallOnGenericErr(pSess->pEngine,
+								"librelp", RELP_RET_DATA_TOO_LONG,
+								"frame too long, size %zu, configured max %zu -"
+								"frame will still be accepted and session "
+								"continues. Note that this can be casued by an "
+								"attack on your system.",
+								pThis->lenData, pSess->maxDataSize);
+						} else {
+							relpEngineCallOnGenericErr(pSess->pEngine,
+								"librelp", RELP_RET_ERR_INTERNAL,
+								"librelp error: invalid oversizeMode in %s:%d "
+								"mode currently is %d - session aborted",
+								__FILE__, __LINE__, pSess->pSrv->oversizeMode);
+							assert(0); /* ensure termination in debug mode! */
 						}
 					}
 					/* we now can assign the buffer for our data */
 					if(pThis->lenData > 0) {
-						if((pThis->pData = malloc(alloc_size)) == NULL)
+						if((pThis->pData = malloc(pSess->maxCharsStore)) == NULL)
 							ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
 					}
 					pThis->rcvState = eRelpFrameRcvState_IN_DATA;
@@ -199,14 +224,14 @@ relpFrameProcessOctetRcvd(relpFrame_t **const ppThis,
 			break;
 		case eRelpFrameRcvState_IN_DATA:
 			if(pThis->iRcv < pThis->lenData) {
-				if(pThis->iRcv < pSess->maxDataSize) {
+				if(pThis->iRcv < pSess->maxCharsStore) {
 					pThis->pData[pThis->iRcv] = c;
 				}
 				++pThis->iRcv;
 				break;
 			} else { /* end of data */
-				if(pThis->lenData > pSess->maxDataSize) {
-					pThis->lenData = pSess->maxDataSize;
+				if(pSess->maxCharsStore < pThis->lenData) {
+					pThis->lenData = pSess->maxCharsStore;
 				}
 				pThis->rcvState = eRelpFrameRcvState_IN_TRAILER;
 				pThis->iRcv = 0;
