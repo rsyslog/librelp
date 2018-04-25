@@ -1,6 +1,6 @@
 /* This module implements the relp sess object.
  *
- * Copyright 2008-2015 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2018 by Rainer Gerhards and Adiscon GmbH.
  *
  * To clarify on session handling: There is no upper limit of the number
  * of sessions, except for system ressources. Some left-over comment
@@ -234,7 +234,7 @@ relpSessRcvData(relpSess_t *pThis)
 	CHKRet(relpTcpRcv(pThis->pTcp, rcvBuf, &lenBuf));
 
 	if(lenBuf == 0) {
-		pThis->pEngine->dbgprint("server closed relp session %p, session broken\n", pThis);
+		pThis->pEngine->dbgprint("server closed relp session %p, session broken\n", (void*)pThis);
 		/* even though we had a "normal" close, it is unexpected at this
 		 * stage. Consequently, we consider the session to be broken, because
 		 * the recovery action is the same no matter how it is broken.
@@ -243,7 +243,8 @@ relpSessRcvData(relpSess_t *pThis)
 		ABORT_FINALIZE(RELP_RET_SESSION_BROKEN);
 	} else if ((int) lenBuf == -1) { /* I don't know why we need to cast to int, but we must... */
 		if(errno != EAGAIN) {
-			pThis->pEngine->dbgprint("errno %d during relp session %p, session broken\n", errno,pThis);
+			pThis->pEngine->dbgprint("errno %d during relp session %p, session broken\n",
+				errno, (void*)pThis);
 			pThis->sessState = eRelpSessState_BROKEN;
 			ABORT_FINALIZE(RELP_RET_SESSION_BROKEN);
 		}
@@ -282,7 +283,7 @@ relpSessSendResponse(relpSess_t *pThis, relpTxnr_t txnr, unsigned char *pData, s
 finalize_it:
 	if(iRet != RELP_RET_OK) {
 		if(iRet == RELP_RET_IO_ERR) {
-			pThis->pEngine->dbgprint("relp session %p is broken, io error\n", pThis);
+			pThis->pEngine->dbgprint("relp session %p is broken, io error\n", (void*)pThis);
 			pThis->sessState = eRelpSessState_BROKEN;
 			}
 
@@ -404,7 +405,7 @@ relpSessAddUnacked(relpSess_t *pThis, relpSendbuf_t *pSendbuf)
 						 pThis->lenUnackedLst, pThis->sizeWindow);
 	}
 	pThis->pEngine->dbgprint("ADD sess %p unacked %d, sessState %d\n",
-		pThis, pThis->lenUnackedLst, pThis->sessState);
+		(void*)pThis, pThis->lenUnackedLst, pThis->sessState);
 
 finalize_it:
 	LEAVE_RELPFUNC;
@@ -438,7 +439,7 @@ relpSessDelUnacked(relpSess_t *pThis, relpSessUnacked_t *pUnackedLstEntry)
 	free(pUnackedLstEntry);
 
 	pThis->pEngine->dbgprint("DEL sess %p unacked %d, sessState %d\n",
-		pThis, pThis->lenUnackedLst, pThis->sessState);
+		(void*)pThis, pThis->lenUnackedLst, pThis->sessState);
 	LEAVE_RELPFUNC;
 }
 
@@ -591,7 +592,7 @@ relpSessRawSendCommand(relpSess_t *pThis, unsigned char *pCmd, size_t lenCmd,
 	iRet = relpSendbufSendAll(pSendbuf, pThis, 1);
 
 	if(iRet == RELP_RET_IO_ERR) {
-		pThis->pEngine->dbgprint("relp session %p flagged as broken, IO error\n", pThis);
+		pThis->pEngine->dbgprint("relp session %p flagged as broken, IO error\n", (void*)pThis);
 		pThis->sessState = eRelpSessState_BROKEN;
 		ABORT_FINALIZE(RELP_RET_SESSION_BROKEN);
 	}
@@ -664,7 +665,7 @@ relpSessTryReestablish(relpSess_t *pThis)
 	pUnackedEtry = pThis->pUnackedLstRoot;
 	if(pUnackedEtry != NULL)
 		pThis->pEngine->dbgprint("relp session %p reestablished, now resending %d unacked frames\n",
-					  pThis, pThis->lenUnackedLst);
+					  (void*)pThis, pThis->lenUnackedLst);
 	while(pUnackedEtry != NULL) {
 		pThis->pEngine->dbgprint("resending frame '%s'\n", pUnackedEtry->pSendbuf->pData + 9
 								   - pUnackedEtry->pSendbuf->lenTxnr);
