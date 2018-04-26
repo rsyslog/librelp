@@ -8,6 +8,10 @@ Version 1.2.16 - 2018-??-??
     Also, in case of session abort a descriptive error message is
     emitted. This did not happen previously and caused confusion.
     closes https://github.com/rsyslog/librelp/issues/81
+  * add new API: relpSrvSetLstnAddr()
+    It permits to set the listen address inside the relp server.
+    If not called, the server will bind to all interfaces. 
+    Thanks to github user perlei for contributing it.
 - bugfix: potential memory leak
   This is very unlikely to occur in practice. Memory can be leaked
   when TLS initialization fails when the client tries to connect
