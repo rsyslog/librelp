@@ -1409,9 +1409,11 @@ finalize_it:
 /* initialize the tcp socket for a listner
  * pLstnPort is a pointer to a port name. NULL is not permitted.
  * gerhards, 2008-03-17
+ * pLstnAddr is a pointer to a bind address. NULL is permitted.
+ * perlei, 2018-04-19
  */
 relpRetVal
-relpTcpLstnInit(relpTcp_t *const pThis, unsigned char *pLstnPort, const int ai_family)
+relpTcpLstnInit(relpTcp_t *pThis, unsigned char *pLstnPort, unsigned char *pLstnAddr, int ai_family)
 {
 	struct addrinfo hints, *res = NULL, *r;
 	int error, maxs, *s, on = 1;
@@ -1431,7 +1433,7 @@ relpTcpLstnInit(relpTcp_t *const pThis, unsigned char *pLstnPort, const int ai_f
 	hints.ai_family = ai_family;
 	hints.ai_socktype = SOCK_STREAM;
 
-	error = getaddrinfo(NULL, (char*) pLstnPt, &hints, &res);
+	error = getaddrinfo((char*)pLstnAddr, (char*) pLstnPt, &hints, &res);
 	if(error) {
 		pThis->pEngine->dbgprint("error %d querying port '%s'\n", error, pLstnPt);
 		ABORT_FINALIZE(RELP_RET_INVALID_PORT);

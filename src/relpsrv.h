@@ -43,6 +43,7 @@ struct relpSrv_s {
 	BEGIN_RELP_OBJ;
 	relpEngine_t *pEngine;
 	unsigned char *pLstnPort;
+	unsigned char *pLstnAddr;
 	int ai_family;
 	relpTcp_t *pTcp; /**< our tcp support object */
 	size_t maxDataSize;  /**< maximum size of a DATA element */
