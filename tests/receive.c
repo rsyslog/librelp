@@ -38,7 +38,7 @@ dbgprintf(char *fmt, ...)
 	va_start(ap, fmt);
 	vsnprintf(pszWriteBuf, sizeof(pszWriteBuf), fmt, ap);
 	va_end(ap);
-	fprintf(stderr, "receive.c: %s", pszWriteBuf);
+	fprintf(stderr, "receive.c: %s", pszWriteBuf); fflush(stderr);
 }
 
 static relpRetVal onSyslogRcv(unsigned char *pHostname __attribute__((unused)),
@@ -144,6 +144,8 @@ int main(int argc, char *argv[]) {
 				oversizeMode = RELP_OVERSIZE_TRUNCATE;
 			} else if(strcmp("abort", optarg) == 0) {
 				oversizeMode = RELP_OVERSIZE_ABORT;
+			} else if(strcmp("accept", optarg) == 0) {
+				oversizeMode = RELP_OVERSIZE_ACCEPT;
 			} else {
 				printf("Wrong oversizeMode, default used.\n");
 			}

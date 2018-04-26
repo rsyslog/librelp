@@ -160,6 +160,7 @@ typedef enum relpCmdEnaState_e relpCmdEnaState_t;
 /* relp frame oversize modes */
 #define RELP_OVERSIZE_ABORT 0				/**< abort connection on oversize frame */
 #define RELP_OVERSIZE_TRUNCATE 1			/**< truncate oversize frame, keep connection active */
+#define RELP_OVERSIZE_ACCEPT 2				/**< accept oversize frame irrespective of risk */
 
 /* some macros to work with librelp error codes */
 #define CHKRet(code) if((iRet = code) != RELP_RET_OK) goto finalize_it

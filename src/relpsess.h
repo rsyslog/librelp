@@ -76,6 +76,7 @@ struct relpSess_s {
 	struct relpFrame_s *pCurrRcvFrame; /**< the current receive frame (a buffer) */
 	relpTxnr_t txnr;	/**< next txnr expected when receiving or to be used when sending */
 	size_t maxDataSize;  /**< maximum size of a DATA element */
+	size_t maxCharsStore;  /**< maximum number of message chars to store - support for truncation mode */
 	pthread_mutex_t mutSend; /**< mutex for send operation (make sure txnr is correct) */
 	relpSrv_t *pSrv;	   /**< a pointer to our server object, if NULL, we belong to a client */
 	relpClt_t *pClt;	   /**< ptr to our client; only valid if pSrv == NULL */

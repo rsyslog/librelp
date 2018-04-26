@@ -22,6 +22,7 @@ TESTS=  basic.sh \
 	tls-missing-param-receiver.sh \
 	long-msg.sh \
 	oversize-msg-abort-errmsg.sh \
+	oversize-msg-accept-errmsg.sh \
 	truncate-oversize-msg.sh
 
 if HAVE_VALGRIND

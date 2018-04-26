@@ -171,7 +171,8 @@ relpSrvSetOversizeMode(relpSrv_t *const pThis, const int oversizeMode)
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Srv);
 	if(   oversizeMode != RELP_OVERSIZE_ABORT
-	   && oversizeMode != RELP_OVERSIZE_TRUNCATE) {
+	   && oversizeMode != RELP_OVERSIZE_TRUNCATE
+	   && oversizeMode != RELP_OVERSIZE_ACCEPT) {
 		ABORT_FINALIZE(RELP_RET_PARAM_ERROR);
 	}
 	pThis->oversizeMode = oversizeMode;
