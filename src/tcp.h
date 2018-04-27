@@ -140,7 +140,7 @@ relpTcpRtryOp(relpTcp_t *pThis)
 relpRetVal relpTcpConstruct(relpTcp_t **ppThis, relpEngine_t *pEngine, int connType, void *pParent);
 relpRetVal relpTcpDestruct(relpTcp_t **ppThis);
 relpRetVal relpTcpAbortDestruct(relpTcp_t **ppThis);
-relpRetVal relpTcpLstnInit(relpTcp_t *pThis, unsigned char *pLstnPort, int ai_family);
+relpRetVal relpTcpLstnInit(relpTcp_t *pThis, unsigned char *pLstnPort, unsigned char *pLstnAddr, int ai_family);
 relpRetVal relpTcpAcceptConnReq(relpTcp_t **ppThis, int sock, relpSrv_t *pSrv);
 relpRetVal relpTcpRcv(relpTcp_t *pThis, relpOctet_t *pRcvBuf, ssize_t *pLenBuf);
 relpRetVal relpTcpSend(relpTcp_t *pThis, relpOctet_t *pBuf, ssize_t *pLenBuf);

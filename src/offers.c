@@ -1,6 +1,6 @@
 /* Support functionality for sending and receiving offers.
  *
- * Copyright 2008 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2018 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
@@ -289,10 +289,11 @@ finalize_it:
  * rgerhards, 2008-03-24
  */
 relpRetVal
-relpOffersToString(relpOffers_t *pThis, unsigned char *pszHdr, size_t lenHdr,
+relpOffersToString(relpOffers_t *pThis, unsigned char *pszHdr, const size_t lenHdr,
 		   unsigned char **ppszOffers, size_t *plenStr)
 {
 	unsigned char *pszOffers = NULL;
+	unsigned char *pszOffersNew;
 	size_t iStr;
 	size_t currSize;
 	size_t iAlloc;
@@ -326,20 +327,22 @@ relpOffersToString(relpOffers_t *pThis, unsigned char *pszHdr, size_t lenHdr,
 	for(pOffer = pThis->pRoot ; pOffer != NULL ; pOffer = pOffer->pNext) {
 		/* we use -3 in the realloc-guard ifs so that we have space for constants following! */
 		if(currSize - iStr - 3 < strlen((char*)pOffer->szName)) {
-			if((pszOffers = realloc(pszOffers, currSize + iAlloc)) == NULL) {
+			if((pszOffersNew = realloc(pszOffers, currSize + iAlloc)) == NULL) {
 				ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
-				currSize += iAlloc;
 			}
+			pszOffers = pszOffersNew;
+			currSize += iAlloc;
 		}
 		strcpy((char*)pszOffers+iStr, (char*)pOffer->szName);
 		iStr += strlen((char*)pOffer->szName);
 		pszOffers[iStr++] = '=';
 		for(pOfferVal = pOffer->pValueRoot ; pOfferVal != NULL ; pOfferVal = pOfferVal->pNext) {
 			if(currSize - iStr - 3 < strlen((char*)pOfferVal->szVal)) {
-				if((pszOffers = realloc(pszOffers, currSize + iAlloc)) == NULL) {
+				if((pszOffersNew = realloc(pszOffers, currSize + iAlloc)) == NULL) {
 					ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
-					currSize += iAlloc;
 				}
+				pszOffers = pszOffersNew;
+				currSize += iAlloc;
 			}
 			strcpy((char*)pszOffers+iStr, (char*)pOfferVal->szVal);
 			iStr += strlen((char*)pOfferVal->szVal);
@@ -355,8 +358,7 @@ relpOffersToString(relpOffers_t *pThis, unsigned char *pszHdr, size_t lenHdr,
 
 finalize_it:
 	if(iRet != RELP_RET_OK) {
-		if(pszOffers != NULL)
-			free(pszOffers);
+		free(pszOffers);
 	}
 
 	LEAVE_RELPFUNC;

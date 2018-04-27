@@ -1,10 +1,21 @@
-# Uncomment for debugging
-DEBUG = -g
-PTHREADS_CFLAGS = -pthread
+if OS_SOLARIS
+then
+	PTHREADS_CFLAGS = -pthread
+else
+if OS_AIX
+	PTHREADS_CFLAGS = -qthreaded
+else
+	PTHREADS_CFLAGS = -mt
+endif
+endif
 
+DEBUG = -g
+# Uncomment for debugging
 #CFLAGS += $(DEBUG)
 
 lib_LTLIBRARIES = librelp.la
+
+EXTRA_DIST = librelp.h
 
 librelp_la_SOURCES = \
 	librelp.h \
@@ -33,8 +44,10 @@ librelp_la_SOURCES = \
 	cserverclose.c \
 	dbllinklist.h \
 	cmdif.h
-librelp_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(GNUTLS_CFLAGS)
+librelp_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(GNUTLS_CFLAGS) $(WARN_CFLAGS)
 librelp_la_LIBADD = $(rt_libs) $(GNUTLS_LIBS)
-librelp_la_LDFLAGS = -version-info 2:0:2
+# info on version-info:
+# http://www.gnu.org/software/libtool/manual/html_node/Updating-version-info.html
+librelp_la_LDFLAGS = -version-info 3:0:3
 
 include_HEADERS = librelp.h

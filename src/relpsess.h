@@ -75,7 +75,8 @@ struct relpSess_s {
 	relpTcp_t *pTcp;	/**< our sockt to the remote peer */
 	struct relpFrame_s *pCurrRcvFrame; /**< the current receive frame (a buffer) */
 	relpTxnr_t txnr;	/**< next txnr expected when receiving or to be used when sending */
-	size_t maxDataSize;  /**< maximum size of a DATA element (TODO: set after handshake on connect) */
+	size_t maxDataSize;  /**< maximum size of a DATA element */
+	size_t maxCharsStore;  /**< maximum number of message chars to store - support for truncation mode */
 	pthread_mutex_t mutSend; /**< mutex for send operation (make sure txnr is correct) */
 	relpSrv_t *pSrv;	   /**< a pointer to our server object, if NULL, we belong to a client */
 	relpClt_t *pClt;	   /**< ptr to our client; only valid if pSrv == NULL */
@@ -161,5 +162,6 @@ relpRetVal relpSessSetPermittedPeers(relpSess_t *pThis, relpPermittedPeers_t *pP
 relpRetVal relpSessSetUsrPtr(relpSess_t *pThis, void *pUsr);
 relpRetVal relpSessSendSyslog(relpSess_t *pThis, unsigned char *pMsg, size_t lenMsg);
 relpRetVal relpSessSetEnableCmd(relpSess_t *pThis, unsigned char *pszCmd, relpCmdEnaState_t stateCmd);
+relpRetVal relpSessSetMaxDataSize(relpSess_t *pThis, size_t maxSize);
 
 #endif /* #ifndef RELPSESS_H_INCLUDED */

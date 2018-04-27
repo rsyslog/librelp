@@ -470,7 +470,7 @@ relpEngineSetOnGenericErr(relpEngine_t *pThis, void (*pCB)(char *objinfo, char*e
 relpRetVal
 relpEngineAddListner2(relpEngine_t *pThis, unsigned char *pLstnPort, void *pUsr)
 {
-	relpSrv_t *pSrv;
+	relpSrv_t *pSrv = NULL;
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Engine);
 	CHKRet(relpEngineListnerConstruct(pThis, &pSrv));
@@ -478,6 +478,11 @@ relpEngineAddListner2(relpEngine_t *pThis, unsigned char *pLstnPort, void *pUsr)
 	CHKRet(relpSrvSetLstnPort(pSrv, pLstnPort));
 	CHKRet(relpEngineListnerConstructFinalize(pThis, pSrv));
 finalize_it:
+	if(iRet != RELP_RET_OK) {
+		if(pSrv != NULL) {
+			relpSrvDestruct(&pSrv);
+		}
+	}
 	LEAVE_RELPFUNC;
 }
 /* a dummy for callbacks not set by the caller */
@@ -507,13 +512,18 @@ relpEngineSetSyslogRcv(relpEngine_t *pThis, relpRetVal (*pCB)(unsigned char*, un
 relpRetVal
 relpEngineAddListner(relpEngine_t *pThis, unsigned char *pLstnPort)
 {
-	relpSrv_t *pSrv;
+	relpSrv_t *pSrv = NULL;
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Engine);
 	CHKRet(relpEngineListnerConstruct(pThis, &pSrv));
 	CHKRet(relpSrvSetLstnPort(pSrv, pLstnPort));
 	CHKRet(relpEngineListnerConstructFinalize(pThis, pSrv));
 finalize_it:
+	if(iRet != RELP_RET_OK) {
+		if(pSrv != NULL) {
+			relpSrvDestruct(&pSrv);
+		}
+	}
 	LEAVE_RELPFUNC;
 }
 
@@ -646,7 +656,8 @@ engineEventLoopInit(relpEngine_t __attribute__((unused)) *pThis)
 	 */
 	for(pSrvEtry = pThis->pSrvLstRoot ; pSrvEtry != NULL ; pSrvEtry = pSrvEtry->pNext) {
 		nLstn = relpSrvGetNumLstnSocks(pSrvEtry->pSrv);
-		CHKmalloc(pSrvEtry->epevts = malloc(sizeof(epolld_t) * nLstn));
+		const size_t allocsize = sizeof(epolld_t) * nLstn;
+		CHKmalloc(pSrvEtry->epevts = (epolld_t **)malloc(allocsize));
 		for(i = 0 ; i < nLstn ; ++i) {
 			sock = relpSrvGetLstnSock(pSrvEtry->pSrv, i+1);
 			addToEpollSet(pThis, epolld_lstn, pSrvEtry->pSrv, sock, &(pSrvEtry->epevts[i]));
@@ -897,13 +908,14 @@ engineEventLoopRun(relpEngine_t *pThis)
 #						ifdef ENABLE_TLS
 							localRet = relpTcpRtryHandshake(pSessEtry->pSess->pTcp);
 							if(localRet != RELP_RET_OK) {
-								pThis->dbgprint("relp session %d handshake iRet %d, tearing it down\n",
+								pThis->dbgprint("relp session %d handshake "
+										"iRet %d, tearing it down\n",
 										sock, localRet);
 								relpEngineDelSess(pThis, pSessEtry);
 							}
 #						else
-							pThis->dbgprint("librelp error: handshake retry requested in "
-									"non-TLS mode");
+							pThis->dbgprint("librelp error: handshake retry "
+									"requested in non-TLS mode");
 
 #						endif /* #ifdef ENABLE_TLS */
 					}

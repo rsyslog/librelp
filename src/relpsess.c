@@ -1,6 +1,6 @@
 /* This module implements the relp sess object.
  *
- * Copyright 2008-2015 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2018 by Rainer Gerhards and Adiscon GmbH.
  *
  * To clarify on session handling: There is no upper limit of the number
  * of sessions, except for system ressources. Some left-over comment
@@ -164,6 +164,9 @@ relpSessDestruct(relpSess_t **ppThis)
 		free(pUnackedToDel);
 	}
 
+	if(pThis->pCurrRcvFrame != NULL)
+		relpFrameDestruct(&pThis->pCurrRcvFrame);
+
 	free(pThis->srvPort);
 	free(pThis->srvAddr);
 	free(pThis->clientIP);
@@ -188,7 +191,7 @@ relpSessDestruct(relpSess_t **ppThis)
 relpRetVal
 relpSessAcceptAndConstruct(relpSess_t **ppThis, relpSrv_t *pSrv, int sock)
 {
-	relpSess_t *pThis;
+	relpSess_t *pThis = NULL;
 
 	ENTER_RELPFUNC;
 	assert(ppThis != NULL);
@@ -197,6 +200,7 @@ relpSessAcceptAndConstruct(relpSess_t **ppThis, relpSrv_t *pSrv, int sock)
 
 	CHKRet(relpSessConstruct(&pThis, pSrv->pEngine, RELP_SRV_CONN, pSrv));
 	CHKRet(relpTcpAcceptConnReq(&pThis->pTcp, sock, pSrv));
+	CHKRet(relpSessSetMaxDataSize(pThis, pSrv->maxDataSize));
 
 	*ppThis = pThis;
 
@@ -230,7 +234,7 @@ relpSessRcvData(relpSess_t *pThis)
 	CHKRet(relpTcpRcv(pThis->pTcp, rcvBuf, &lenBuf));
 
 	if(lenBuf == 0) {
-		pThis->pEngine->dbgprint("server closed relp session %p, session broken\n", pThis);
+		pThis->pEngine->dbgprint("server closed relp session %p, session broken\n", (void*)pThis);
 		/* even though we had a "normal" close, it is unexpected at this
 		 * stage. Consequently, we consider the session to be broken, because
 		 * the recovery action is the same no matter how it is broken.
@@ -239,7 +243,8 @@ relpSessRcvData(relpSess_t *pThis)
 		ABORT_FINALIZE(RELP_RET_SESSION_BROKEN);
 	} else if ((int) lenBuf == -1) { /* I don't know why we need to cast to int, but we must... */
 		if(errno != EAGAIN) {
-			pThis->pEngine->dbgprint("errno %d during relp session %p, session broken\n", errno,pThis);
+			pThis->pEngine->dbgprint("errno %d during relp session %p, session broken\n",
+				errno, (void*)pThis);
 			pThis->sessState = eRelpSessState_BROKEN;
 			ABORT_FINALIZE(RELP_RET_SESSION_BROKEN);
 		}
@@ -278,7 +283,7 @@ relpSessSendResponse(relpSess_t *pThis, relpTxnr_t txnr, unsigned char *pData, s
 finalize_it:
 	if(iRet != RELP_RET_OK) {
 		if(iRet == RELP_RET_IO_ERR) {
-			pThis->pEngine->dbgprint("relp session %p is broken, io error\n", pThis);
+			pThis->pEngine->dbgprint("relp session %p is broken, io error\n", (void*)pThis);
 			pThis->sessState = eRelpSessState_BROKEN;
 			}
 
@@ -399,7 +404,8 @@ relpSessAddUnacked(relpSess_t *pThis, relpSendbuf_t *pSendbuf)
 			pThis->pEngine->dbgprint("Warning: exceeding window size, max %d, curr %d\n",
 						 pThis->lenUnackedLst, pThis->sizeWindow);
 	}
-	pThis->pEngine->dbgprint("ADD sess %p unacked %d, sessState %d\n", pThis, pThis->lenUnackedLst, pThis->sessState);
+	pThis->pEngine->dbgprint("ADD sess %p unacked %d, sessState %d\n",
+		(void*)pThis, pThis->lenUnackedLst, pThis->sessState);
 
 finalize_it:
 	LEAVE_RELPFUNC;
@@ -432,7 +438,8 @@ relpSessDelUnacked(relpSess_t *pThis, relpSessUnacked_t *pUnackedLstEntry)
 
 	free(pUnackedLstEntry);
 
-	pThis->pEngine->dbgprint("DEL sess %p unacked %d, sessState %d\n", pThis, pThis->lenUnackedLst, pThis->sessState);
+	pThis->pEngine->dbgprint("DEL sess %p unacked %d, sessState %d\n",
+		(void*)pThis, pThis->lenUnackedLst, pThis->sessState);
 	LEAVE_RELPFUNC;
 }
 
@@ -493,11 +500,6 @@ relpSessWaitState(relpSess_t *const pThis, const relpSessState_t stateExpected, 
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
 
-	/* are we already ready? */
-	if(pThis->sessState == stateExpected || pThis->sessState == eRelpSessState_BROKEN) {
-		FINALIZE;
-	}
-
 	/* first read any outstanding data and process the packets. Note that this
 	 * call DOES NOT block.
 	 */
@@ -505,7 +507,7 @@ relpSessWaitState(relpSess_t *const pThis, const relpSessState_t stateExpected, 
 	if(localRet != RELP_RET_OK && localRet != RELP_RET_SESSION_BROKEN)
 		ABORT_FINALIZE(localRet);
 
-	/* re-check if we are already in the desired state. If so, we can immediately
+	/* check if we are already in the desired state. If so, we can immediately
 	 * return. That saves us doing a costly clock call to set the timeout. As a
 	 * side-effect, the timeout is actually applied without the time needed for
 	 * above reception. I think is is OK, even a bit logical ;)
@@ -590,7 +592,7 @@ relpSessRawSendCommand(relpSess_t *pThis, unsigned char *pCmd, size_t lenCmd,
 	iRet = relpSendbufSendAll(pSendbuf, pThis, 1);
 
 	if(iRet == RELP_RET_IO_ERR) {
-		pThis->pEngine->dbgprint("relp session %p flagged as broken, IO error\n", pThis);
+		pThis->pEngine->dbgprint("relp session %p flagged as broken, IO error\n", (void*)pThis);
 		pThis->sessState = eRelpSessState_BROKEN;
 		ABORT_FINALIZE(RELP_RET_SESSION_BROKEN);
 	}
@@ -650,7 +652,7 @@ relpSessTryReestablish(relpSess_t *pThis)
 
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
-	assert(pThis->sessState = eRelpSessState_BROKEN);
+	assert(pThis->sessState == eRelpSessState_BROKEN);
 
 	CHKRet(relpTcpAbortDestruct(&pThis->pTcp));
 	CHKRet(relpSessConnect(pThis, pThis->protFamily, pThis->srvPort, pThis->srvAddr));
@@ -663,7 +665,7 @@ relpSessTryReestablish(relpSess_t *pThis)
 	pUnackedEtry = pThis->pUnackedLstRoot;
 	if(pUnackedEtry != NULL)
 		pThis->pEngine->dbgprint("relp session %p reestablished, now resending %d unacked frames\n",
-					  pThis, pThis->lenUnackedLst);
+					  (void*)pThis, pThis->lenUnackedLst);
 	while(pUnackedEtry != NULL) {
 		pThis->pEngine->dbgprint("resending frame '%s'\n", pUnackedEtry->pSendbuf->pData + 9
 								   - pUnackedEtry->pSendbuf->lenTxnr);
@@ -992,6 +994,13 @@ relpSessSetUsrPtr(relpSess_t *pThis, void *pUsr)
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
 	pThis->pUsr = pUsr;
+	LEAVE_RELPFUNC;
+}
+
+relpRetVal relpSessSetMaxDataSize(relpSess_t *pThis, size_t maxSize) {
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Sess);
+	pThis->maxDataSize = maxSize;
 	LEAVE_RELPFUNC;
 }
 

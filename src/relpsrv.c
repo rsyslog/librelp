@@ -1,6 +1,6 @@
 /* The relp server.
  *
- * Copyright 2008-2016 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2018 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
@@ -69,6 +69,8 @@ relpSrvConstruct(relpSrv_t **ppThis, relpEngine_t *pEngine)
 	pThis->ownCertFile = NULL;
 	pThis->privKey = NULL;
 	pThis->permittedPeers.nmemb = 0;
+	pThis->maxDataSize = RELP_DFLT_MAX_DATA_SIZE;
+	pThis->oversizeMode = RELP_DFLT_OVERSIZE_MODE;
 
 	*ppThis = pThis;
 
@@ -95,6 +97,8 @@ relpSrvDestruct(relpSrv_t **ppThis)
 
 	if(pThis->pLstnPort != NULL)
 		free(pThis->pLstnPort);
+	if(pThis->pLstnAddr != NULL)
+		free(pThis->pLstnAddr);
 
 	free(pThis->pristring);
 	free(pThis->caCertFile);
@@ -156,6 +160,27 @@ relpSrvSetUsrPtr(relpSrv_t *pThis, void *pUsr)
 	LEAVE_RELPFUNC;
 }
 
+relpRetVal relpSrvSetMaxDataSize(relpSrv_t *pThis, size_t maxSize) {
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Srv);
+	pThis->maxDataSize = maxSize;
+	LEAVE_RELPFUNC;
+}
+
+relpRetVal ATTR_NONNULL()
+relpSrvSetOversizeMode(relpSrv_t *const pThis, const int oversizeMode)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Srv);
+	if(   oversizeMode != RELP_OVERSIZE_ABORT
+	   && oversizeMode != RELP_OVERSIZE_TRUNCATE
+	   && oversizeMode != RELP_OVERSIZE_ACCEPT) {
+		ABORT_FINALIZE(RELP_RET_PARAM_ERROR);
+	}
+	pThis->oversizeMode = oversizeMode;
+finalize_it:
+	LEAVE_RELPFUNC;
+}
 
 /* set the listen port inside the relp server. If NULL is provided, the default port
  * is used. The provided string is always copied, it is the caller's duty to
@@ -175,6 +200,31 @@ relpSrvSetLstnPort(relpSrv_t *pThis, unsigned char *pLstnPort)
 
 	if(pLstnPort != NULL) {
 		if((pThis->pLstnPort = (unsigned char*) strdup((char*)pLstnPort)) == NULL)
+			ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+	}
+
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+/* set the address inside the relp server. If NULL is provided, the server
+ * will bind to all interfaces. The provided string is always copied, it is the caller's duty to
+ * free the passed-in string.
+ * perlei, 2018-04-19
+ */
+relpRetVal
+relpSrvSetLstnAddr(relpSrv_t *pThis, unsigned char *pLstnAddr)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Srv);
+
+	/* first free old value */
+	if(pThis->pLstnAddr != NULL)
+		free(pThis->pLstnAddr);
+	pThis->pLstnAddr = NULL;
+
+	if(pLstnAddr != NULL) {
+		if((pThis->pLstnAddr = (unsigned char*) strdup((char*)pLstnAddr)) == NULL)
 			ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
 	}
 
@@ -357,13 +407,15 @@ relpSrvRun(relpSrv_t *pThis)
 		CHKRet(relpTcpSetPermittedPeers(pTcp, &(pThis->permittedPeers)));
 	}
 	CHKRet(relpTcpLstnInit(pTcp, (pThis->pLstnPort == NULL) ?
-		(unsigned char*) RELP_DFLT_PORT : pThis->pLstnPort, pThis->ai_family));
+		(unsigned char*) RELP_DFLT_PORT : pThis->pLstnPort,
+		(unsigned char*) pThis->pLstnAddr,
+		pThis->ai_family));
 
 	pThis->pTcp = pTcp;
 
 finalize_it:
 	if(iRet != RELP_RET_OK) {
-		if(pThis->pTcp != NULL)
+		if(pTcp != NULL)
 			relpTcpDestruct(&pTcp);
 	}
 

@@ -1,6 +1,76 @@
 ----------------------------------------------------------------------
-Version 1.2.13 - 2016-??-??
+Version 1.2.16 - 2018-??-??
+- API changes
+  * add new API: relpSrvSetOversizeMode()
+    This permits to tell librelp how to handle oversize messages.
+    Traditionally (and now default), this aborts the session. We now
+    added an option to truncate the message instead.
+    Also, in case of session abort a descriptive error message is
+    emitted. This did not happen previously and caused confusion.
+    closes https://github.com/rsyslog/librelp/issues/81
+  * add new API: relpSrvSetLstnAddr()
+    It permits to set the listen address inside the relp server.
+    If not called, the server will bind to all interfaces. 
+    Thanks to github user perlei for contributing it.
+- bugfix: potential memory leak
+  This is very unlikely to occur in practice. Memory can be leaked
+  when TLS initialization fails when the client tries to connect
+  to the server. However, if this actually happens, it can happen
+  frequently and so accumulate to a large leak.
+  No report of such occurence from practice.
+  Detected by Coverity Scan, CID 266008.
+- bugfix: memory leak on protocol error
+  Receiving relp frames are not correctly deallocated while handling
+  protocol errors resulting in memory leak of dirty pages.
+  Thanks to github user gleentea for the patch.
+  see also https://github.com/rsyslog/librelp/issues/59
+  closes https://github.com/rsyslog/librelp/issues/60
+- fixed a couple of minor issues:
+  * fix memory leak when relp frame construction fails
+    detected by clang static analyzer
+  * removed unnecessary code
+    detected by clang static analyzer
+  * fix memory leak
+    This leaks occurs if the process is already totally out of memory,
+    a situation that is very rare and will also cuase other troubles.
+    So the practical relevance of this patch looks rather slim.
+    Detected by clang static analyzer.
+  * fix memory leak on relpSrvRun() error
+    this is kind of cosmetic, because it can only occur when the
+    run fails, which usually should lead to termination of the
+    calling application
+    deteced by Coverity Scan, CID 266016
+  * fix memory leak on relp listener construction error
+    detected by Coverity Scan, CID 266014, 266015
+- CI
+  * added native testbench (formerly used rsyslog for testing)
+  * added additional compile tests
+----------------------------------------------------------------------
+Version 1.2.15 - 2018-03-21
+- made build on Solaris again
+- made build on AIX
+  Thanks to Philippe Duveau for providing the patches
+- bugfix: invalid handling of snprintf() return code
+- bugfix: invalid assert predicate
+  an assert could change status variable due to typo, so in debug
+  mode processing could fail.
+  thanks to github user KatMisato for alerting us
+  fixes https://github.com/rsyslog/librelp/issues/66
+- some code cleanup
+- bugfix: error message on open error was truncated
+  The "connection already open" error message when trying to open
+  an already open connection was truncated due to too-small size
+  specified.
+  Thanks to rsyslog forum user AlanR for the problem report.
+----------------------------------------------------------------------
+Version 1.2.14 - 2017-05-29
+- API extension: add relpSrvSetMaxDataSize()
+  Thanks to Nathan Brown for the patch.
+----------------------------------------------------------------------
+Version 1.2.13 - 2017-02-20
 - make build under BSD
+- bugfix: duplicated lines after server reconnect
+  Thanks to Hervé for the patch.
 ----------------------------------------------------------------------
 Version 1.2.12 - 2016-07-07
 - API enhancement: permit to set connection timeout

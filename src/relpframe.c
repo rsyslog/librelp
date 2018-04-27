@@ -1,6 +1,6 @@
 /* This module implements the relp frame object.
  *
- * Copyright 2008 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2018 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
@@ -93,11 +93,13 @@ relpFrameDestruct(relpFrame_t **ppThis)
  * caller can pass in a NULL pointer.
  * rgerhards, 2008-03-16
  */
-relpRetVal
-relpFrameProcessOctetRcvd(relpFrame_t **ppThis, relpOctet_t c, relpSess_t *pSess)
+relpRetVal ATTR_NONNULL()
+relpFrameProcessOctetRcvd(relpFrame_t **const ppThis,
+	const relpOctet_t c,
+	relpSess_t *const pSess)
 {
 	relpFrame_t *pThis;
-
+	int frame_alloced = 0;
 	ENTER_RELPFUNC;
 	assert(ppThis != NULL);
 	pThis = *ppThis;
@@ -110,6 +112,7 @@ relpFrameProcessOctetRcvd(relpFrame_t **ppThis, relpOctet_t c, relpSess_t *pSess
 	if(pThis == NULL) {
 		CHKRet(relpFrameConstruct(&pThis, pSess->pEngine));
 		pThis->rcvState = eRelpFrameRcvState_BEGIN_FRAME;
+		frame_alloced = 1;
 	}
 
 	switch(pThis->rcvState) {
@@ -164,13 +167,53 @@ relpFrameProcessOctetRcvd(relpFrame_t **ppThis, relpOctet_t c, relpSess_t *pSess
 				}
 				/* ok, we have data, so now let's do the usual checks... */
 				if(c == ' ') { /* field terminator */
+					pSess->maxCharsStore = pThis->lenData;
+					if(pThis->lenData > pSess->maxDataSize) {
+						if(pSess->pSrv == NULL) {
+							/* we are a client */
+							relpEngineCallOnGenericErr(pSess->pEngine,
+								"librelp", RELP_RET_DATA_TOO_LONG,
+								"server response frame too long, size %zu, "
+								"configured max %zu -"
+								"session will be closed (aborted)",
+								pThis->lenData, pSess->maxDataSize);
+							ABORT_FINALIZE(RELP_RET_DATA_TOO_LONG);
+						}
+						if(pSess->pSrv->oversizeMode == RELP_OVERSIZE_ABORT) {
+							relpEngineCallOnGenericErr(pSess->pEngine,
+								"librelp", RELP_RET_DATA_TOO_LONG,
+								"frame too long, size %zu, configured max %zu -"
+								"session will be closed (aborted)",
+								pThis->lenData, pSess->maxDataSize);
+							ABORT_FINALIZE(RELP_RET_DATA_TOO_LONG);
+						} else if(pSess->pSrv->oversizeMode == RELP_OVERSIZE_TRUNCATE) {
+							relpEngineCallOnGenericErr(pSess->pEngine,
+								"librelp", RELP_RET_DATA_TOO_LONG,
+								"frame too long, size %zu, configured max %zu -"
+								"frame will be truncated, but session continues",
+								pThis->lenData, pSess->maxDataSize);
+							pSess->maxCharsStore = pSess->maxDataSize;
+						} else if(pSess->pSrv->oversizeMode == RELP_OVERSIZE_ACCEPT) {
+							relpEngineCallOnGenericErr(pSess->pEngine,
+								"librelp", RELP_RET_DATA_TOO_LONG,
+								"frame too long, size %zu, configured max %zu -"
+								"frame will still be accepted and session "
+								"continues. Note that this can be casued by an "
+								"attack on your system.",
+								pThis->lenData, pSess->maxDataSize);
+						} else {
+							relpEngineCallOnGenericErr(pSess->pEngine,
+								"librelp", RELP_RET_ERR_INTERNAL,
+								"librelp error: invalid oversizeMode in %s:%d "
+								"mode currently is %d - session aborted",
+								__FILE__, __LINE__, pSess->pSrv->oversizeMode);
+							assert(0); /* ensure termination in debug mode! */
+						}
+					}
 					/* we now can assign the buffer for our data */
 					if(pThis->lenData > 0) {
-						if((pThis->pData = malloc(pThis->lenData)) == NULL)
+						if((pThis->pData = malloc(pSess->maxCharsStore)) == NULL)
 							ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
-					}
-					if(pThis->lenData > pSess->maxDataSize) {
-						ABORT_FINALIZE(RELP_RET_DATA_TOO_LONG);
 					}
 					pThis->rcvState = eRelpFrameRcvState_IN_DATA;
 					pThis->iRcv = 0;
@@ -181,14 +224,19 @@ relpFrameProcessOctetRcvd(relpFrame_t **ppThis, relpOctet_t c, relpSess_t *pSess
 			break;
 		case eRelpFrameRcvState_IN_DATA:
 			if(pThis->iRcv < pThis->lenData) {
-				pThis->pData[pThis->iRcv] = c;
+				if(pThis->iRcv < pSess->maxCharsStore) {
+					pThis->pData[pThis->iRcv] = c;
+				}
 				++pThis->iRcv;
 				break;
 			} else { /* end of data */
+				if(pSess->maxCharsStore < pThis->lenData) {
+					pThis->lenData = pSess->maxCharsStore;
+				}
 				pThis->rcvState = eRelpFrameRcvState_IN_TRAILER;
 				pThis->iRcv = 0;
-				/*FALLTHROUGH*/
 			}
+			/*FALLTHROUGH*/
 		case eRelpFrameRcvState_IN_TRAILER:
 		do_trailer:
 			if(c != '\n')
@@ -211,12 +259,23 @@ relpFrameProcessOctetRcvd(relpFrame_t **ppThis, relpOctet_t c, relpSess_t *pSess
 		case eRelpFrameRcvState_FINISHED:
 			assert(0); /* this shall never happen */
 			break;
+		default:assert(0); /* make sure we die when debugging */
+			relpEngineCallOnGenericErr(pSess->pEngine,
+				"librelp", RELP_RET_ERR_INTERNAL,
+				"invalid FrameRcvState %d in %s:%d",
+				pThis->rcvState, __FILE__, __LINE__);
+			break;
 	}
 
 	*ppThis = pThis;
 
 finalize_it:
-//pSess->pEngine->dbgprint("end relp frame construct, iRet %d\n", iRet);
+// TODO:more cleanup
+	if(iRet != RELP_RET_OK) {
+		if(frame_alloced) {
+			relpFrameDestruct(&pThis);
+		}
+	}
 	LEAVE_RELPFUNC;
 }
 
@@ -300,7 +359,7 @@ relpRetVal
 relpFrameConstructWithData(relpFrame_t **ppThis, relpEngine_t *pEngine, unsigned char *pCmd,
 			   relpOctet_t *pData, size_t lenData, int bHandoverBuffer)
 {
-	relpFrame_t *pThis;
+	relpFrame_t *pThis = NULL;
 
 	ENTER_RELPFUNC;
 	assert(ppThis != NULL);
@@ -348,7 +407,7 @@ relpFrameRewriteTxnr(relpSendbuf_t *pSendbuf, relpTxnr_t txnr)
 	ptrMembuf = pSendbuf->pData + 9 - lenTxnr; /* set ptr to start of area we intend to write to */
 	pSendbuf->lenData = pSendbuf->lenData - pSendbuf->lenTxnr + lenTxnr;
 	pSendbuf->lenTxnr = lenTxnr;
-	memcpy(ptrMembuf, bufTxnr, lenTxnr); ptrMembuf += lenTxnr;
+	memcpy(ptrMembuf, bufTxnr, lenTxnr);
 
 	/* the rest of the frame remains unchanged */
 
