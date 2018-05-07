@@ -12,6 +12,10 @@ Version 1.2.16 - 2018-??-??
     It permits to set the listen address inside the relp server.
     If not called, the server will bind to all interfaces. 
     Thanks to github user perlei for contributing it.
+- support additional hashes for fingerprint mode
+  old-style SHA1 is used automatically
+  Thanks to github user briaeros for the patch.
+  see also https://github.com/rsyslog/librelp/pull/55
 - bugfix: potential memory leak
   This is very unlikely to occur in practice. Memory can be leaked
   when TLS initialization fails when the client tries to connect
