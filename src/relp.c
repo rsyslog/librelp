@@ -1042,7 +1042,7 @@ relpEngineCltConstruct(relpEngine_t *pThis, relpClt_t **ppClt)
 	assert(ppClt != NULL);
 
 	CHKRet(relpCltConstruct(ppClt, pThis));
-	pThis->dbgprint("relp engine created new client %p\n", *ppClt);
+	pThis->dbgprint("relp engine created new client %p\n", (void*) *ppClt);
 
 finalize_it:
 	LEAVE_RELPFUNC;
@@ -1061,7 +1061,7 @@ relpEngineCltDestruct(relpEngine_t *pThis, relpClt_t **ppClt)
 	assert(ppClt != NULL);
 	RELPOBJ_assert(*ppClt, Clt);
 
-	pThis->dbgprint("relp engine destructing client %p\n", *ppClt);
+	pThis->dbgprint("relp engine destructing client %p\n", (void*) *ppClt);
 	CHKRet(relpCltDestruct(ppClt));
 
 finalize_it:

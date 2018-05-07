@@ -58,6 +58,7 @@ AM_CONDITIONAL(OS_AIX, test "x$os_type" = "xaix")
 
 # Checks for programs.
 AC_PROG_CC
+AC_PROG_CC_C99
 AM_PROG_CC_C_O
 if test "$GCC" = "yes"
 then CFLAGS="$CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
@@ -70,7 +71,7 @@ then
 	m4_ifdef([AX_IS_RELEASE], [
 		AX_IS_RELEASE([git-directory])
 		m4_ifdef([AX_COMPILER_FLAGS], [
-			AX_COMPILER_FLAGS(,,,,[-Wunused-parameter -Wmissing-field-initializers])
+			AX_COMPILER_FLAGS(,,,,[-pedantic -Wunused-parameter -Wmissing-field-initializers])
 			# unfortunately, AX_COMPILER_FLAGS does not provide a way to override
 			# the default -Wno-error=warning" flags. So we do this via sed below.
 			# Note: we *really* want to have this error out during CI testing!
@@ -115,7 +116,7 @@ AC_CHECK_MEMBERS([struct sockaddr.sa_len],,,[$sa_includes])
 AC_FUNC_SELECT_ARGTYPES
 AC_FUNC_STRERROR_R
 AC_TYPE_SIGNAL
-AC_CHECK_FUNCS([strerror_r epoll_create epoll_create1])
+AC_CHECK_FUNCS([strerror_r strdup epoll_create epoll_create1])
 
 # enable TLS (may not be possible on platforms with too-old GnuTLS)
 AC_ARG_ENABLE(tls,
