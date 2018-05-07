@@ -46,6 +46,7 @@ Version 1.2.16 - 2018-??-??
     deteced by Coverity Scan, CID 266016
   * fix memory leak on relp listener construction error
     detected by Coverity Scan, CID 266014, 266015
+  * also resolved all other issues reported by Coverity scan
 - CI
   * added native testbench (formerly used rsyslog for testing)
   * added additional compile tests
