@@ -1706,13 +1706,17 @@ relpTcpRcv(relpTcp_t *const pThis, relpOctet_t *pRcvBuf, ssize_t *pLenBuf)
  * helper abstracts it. Note that it is a null-operation if no
  * such option is available on the platform in question.
  */
-static inline void
-setCORKopt(int sock, const int onOff)
+static void
+setCORKopt(const relpTcp_t *const pThis, const int onOff)
 {
 #if defined(TCP_CORK)
-	setsockopt(sock, SOL_TCP, TCP_CORK, &onOff, sizeof (onOff));
+	if(setsockopt(pThis->sock, SOL_TCP, TCP_CORK, &onOff, sizeof (onOff)) == -1) {
+		pThis->pEngine->dbgprint("relpTcp: setsockopt() TCP_CORK failed\n");
+	}
 #elif defined(TCP_NOPUSH)
-	setsockopt(sock, IPPROTO_TCP, TCP_NOPUSH, &onOff, sizeof (onOff));
+	if(setsockopt(pThis->sock, IPPROTO_TCP, TCP_NOPUSH, &onOff, sizeof (onOff)) == -1) {
+		pThis->pEngine->dbgprint("relpTcp: setsockopt() TCP_NOPUSH failed\n");
+	}
 #endif
 }
 /* this function is called to hint librelp that a "burst" of data is to be
@@ -1725,13 +1729,13 @@ setCORKopt(int sock, const int onOff)
 void
 relpTcpHintBurstBegin(relpTcp_t *const pThis)
 {
-	setCORKopt(pThis->sock, 1);
+	setCORKopt(pThis, 1);
 }
 /* this is the counterpart to relpTcpHintBurstBegin -- see there for doc */
 void
 relpTcpHintBurstEnd(relpTcp_t *const pThis)
 {
-	setCORKopt(pThis->sock, 0);
+	setCORKopt(pThis, 0);
 }
 
 /* send a buffer via TCP.
@@ -1903,7 +1907,11 @@ relpTcpConnectTLSInit(relpTcp_t *const pThis)
 		sockflags |= O_NONBLOCK;
 		/* SETFL could fail too, so get it caught by the subsequent
 		 * error check.  */
-		fcntl(pThis->sock, F_SETFL, sockflags);
+		if(fcntl(pThis->sock, F_SETFL, sockflags) == -1) {
+			callOnErr(pThis, "error setting socket to non-blocking",
+				RELP_RET_ERR_TLS_SETUP);
+			ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
+		}
 	}
 finalize_it:
 	LEAVE_RELPFUNC;
@@ -1957,8 +1965,17 @@ relpTcpConnect(relpTcp_t *const pThis,
 		}
 	}
 
-	fcntl(pThis->sock, F_SETFL, O_NONBLOCK);
-	connect(pThis->sock, res->ai_addr, res->ai_addrlen);
+	if(fcntl(pThis->sock, F_SETFL, O_NONBLOCK) == -1) {
+		callOnErr(pThis, "error setting socket to non-blocking",
+			RELP_RET_IO_ERR);
+		ABORT_FINALIZE(RELP_RET_IO_ERR);
+	}
+	if(connect(pThis->sock, res->ai_addr, res->ai_addrlen) == -1) {
+		if(errno != EINPROGRESS) {
+			callOnErr(pThis, "error connecting", RELP_RET_IO_ERR);
+			ABORT_FINALIZE(RELP_RET_IO_ERR);
+		}
+	}
 
 	pfd.fd = pThis->sock;
 	pfd.events = POLLOUT;
@@ -1971,8 +1988,8 @@ relpTcpConnect(relpTcp_t *const pThis,
 	int so_error;
 	socklen_t len = sizeof so_error;
 
-	getsockopt(pThis->sock, SOL_SOCKET, SO_ERROR, &so_error, &len);
-	if (so_error != 0) {
+	int r = getsockopt(pThis->sock, SOL_SOCKET, SO_ERROR, &so_error, &len);
+	if (r == -1 || so_error != 0) {
 		pThis->pEngine->dbgprint("socket has an error %d\n", so_error);
 		ABORT_FINALIZE(RELP_RET_IO_ERR);
 	}
