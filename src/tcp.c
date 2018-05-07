@@ -943,13 +943,16 @@ relpTcpChkPeerFingerprint(relpTcp_t *const pThis, gnutls_x509_crt_t cert)
 			r = GNUTLS_E_CERTIFICATE_ERROR; goto done;
 		}
 
-		GenFingerprintStr(fingerprint, (int) size, (char*)fpPrintable,sizeof(fpPrintable),digest,pThis->pEngine);
-		pThis->pEngine->dbgprint("DDDD: peer's certificate %s fingerprint: %s\n",digest_get_name(digest), fpPrintable);
+		GenFingerprintStr(fingerprint, (int) size,
+			(char*)fpPrintable,sizeof(fpPrintable),digest,pThis->pEngine);
+		pThis->pEngine->dbgprint("peer's certificate %s fingerprint: %s\n",
+			digest_get_name(digest), fpPrintable);
 
 		/* now search through the permitted peers to see if we can find a permitted one */
-		pThis->pEngine->dbgprint("DDDD: n peers %d\n", pThis->permittedPeers.nmemb);
+		pThis->pEngine->dbgprint("n peers %d\n", pThis->permittedPeers.nmemb);
 		for(i = 0 ; i < pThis->permittedPeers.nmemb ; ++i) {
-		pThis->pEngine->dbgprint("DDDD: checking peer '%s','%s'\n", fpPrintable, pThis->permittedPeers.peer[i].name);
+		pThis->pEngine->dbgprint("checking peer '%s','%s'\n",
+			fpPrintable, pThis->permittedPeers.peer[i].name);
 			if(!strcmp(fpPrintable, pThis->permittedPeers.peer[i].name)) {
 				found = 1;
 				break;
