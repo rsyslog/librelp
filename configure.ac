@@ -71,7 +71,7 @@ then
 	m4_ifdef([AX_IS_RELEASE], [
 		AX_IS_RELEASE([git-directory])
 		m4_ifdef([AX_COMPILER_FLAGS], [
-			AX_COMPILER_FLAGS(,,,,[-pedantic -Wunused-parameter -Wmissing-field-initializers])
+			AX_COMPILER_FLAGS(,,,,[-pedantic -Wwrite-strings -Wunused-parameter -Wmissing-field-initializers])
 			# unfortunately, AX_COMPILER_FLAGS does not provide a way to override
 			# the default -Wno-error=warning" flags. So we do this via sed below.
 			# Note: we *really* want to have this error out during CI testing!

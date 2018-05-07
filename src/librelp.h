@@ -192,7 +192,7 @@ relpRetVal relpEngineSetDnsLookupMode(relpEngine_t *pThis, int iMode);
 relpRetVal relpEngineSetOnAuthErr(relpEngine_t *pThis,
 			          void (*pCB)(void*pUsr, char *authinfo, char*errmsg, relpRetVal errcode) );
 relpRetVal relpEngineSetOnErr(relpEngine_t *pThis,
-				void (*pCB)(void*pUsr, char *objinfo, char*errmsg, relpRetVal errcode) );
+				void (*pCB)(void*pUsr, const char *objinfo, char*errmsg, relpRetVal errcode) );
 relpRetVal relpEngineSetOnGenericErr(relpEngine_t *pThis,
 				void (*pCB)(char *objinfo, char*errmsg, relpRetVal errcode) );
 

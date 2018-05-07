@@ -436,7 +436,7 @@ relpEngineSetOnAuthErr(relpEngine_t *pThis, void (*pCB)(void*pUsr, char *authinf
  * errcode  - contains librelp error status
  */
 relpRetVal
-relpEngineSetOnErr(relpEngine_t *pThis, void (*pCB)(void*pUsr, char *objinfo, char*errmsg, relpRetVal errcode) )
+relpEngineSetOnErr(relpEngine_t *pThis, void (*pCB)(void*pUsr, const char *objinfo, char*errmsg, relpRetVal errcode) )
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Engine);

@@ -127,14 +127,14 @@ typedef struct relpEngSessLst_s {
  */
 struct relpEngine_s {
 	BEGIN_RELP_OBJ;
-	void (*dbgprint)(char *fmt, ...) __attribute__((format(printf, 1, 2)));
-	relpRetVal (*onSyslogRcv)(unsigned char*pHostname, unsigned char *pIP,
-		                  unsigned char *pMsg, size_t lenMsg); /**< callback for "syslog" cmd */
-	relpRetVal (*onSyslogRcv2)(void*, unsigned char*pHostname, unsigned char *pIP,
-		                  unsigned char *pMsg, size_t lenMsg); /**< callback for "syslog" cmd */
-	void (*onAuthErr)(void*pUsr, char *authinfo, char*errmsg, relpRetVal errcode);
-	void (*onErr)(void*pUsr, char *objinfo, char*errmsg, relpRetVal errcode);
-	void (*onGenericErr)(char *objinfo, char*errmsg, relpRetVal errcode);
+	void (*dbgprint)(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+	relpRetVal (*onSyslogRcv)(unsigned const char*pHostname, unsigned const char *pIP,
+		                  unsigned const char *pMsg, size_t lenMsg); /**< callback for "syslog" cmd */
+	relpRetVal (*onSyslogRcv2)(void*, unsigned const char*pHostname, unsigned const char *pIP,
+		                  unsigned const char *pMsg, size_t lenMsg); /**< callback for "syslog" cmd */
+	void (*onAuthErr)(void*pUsr, const char *authinfo, const char*errmsg, relpRetVal errcode);
+	void (*onErr)(void*pUsr, const char *objinfo, const char*errmsg, relpRetVal errcode);
+	void (*onGenericErr)(const char *objinfo, const char*errmsg, relpRetVal errcode);
 	int protocolVersion; /**< version of the relp protocol supported by this engine */
 
 	/* Flags */
