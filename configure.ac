@@ -35,7 +35,7 @@ case "${host}" in
     AC_DEFINE([_POSIX_PTHREAD_SEMANTICS], [1], [Use POSIX pthread semantics])
     AC_DEFINE([_XOPEN_SOURCE], [600], [Use X/Open CAE Specification])
     CPPFLAGS="-std=c99 $CPPFLAGS"
-    CFLAGS="-std=c99 $CFLAGS"
+    AM_CFLAGS="-std=c99 $CFLAGS"
     SOL_LIBS="-lsocket -lnsl"
     # Solaris libuuid does not ship with a pkgconfig file so override the appropriate
     # variables (but only if they have not been set by the user).
@@ -46,7 +46,7 @@ case "${host}" in
   *-*-aix*)
     os_type="aix"
     AC_DEFINE([OS_AIX], [1], [Indicator for a AIX OS])
-    CFLAGS="$CFLAGS -D_LINUX_SOURCE_COMPAT"
+    AM_CFLAGS="$CFLAGS -D_LINUX_SOURCE_COMPAT"
     LDFLAGS="$LDFLAGS -brtl"
   ;;
 esac
@@ -61,7 +61,7 @@ AC_PROG_CC
 AC_PROG_CC_C99
 AM_PROG_CC_C_O
 if test "$GCC" = "yes"
-then CFLAGS="$CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
+then AM_CFLAGS="$CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
 fi
 
 AC_PROG_LIBTOOL
@@ -80,11 +80,11 @@ then
 			# rgerhards, 2018-05-09
 			WARN_CFLAGS="$(echo "$WARN_CFLAGS" | sed s/-Wno-error=/-W/g | sed s/-W.*declaration-after-statement//g)"
 		], [
-			CFLAGS="$CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
+			AM_CFLAGS="$CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
 			AC_MSG_WARN([missing AX_COMPILER_FLAGS macro, not using it])
 		])
 	], [
-		CFLAGS="$CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
+		AM_CFLAGS="$CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
 		AC_MSG_WARN([missing AX_IS_RELEASE macro, not using AX_COMPILER_FLAGS macro because of this])
 	])
 else

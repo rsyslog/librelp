@@ -3,12 +3,12 @@ check_PROGRAMS=receive send
 receive_SOURCES=receive.c
 #receive_LDADD=-lrelp
 receive_LDADD=../src/.libs/librelp.la
-receive_CFLAGS=-I${top_srcdir}/src $(WARN_CFLAGS)
+receive_CFLAGS=$(AM_CFLAGS) -I${top_srcdir}/src $(WARN_CFLAGS)
 
 send_SOURCES=send.c
 #send_LDADD=-lrelp
 send_LDADD=../src/.libs/librelp.la
-send_CFLAGS=-I${top_srcdir}/src $(WARN_CFLAGS)
+send_CFLAGS=$(AM_CFLAGS) -I${top_srcdir}/src $(WARN_CFLAGS)
 
 VALGRIND_TESTS= \
 	tls-basic-vg.sh
