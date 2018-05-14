@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------
-Version 1.2.16 - 2018-??-??
+Version 1.2.16 - 2018-05-14
 - API changes
   * add new API: relpSrvSetOversizeMode()
     This permits to tell librelp how to handle oversize messages.
