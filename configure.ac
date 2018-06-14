@@ -66,6 +66,8 @@ fi
 
 AC_PROG_LIBTOOL
 
+PKG_PROG_PKG_CONFIG
+
 if test "$GCC" = "yes"
 then
 	m4_ifdef([AX_IS_RELEASE], [
@@ -120,13 +122,13 @@ AC_CHECK_FUNCS([strerror_r strdup epoll_create epoll_create1])
 
 # enable TLS (may not be possible on platforms with too-old GnuTLS)
 AC_ARG_ENABLE(tls,
-        [AS_HELP_STRING([--enable-tls],[Enable TLS support @<:@default=yes@:>@])],
+        [AS_HELP_STRING([--enable-tls],[Enable TLS support @<:@default=no@:>@])],
         [case "${enableval}" in
          yes) enable_tls="yes" ;;
           no) enable_tls="no" ;;
            *) AC_MSG_ERROR(bad value ${enableval} for --enable-tls) ;;
          esac],
-        [enable_tls="yes"]
+        [enable_tls="no"]
 )
 if test "$enable_tls" = "yes"; then
 	PKG_CHECK_MODULES(GNUTLS, gnutls >= 2.0.0)
@@ -157,6 +159,31 @@ if test "$enable_tls" = "yes"; then
 fi
 
 
+# enable Openssl TLS  
+AC_ARG_ENABLE(tls-openssl,
+        [AS_HELP_STRING([--enable-tls-openssl],[Enable OpenSSL TLS support @<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) enable_tls_openssl="yes" ;;
+          no) enable_tls_openssl="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-tls-openssl) ;;
+         esac],
+        [enable_tls_openssl="no"]
+)
+if test "$enable_tls_openssl" = "yes"; then
+	PKG_CHECK_MODULES(OPENSSL, openssl)
+	AC_DEFINE([ENABLE_TLS_OPENSSL], [1], [Indicator that openssl is present])
+	save_CFLAGS="$CFLAGS"
+	CFLAGS="$CFLAGS $OPENSSL_CFLAGS"
+	save_LIBS="$LIBS"
+	LIBS="$LIBS $OPENSSL_LIBS"
+
+	# Make sure GNUTLS is disabled
+	if test "$enable_tls" = "yes"; then
+		AC_MSG_ERROR([Cannot compile GNUTLS and OpenSSL at the same time. Either use --enable-tls or --enable-tls-openssl but not both.])
+	fi
+fi
+AM_CONDITIONAL(ENABLE_TLS_OPENSSL, test x$enable_tls_openssl = xyes)
+
 # debug mode settings
 AC_ARG_ENABLE(debug,
         [AS_HELP_STRING([--enable-debug],[Enable debug mode @<:@default=no@:>@])],
@@ -176,20 +203,16 @@ fi
 
 # valgrind
 AC_ARG_ENABLE(valgrind,
-        [AS_HELP_STRING([--enable-valgrind],[Enable valgrind tests@<:@default=no@:>@])],
+        [AS_HELP_STRING([--enable-valgrind],[Enable valgrind tests@<:@default=yes@:>@])],
         [case "${enableval}" in
          yes) enable_valgrind="yes" ;;
           no) enable_valgrind="no" ;;
            *) AC_MSG_ERROR(bad value ${enableval} for --enable-valgrind) ;;
          esac],
-        [enable_valgrind="no"]
+        [enable_valgrind="yes"]
 )
 if test "$enable_valgrind" = "yes"; then
         AC_CHECK_PROG(VALGRIND, [valgrind], [valgrind], [no])
-
-        if test "x$VALGRIND" = "xno"; then
-                AC_MSG_ERROR([valgrind is missing but forced with --enable-valgrind. Either install valgrind or remove the option!])
-        fi
 fi
 AM_CONDITIONAL([HAVE_VALGRIND], test "$enable_valgrind" == "yes")
 
@@ -206,8 +229,9 @@ AC_OUTPUT
 echo "*****************************************************"
 echo "librelp will be compiled with the following settings:"
 echo
-echo "run valgrind in testbench:     $enable_valgrind"
-echo "Debug mode enabled:            $enable_debug"
-echo "TLS enabled:                   $enable_tls"
-echo "TLS authentication supported:  $have_gnutls_certificate_set_verify_function"
+echo "run valgrind in testbench:       $enable_valgrind"
+echo "Debug mode enabled:              $enable_debug"
+echo "GNUTLS enabled:                  $enable_tls"
+echo "GNUTLS authentication supported: $have_gnutls_certificate_set_verify_function"
+echo "OPENSSL enabled:                 $enable_tls_openssl"
 

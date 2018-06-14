@@ -12,16 +12,17 @@ fi
 
 TESTPORT=20514
 echo 'Start Receiver...'
-valgrind ./receive -p $TESTPORT -T -a "name" -x ${srcdir}/tls-certs/ca.pem -y ${srcdir}/tls-certs/cert.pem -z ${srcdir}/tls-certs/key.pem -P "rsyslog-client" > librelp.out.log &
+$valgrind ./receive -p $TESTPORT -T  -a "name" -x ${srcdir}/tls-certs/ca.pem -y ${srcdir}/tls-certs/cert.pem -z ${srcdir}/tls-certs/key.pem -P "rsyslog-client" $OPT_VERBOSE > librelp.out.log &
 PID=$!
 
 sleep 1
 
 echo 'Send Message...'
-valgrind ./send -t 127.0.0.1 -p $TESTPORT -m "testmessage" -T -a "name" -x ${srcdir}/tls-certs/ca.pem -y ${srcdir}/tls-certs/cert.pem -z ${srcdir}/tls-certs/key.pem -P "rsyslog-client"
+$valgrind ./send -t 127.0.0.1 -p $TESTPORT -m "testmessage" -T -a "name" -x ${srcdir}/tls-certs/ca.pem -y ${srcdir}/tls-certs/cert.pem -z ${srcdir}/tls-certs/key.pem -P "rsyslog-client" $OPT_VERBOSE > librelp.out.log &
 
-echo 'Stop Receiver...'
-kill $PID
+stop_receiver
+#echo 'Stop Receiver...'
+#kill $PID
 
 check_output "testmessage"
 terminate

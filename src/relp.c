@@ -56,12 +56,12 @@ relpEngineCallOnGenericErr(relpEngine_t *pThis, char *eobj, relpRetVal ecode, ch
 {
 	va_list ap;
 	char emsg[1024];
-	
+
 	va_start(ap, fmt);
 	vsnprintf(emsg, sizeof(emsg), fmt, ap);
 	emsg[sizeof(emsg)/sizeof(char) - 1] = '\0'; /* just to be on the safe side... */
 	va_end(ap);
-	
+
 	pThis->dbgprint("librelp: generic error: ecode %d, eobj %s,"
 		"emsg '%s'\n", ecode, eobj, emsg);
 	if(pThis->onGenericErr != NULL) {
@@ -692,7 +692,7 @@ handleSessIO(relpEngine_t *pThis, epolld_t *epd)
 {
 	relpEngSessLst_t *pSessEtry;
 	relpTcp_t *pTcp;
-#	ifdef ENABLE_TLS
+#	if defined(ENABLE_TLS) || defined(ENABLE_TLS_OPENSSL)
 	relpRetVal localRet;
 #	endif
 
@@ -704,7 +704,7 @@ handleSessIO(relpEngine_t *pThis, epolld_t *epd)
 		} else if(relpTcpRtryOp(pTcp) == relpTCP_RETRY_recv) {
 			doRecv(pThis, pSessEtry, epd->sock);
 		} else {
-#			ifdef ENABLE_TLS
+#			if defined(ENABLE_TLS) || defined(ENABLE_TLS_OPENSSL)
 				localRet = relpTcpRtryHandshake(pTcp);
 				if(localRet != RELP_RET_OK) {
 					pThis->dbgprint("relp session %d handshake iRet %d, tearing it down\n",
@@ -715,7 +715,7 @@ handleSessIO(relpEngine_t *pThis, epolld_t *epd)
 					pThis->dbgprint("librelp error: handshake retry requested in "
 							"non-TLS mode");
 
-#			endif /* #ifdef ENABLE_TLS */
+#			endif /* #ifdef ENABLE_TLS | ENABLE_TLS_OPENSSL*/
 		}
 	} else {
 		if(doRecv(pThis, pSessEtry, epd->sock) == RELP_RET_OK) {
@@ -748,7 +748,7 @@ engineEventLoopRun(relpEngine_t *pThis)
 		 */
 		for(pSessEtry = pThis->pSessLstRoot ; pSessEtry != NULL ; pSessEtry = pSessEtry->pNext) {
 			sock = relpSessGetSock(pSessEtry->pSess);
-#			ifdef ENABLE_TLS
+#			if defined(ENABLE_TLS) || defined(ENABLE_TLS_OPENSSL)
 			if(relpSessTcpRequiresRtry(pSessEtry->pSess)) {
 				pThis->dbgprint("librelp: retry op requested for sock %d\n", sock);
 				if(relpTcpGetRtryDirection(pSessEtry->pSess->pTcp) == 0) {
@@ -757,7 +757,7 @@ engineEventLoopRun(relpEngine_t *pThis)
 					epoll_set_events(pThis, pSessEtry, sock, EPOLLOUT);
 				}
 			} else
-#			endif /* #ifdef ENABLE_TLS */
+#			endif /* #ifdef ENABLE_TLS | ENABLE_TLS_OPENSSL */
 			{
 				/* now check if a send request is outstanding and, if so, add it */
 				if(relpSendqIsEmpty(pSessEtry->pSess->pSendq)) {
@@ -834,7 +834,7 @@ engineEventLoopRun(relpEngine_t *pThis)
 		/* Add all sessions for reception and sending (they all have just one socket) */
 		for(pSessEtry = pThis->pSessLstRoot ; pSessEtry != NULL ; pSessEtry = pSessEtry->pNext) {
 			sock = relpSessGetSock(pSessEtry->pSess);
-#			ifdef ENABLE_TLS
+#			if defined(ENABLE_TLS) || defined(ENABLE_TLS_OPENSSL)
 			if(relpSessTcpRequiresRtry(pSessEtry->pSess)) {
 				pThis->dbgprint("librelp: retry op requested for sock %d\n", sock);
 				if(relpTcpGetRtryDirection(pSessEtry->pSess->pTcp) == 0) {
@@ -843,7 +843,7 @@ engineEventLoopRun(relpEngine_t *pThis)
 					FD_SET(sock, &writefds);
 				}
 			} else
-#			endif /* #ifdef ENABLE_TLS */
+#			endif /* #ifdef ENABLE_TLS | ENABLE_TLS_OPENSSL*/
 			{
 				FD_SET(sock, &readfds);
 				/* now check if a send request is outstanding and, if so, add it */
@@ -877,7 +877,7 @@ engineEventLoopRun(relpEngine_t *pThis)
 			}
 			continue;
 		}
-	
+
 		/* and then start again with the servers (new connection request) */
 		for(pSrvEtry = pThis->pSrvLstRoot ; nfds && pSrvEtry != NULL ; pSrvEtry = pSrvEtry->pNext) {
 			for(iSocks = 1 ; nfds && iSocks <= relpSrvGetNumLstnSocks(pSrvEtry->pSrv) ; ++iSocks) {
@@ -905,7 +905,7 @@ engineEventLoopRun(relpEngine_t *pThis)
 						doRecv(pThis, pSessEtry, sock);
 						--nfds; /* indicate we have processed one */
 					} else {
-#						ifdef ENABLE_TLS
+#						if defined(ENABLE_TLS) || defined(ENABLE_TLS_OPENSSL)
 							localRet = relpTcpRtryHandshake(pSessEtry->pSess->pTcp);
 							if(localRet != RELP_RET_OK) {
 								pThis->dbgprint("relp session %d handshake "
@@ -917,7 +917,7 @@ engineEventLoopRun(relpEngine_t *pThis)
 							pThis->dbgprint("librelp error: handshake retry "
 									"requested in non-TLS mode");
 
-#						endif /* #ifdef ENABLE_TLS */
+#						endif /* #ifdef ENABLE_TLS | ENABLE_TLS_OPENSSL */
 					}
 				}
 			} else {

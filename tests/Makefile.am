@@ -14,8 +14,9 @@ VALGRIND_TESTS= \
 	tls-basic-vg.sh
 
 TESTS=  basic.sh \
-	tls-basic.sh \
 	tls-basic-anon.sh \
+	tls-basic.sh \
+	tls-basic-fingerprint.sh \
 	tls-wrong-permittedPeer.sh \
 	tls-wrong-authname.sh \
 	tls-missing-param-sender.sh \

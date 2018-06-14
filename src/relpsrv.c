@@ -338,22 +338,22 @@ relpRetVal
 relpSrvEnableTLS2(relpSrv_t __attribute__((unused)) *pThis)
 {
 	ENTER_RELPFUNC;
-#ifdef ENABLE_TLS
+#if defined(ENABLE_TLS) || defined(ENABLE_TLS_OPENSSL)
 	pThis->bEnableTLS = 1;
 #else
 	iRet = RELP_RET_ERR_NO_TLS;
-#endif /* #ifdef ENABLE_TLS */
+#endif /* #ifdef ENABLE_TLS | ENABLE_TLS_OPENSSL */
 	LEAVE_RELPFUNC;
 }
 relpRetVal
 relpSrvEnableTLSZip2(relpSrv_t __attribute__((unused)) *pThis)
 {
 	ENTER_RELPFUNC;
-#ifdef ENABLE_TLS
+#if defined(ENABLE_TLS) || defined(ENABLE_TLS_OPENSSL)
 	pThis->bEnableTLSZip = 1;
 #else
 	iRet = RELP_RET_ERR_NO_TLS;
-#endif /* #ifdef ENABLE_TLS */
+#endif /* #ifdef ENABLE_TLS | ENABLE_TLS_OPENSSL */
 	LEAVE_RELPFUNC;
 }
 void

@@ -457,7 +457,7 @@ relpSessGetUnacked(relpSess_t *pThis, relpSendbuf_t **ppSendbuf, relpTxnr_t txnr
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
 	assert(ppSendbuf != NULL);
-	
+
 	for(  pUnackedEtry = pThis->pUnackedLstRoot
 	    ; pUnackedEtry != NULL && pUnackedEtry->pSendbuf->txnr != txnr
 	    ; pUnackedEtry = pUnackedEtry->pNext)
@@ -960,7 +960,7 @@ relpSessSetPermittedPeers(relpSess_t *pThis, relpPermittedPeers_t *pPeers)
 	ENTER_RELPFUNC;
 	int i;
 	RELPOBJ_assert(pThis, Sess);
-	
+
 	relpSessFreePermittedPeers(pThis);
 	if(pPeers->nmemb != 0) {
 		if((pThis->permittedPeers.name =
@@ -1028,7 +1028,7 @@ relpSessSetGnuTLSPriString(relpSess_t *pThis, char *pristr)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
-	
+
 	free(pThis->pristring);
 	if(pristr == NULL) {
 		pThis->pristring = NULL;
@@ -1045,7 +1045,7 @@ relpSessSetCACert(relpSess_t *pThis, char *cert)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
-	
+
 	free(pThis->caCertFile);
 	if(cert == NULL) {
 		pThis->caCertFile = NULL;
@@ -1062,7 +1062,7 @@ relpSessSetOwnCert(relpSess_t *pThis, char *cert)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
-	
+
 	free(pThis->ownCertFile);
 	if(cert == NULL) {
 		pThis->ownCertFile = NULL;
@@ -1079,7 +1079,7 @@ relpSessSetPrivKey(relpSess_t *pThis, char *cert)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
-	
+
 	free(pThis->privKeyFile);
 	if(cert == NULL) {
 		pThis->privKeyFile = NULL;

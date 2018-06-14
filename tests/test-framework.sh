@@ -5,8 +5,10 @@
 
 # "config settings" for the testbench
 TB_TIMEOUT_STARTUP=400  # 40 seconds - Solaris sometimes needs this...
-TESTPORT=30514
-#OPT_VERBOSE=-v # uncomment to get verbose output
+TESTPORT=31514
+export valgrind="valgrind --malloc-fill=ff --free-fill=fe --log-fd=1"
+export OPT_VERBOSE=-v # uncomment to get verbose output
+
 
 ######################################################################
 # functions
@@ -32,19 +34,27 @@ function wait_process_startup_via_pidfile() {
 # start receiver, add receiver command line parameters after function name
 function startup_receiver() {
 	printf 'Starting Receiver...\n'
-	./receive -p $TESTPORT -F receive.pid $OPT_VERBOSE $* > librelp.out.log &
+	./receive -p $TESTPORT -F $srcdir/receive.pid $OPT_VERBOSE $* > librelp.out.log &
 	export RECEIVE_PID=$!
 	printf "got receive pid $RECEIVE_PID\n"
-	wait_process_startup_via_pidfile receive.pid
+	wait_process_startup_via_pidfile $srcdir/receive.pid
 	sleep 1
 	printf 'Receiver running\n'
 }
 
 # stop receiver
 function stop_receiver() {
-	kill $(cat receive.pid)
-	wait $(cat receive.pid) &> /dev/null
-	#kill $RECEIVE_PID
+	if [ -f $srcdir/receive.pid ]; then
+		kill $(cat $srcdir/receive.pid) &> /dev/null
+	fi
+	wait -n 5 $(cat $srcdir/receive.pid) &> /dev/null
+#kill $RECEIVE_PID
+	if [ -f $srcdir/receive.pid ]; then
+		# FORCE
+		kill -9 $(cat $srcdir/receive.pid) &> /dev/null
+	fi
+	sleep 1
+
 	printf "receiver stopped\n"
 }
 
@@ -78,6 +88,11 @@ function cleanup() {
 		pkill -x receive
 		echo pkill result $?
 	fi
+
+	if [ -f $srcdir/receive.pid ]; then
+		kill -9 `cat $srcdir/receive.pid` &> /dev/null
+	fi
+
 	rm -f receive.pid librelp.out.log *.err.log
 }
 
