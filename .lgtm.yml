@@ -1,0 +1,10 @@
+extraction:
+  cpp:
+    prepare:
+      packages:
+        - python-docutils
+    
+    configure:
+      command:
+        - autoreconf -fvi
+        - ./configure --enable-tls
