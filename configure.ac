@@ -128,8 +128,39 @@ AC_ARG_ENABLE(tls,
           no) enable_tls="no" ;;
            *) AC_MSG_ERROR(bad value ${enableval} for --enable-tls) ;;
          esac],
-        [enable_tls="no"]
+        [enable_tls="yes"]
 )
+# enable Openssl TLS  
+AC_ARG_ENABLE(tls-openssl,
+        [AS_HELP_STRING([--enable-tls-openssl],[Enable OpenSSL TLS support @<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) enable_tls_openssl="yes" ;;
+          no) enable_tls_openssl="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-tls-openssl) ;;
+         esac],
+        [enable_tls_openssl="no"]
+)
+
+if test "$enable_tls_openssl" = "yes"; then
+	PKG_CHECK_MODULES(OPENSSL, openssl)
+	AC_DEFINE([ENABLE_TLS_OPENSSL], [1], [Indicator that openssl is present])
+	save_CFLAGS="$CFLAGS"
+	CFLAGS="$CFLAGS $OPENSSL_CFLAGS"
+	save_LIBS="$LIBS"
+	LIBS="$LIBS $OPENSSL_LIBS"
+
+	# Make sure GNUTLS is disabled
+	if test "$enable_tls" = "yes"; then
+		AC_MSG_WARN([Cannot compile GNUTLS and OpenSSL at the same time. Disabling gnutls. ])
+
+		# Disable GNUTLS
+		enable_tls="no"
+		have_gnutls_certificate_set_verify_function="no"
+	fi
+
+fi
+AM_CONDITIONAL(ENABLE_TLS_OPENSSL, test x$enable_tls_openssl = xyes)
+
 if test "$enable_tls" = "yes"; then
 	PKG_CHECK_MODULES(GNUTLS, gnutls >= 2.0.0)
         AC_DEFINE(ENABLE_TLS, 1, [Defined if TLS support is enabled])
@@ -157,32 +188,6 @@ if test "$enable_tls" = "yes"; then
 	CFLAGS="$save_CFLAGS"
 	LIBS="$save_LIBS"
 fi
-
-
-# enable Openssl TLS  
-AC_ARG_ENABLE(tls-openssl,
-        [AS_HELP_STRING([--enable-tls-openssl],[Enable OpenSSL TLS support @<:@default=yes@:>@])],
-        [case "${enableval}" in
-         yes) enable_tls_openssl="yes" ;;
-          no) enable_tls_openssl="no" ;;
-           *) AC_MSG_ERROR(bad value ${enableval} for --enable-tls-openssl) ;;
-         esac],
-        [enable_tls_openssl="no"]
-)
-if test "$enable_tls_openssl" = "yes"; then
-	PKG_CHECK_MODULES(OPENSSL, openssl)
-	AC_DEFINE([ENABLE_TLS_OPENSSL], [1], [Indicator that openssl is present])
-	save_CFLAGS="$CFLAGS"
-	CFLAGS="$CFLAGS $OPENSSL_CFLAGS"
-	save_LIBS="$LIBS"
-	LIBS="$LIBS $OPENSSL_LIBS"
-
-	# Make sure GNUTLS is disabled
-	if test "$enable_tls" = "yes"; then
-		AC_MSG_ERROR([Cannot compile GNUTLS and OpenSSL at the same time. Either use --enable-tls or --enable-tls-openssl but not both.])
-	fi
-fi
-AM_CONDITIONAL(ENABLE_TLS_OPENSSL, test x$enable_tls_openssl = xyes)
 
 # debug mode settings
 AC_ARG_ENABLE(debug,

@@ -114,6 +114,8 @@ relpTcpFreePermittedPeers(relpTcp_t *const pThis)
 	for(i = 0 ; i < pThis->permittedPeers.nmemb ; ++i)
 		free(pThis->permittedPeers.peer[i].name);
 	pThis->permittedPeers.nmemb = 0;
+	if(pThis->permittedPeers.peer != NULL)
+		free(pThis->permittedPeers.peer);
 }
 
 /* helper to call onAuthErr if set */
@@ -237,14 +239,15 @@ long BIO_debug_callback(BIO *bio, int cmd, const char __attribute__((unused)) *a
 {
 	long r = 1;
 
-	relpTcp_t *const pThis = (relpTcp_t*) BIO_get_callback_arg(bio);
+	relpTcp_t* pThis = (relpTcp_t*) (void *) BIO_get_callback_arg(bio);
 
 	if (BIO_CB_RETURN & cmd)
 	r = ret;
 
 	switch (cmd) {
 	case BIO_CB_FREE:
-		pThis->pEngine->dbgprint("openssl debugmsg: BIO[%p]: Free - %s\n", (void *)bio, RSYSLOG_BIO_method_name(bio));
+		pThis->pEngine->dbgprint("openssl debugmsg: BIO[%p]: Free - %s\n",
+			(void *)bio, RSYSLOG_BIO_method_name(bio));
 		break;
 	/* Disabled due API changes for OpenSSL 1.1.0+ */
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
@@ -341,7 +344,8 @@ void relpTcpLastSSLErrorMsg(int ret, relpTcp_t *pThis, const char* pszCallSource
 	long iMyRet = SSL_get_error(pThis->ssl, ret);
 
 	/* Check which kind of error we have */
-	pThis->pEngine->dbgprint("relpTcpLastSSLErrorMsg: openssl error '%s' with error code=%ld\n", pszCallSource, iMyRet);
+	pThis->pEngine->dbgprint("relpTcpLastSSLErrorMsg: openssl error '%s' with error code=%ld\n",
+		pszCallSource, iMyRet);
 	if(iMyRet == SSL_ERROR_SSL) {
 		/* Loop through errors */
 		while ((un_error = ERR_get_error()) != 0){
@@ -380,15 +384,18 @@ GenFingerprintStr(unsigned char *pFingerprint, size_t sizeFingerprint,
 	char * fpBuf,const size_t bufLen)
 {
 	char buf[4];
-	int iSrc, iDst;
+	size_t iSrc, iDst;
 	size_t i;
 	ENTER_RELPFUNC;
 
+	if (bufLen <= 5) {
+		ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+	}
 
-	strncpy(fpBuf,"SHA1", 4);
+	strncpy(fpBuf,"SHA1", bufLen);
 	iDst=4;
 
-	for(iSrc = 0; iSrc < sizeFingerprint ; ++iSrc, iDst += 3) {
+	for(iSrc = 0; iSrc < sizeFingerprint && iSrc < bufLen; ++iSrc, iDst += 3) {
 		sprintf(fpBuf+iDst, ":%2.2X", (unsigned char) pFingerprint[iSrc]);
 	}
 
@@ -436,7 +443,8 @@ relpTcpChkPeerFingerprint(relpTcp_t *const pThis, X509* cert)
 	}
 
 	if(!bFoundPositiveMatch) {
-		pThis->pEngine->dbgprint("relpTcpChkPeerFingerprint: invalid peer fingerprint, not permitted to talk to it\n");
+		pThis->pEngine->dbgprint("relpTcpChkPeerFingerprint: invalid peer fingerprint, "
+			"not permitted to talk to it\n");
 		callOnAuthErr(pThis, fpPrintable, "non-permited fingerprint", RELP_RET_AUTH_ERR_FP);
 		ABORT_FINALIZE(RELP_RET_AUTH_ERR_FP);
 	}
@@ -458,7 +466,10 @@ relpTcpChkPeerName(relpTcp_t *const pThis, X509* cert)
 	int iLoop;
 	int san_names_nb = -1;
 	GENERAL_NAMES *san_names = NULL;
-	unsigned char *szAltName;
+	GENERAL_NAME *gnDnsName;
+	int gtype;
+	ASN1_STRING *asDnsName;
+	const char *szAltName;
 
 	ENTER_RELPFUNC;
 
@@ -481,14 +492,21 @@ relpTcpChkPeerName(relpTcp_t *const pThis, X509* cert)
 			/* Loop through each name within the extension */
 			san_names_nb = sk_GENERAL_NAME_num(san_names);
 			for (iLoop=0; iLoop<san_names_nb; iLoop++) {
-				const GENERAL_NAME *current_name = sk_GENERAL_NAME_value(san_names, iLoop);
+				/* Get DNSName from san_names */
+				gnDnsName = sk_GENERAL_NAME_value(san_names, iLoop);
+				asDnsName = GENERAL_NAME_get0_value(gnDnsName, &gtype);
 
-				// Current name is a DNS name, let's check it
-				szAltName = ASN1_STRING_data(current_name->d.dNSName);
+#				if OPENSSL_VERSION_NUMBER >= 0x10100000L
+				szAltName = (const char *)ASN1_STRING_get0_data(asDnsName);
+#				else
+				szAltName = (const char *)ASN1_STRING_data(asDnsName);
+#				endif
+
 				pThis->pEngine->dbgprint("relpTcpChkPeerName: checking - altName: '%s'\n", szAltName);
 
 				/* Add to Names Buffer first */
-				if (relpTcpAddToCertNamesBuffer(pThis, allNames, sizeof(allNames), &iAllNames, (char *)szAltName) != 0)
+				if (relpTcpAddToCertNamesBuffer(pThis, allNames, sizeof(allNames),
+						&iAllNames, (char *)szAltName) != 0)
 					ABORT_FINALIZE(RELP_RET_AUTH_CERT_INVL);
 
 				/* Perform PeerName check on AltName */
@@ -603,6 +621,7 @@ relpTcpConstruct(relpTcp_t **ppThis, relpEngine_t *const pEngine,
 	pThis->privKeyFile = NULL;
 	pThis->pUsr = NULL;
 	pThis->permittedPeers.nmemb = 0;
+	pThis->permittedPeers.peer = NULL;
 
 	*ppThis = pThis;
 
@@ -650,7 +669,6 @@ relpTcpDestruct(relpTcp_t **ppThis)
 		}
 		gnutls_deinit(pThis->session);
 	}
-	relpTcpFreePermittedPeers(pThis);
 #endif /* #ifdef ENABLE_TLS */
 
 #ifdef ENABLE_TLS_OPENSSL
@@ -658,11 +676,12 @@ relpTcpDestruct(relpTcp_t **ppThis)
 		pThis->ssl != NULL) {
 
 		/* Try shutdown */
-		pThis->pEngine->dbgprint("relpTcpDestruct: try shutdown #1 for [%p]\n", pThis->ssl);
+		pThis->pEngine->dbgprint("relpTcpDestruct: try shutdown #1 for [%p]\n", (void *) pThis->ssl);
 		sslRet = SSL_shutdown(pThis->ssl);
 		if (sslRet <= 0) {
 			sslErr = SSL_get_error(pThis->ssl, sslRet);
-			pThis->pEngine->dbgprint("relpTcpDestruct: shutdown failed with err = %d, forcing ssl shutdown!\n", sslErr);
+			pThis->pEngine->dbgprint("relpTcpDestruct: shutdown failed with err = %d, "
+				"forcing ssl shutdown!\n", sslErr);
 
 			/* ignore those SSL Errors on shutdown */
 			if(	sslErr != SSL_ERROR_SYSCALL &&
@@ -684,6 +703,10 @@ relpTcpDestruct(relpTcp_t **ppThis)
 		pThis->ssl = NULL;
 	}
 #endif /* #ifdef ENABLE_TLS_OPENSSL */
+
+#if defined(ENABLE_TLS) || defined(ENABLE_TLS_OPENSSL)
+	relpTcpFreePermittedPeers(pThis);
+#endif /* #ifdef ENABLE_TLS | ENABLE_TLS_OPENSSL */
 
 	if (pThis->pRemHostIP != NULL)
 		free(pThis->pRemHostIP);
@@ -1075,9 +1098,10 @@ relpTcpTLSSetPrio(relpTcp_t *const pThis)
 #endif /* defined(ENABLE_TLS)*/
 #if defined(ENABLE_TLS_OPENSSL)
 	if (pThis->authmode == eRelpAuthMode_None)
-		strncpy(pristringBuf, "ALL:+COMPLEMENTOFDEFAULT" /* :+aNULL:+eNULL */, sizeof(pristringBuf));
+		strncpy(pristringBuf, "ALL:+COMPLEMENTOFDEFAULT:+ADH:+ECDH:+aNULL" /* :+aNULL:+eNULL */,
+			sizeof(pristringBuf));
 	else
-		strncpy(pristringBuf, "DEFAULT" /* :+aNULL:+eNULL */, sizeof(pristringBuf));
+		strncpy(pristringBuf, "DEFAULT", sizeof(pristringBuf));
 
 #endif /* defined(ENABLE_TLS_OPENSSL)*/
 		pristringBuf[sizeof(pristringBuf)-1] = '\0';
@@ -1187,7 +1211,7 @@ relpTcpInitTLS(relpTcp_t *const pThis)
 {
 	int iErr = 0;
 	ENTER_RELPFUNC;
-	pThis->pEngine->dbgprint("relpTcpInitTLS: Init OpenSSL library\n", errno);
+	pThis->pEngine->dbgprint("relpTcpInitTLS: Init OpenSSL library\n");
 
 	/* Setup OpenSSL library */
 	if((opensslh_THREAD_setup() == 0) || !SSL_library_init()) {
@@ -1208,8 +1232,15 @@ relpTcpInitTLS(relpTcp_t *const pThis)
 	SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv3);		/* Disable insecure SSLv3 Protocol */
 	SSL_CTX_sess_set_cache_size(ctx,1024);			/* TODO: make configurable? */
 
+	#if OPENSSL_VERSION_NUMBER >= 0x10002000L
 	/* Enable Support for automatic EC temporary key parameter selection. */
 	SSL_CTX_set_ecdh_auto(ctx, 1);
+	#else
+	pThis->pEngine->dbgprint("relpTcpInitTLS: openssl to old, cannot use SSL_CTX_set_ecdh_auto."
+		"Using SSL_CTX_set_tmp_ecdh with NID_X9_62_prime256v1/() instead.\n");
+	SSL_CTX_set_tmp_ecdh(ctx, EC_KEY_new_by_curve_name(NID_X9_62_prime256v1));
+
+	#endif
 
 	SSL_CTX_set_timeout(ctx, 30);	/* Default Session Timeout, TODO: Make configureable */
 	SSL_CTX_set_mode(ctx, SSL_MODE_AUTO_RETRY);
@@ -1256,8 +1287,8 @@ relpTcpChkPeerAuth(relpTcp_t *const pThis)
 	certpeer = SSL_get_peer_certificate(pThis->ssl);
 	if ( certpeer == NULL ) {
 		if(pThis->authmode == eRelpAuthMode_None ) {
-			pThis->pEngine->dbgprint("relpTcpChkPeerAuth: peer certificate for [%p] invalid, but allowed in anon auth mode\n",
-				pThis);
+			pThis->pEngine->dbgprint("relpTcpChkPeerAuth: peer certificate for [%p] invalid, "
+				"but allowed in anon auth mode\n", (void *) pThis);
 		} else
 			ABORT_FINALIZE(RELP_RET_AUTH_NO_CERT);
 	} else {
@@ -1265,11 +1296,13 @@ relpTcpChkPeerAuth(relpTcp_t *const pThis)
 		r = SSL_get_verify_result(pThis->ssl);
 		if (r != X509_V_OK) {
 			if (r == X509_V_ERR_CERT_HAS_EXPIRED) {
-				callOnAuthErr(pThis, (char*) X509_verify_cert_error_string(r), "certificate validation failed, certificate expired!",
+				callOnAuthErr(pThis, (char*) X509_verify_cert_error_string(r),
+					"certificate validation failed, certificate expired!",
 					RELP_RET_AUTH_CERT_INVL);
 				ABORT_FINALIZE(RELP_RET_AUTH_CERT_INVL);
 			} else {
-				callOnAuthErr(pThis, (char*) X509_verify_cert_error_string(r), "certificate validation failed",
+				callOnAuthErr(pThis, (char*) X509_verify_cert_error_string(r),
+					"certificate validation failed",
 					RELP_RET_AUTH_CERT_INVL);
 				ABORT_FINALIZE(RELP_RET_AUTH_CERT_INVL);
 			}
@@ -1378,12 +1411,12 @@ relpTcpRtryHandshake(relpTcp_t *const pThis)
 				resErr == SSL_ERROR_WANT_WRITE) {
 				pThis->rtryOp = relpTCP_RETRY_handshake;
 //				pThis->rtryOsslErr = resErr; /* Store SSL ErrorCode into*/
-				pThis->pEngine->dbgprint("relpTcpRtryHandshake: OpenSSL Server handshake does not complete "
-					"immediately - setting to retry (this is OK and normal)\n");
+				pThis->pEngine->dbgprint("relpTcpRtryHandshake: Server handshake does not "
+					"complete immediately - setting to retry (this is OK and normal)\n");
 				FINALIZE;
 			} else if(resErr == SSL_ERROR_SYSCALL) {
-				pThis->pEngine->dbgprint("relpTcpRtryHandshake: OpenSSL Server handshake failed with SSL_ERROR_SYSCALL "
-					"- Aborting handshake.\n");
+				pThis->pEngine->dbgprint("relpTcpRtryHandshake: Server handshake failed with "
+					"SSL_ERROR_SYSCALL - Aborting handshake.\n");
 				relpTcpLastSSLErrorMsg(res, pThis, "relpTcpRtryHandshake Server");
 				ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
 			} else {
@@ -1391,7 +1424,8 @@ relpTcpRtryHandshake(relpTcp_t *const pThis)
 				ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
 			}
 		} else
-			pThis->pEngine->dbgprint("relpTcpRtryHandshake: OpenSSL Server handshake finished for ssl[%p]\n", (void *)pThis->ssl);
+			pThis->pEngine->dbgprint("relpTcpRtryHandshake: Server handshake finished for ssl[%p]\n",
+				(void *)pThis->ssl);
 	} else {
 		/* Handle Client SSL Object */
 		if((res = SSL_do_handshake(pThis->ssl)) <= 0) {
@@ -1401,12 +1435,12 @@ relpTcpRtryHandshake(relpTcp_t *const pThis)
 				resErr == SSL_ERROR_WANT_WRITE) {
 				pThis->rtryOp = relpTCP_RETRY_handshake;
 //				pThis->rtryOsslErr = resErr; /* Store SSL ErrorCode into*/
-				pThis->pEngine->dbgprint("relpTcpRtryHandshake: OpenSSL Client handshake does not complete "
+				pThis->pEngine->dbgprint("relpTcpRtryHandshake: Client handshake does not complete "
 					"immediately - setting to retry (this is OK and normal)\n");
 				FINALIZE;
 			} else if(resErr == SSL_ERROR_SYSCALL) {
-				pThis->pEngine->dbgprint("relpTcpRtryHandshake: OpenSSL Client handshake failed with SSL_ERROR_SYSCALL "
-					"- Aborting handshake.\n");
+				pThis->pEngine->dbgprint("relpTcpRtryHandshake: Client handshake failed with "
+					"SSL_ERROR_SYSCALL - Aborting handshake.\n");
 				relpTcpLastSSLErrorMsg(res, pThis, "relpTcpRtryHandshake Client");
 				ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP /*RS_RET_RETRY*/);
 			} else {
@@ -1414,7 +1448,8 @@ relpTcpRtryHandshake(relpTcp_t *const pThis)
 				ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
 			}
 		} else
-			pThis->pEngine->dbgprint("relpTcpRtryHandshake: OpenSSL Client handshake finished for ssl[%p]\n", (void *)pThis->ssl);
+			pThis->pEngine->dbgprint("relpTcpRtryHandshake: Client handshake finished for ssl[%p]\n",
+				(void *)pThis->ssl);
 	}
 
 	/* Handshake finished */
@@ -1458,6 +1493,8 @@ relpTcpAcceptConnReqInitTLS(relpTcp_t *const pThis, relpSrv_t *const pSrv)
 		/* Enable certificate valid checking */
 		SSL_set_verify(pThis->ssl, SSL_VERIFY_PEER|SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verify_callback);
 		SSL_set_verify_depth(pThis->ssl, 4);
+	} else {
+		SSL_set_verify(pThis->ssl, SSL_VERIFY_NONE, verify_callback);
 	}
 
 	/* Create BIO from ptcp socket! */
@@ -1483,7 +1520,7 @@ BIO_set_nbio( client, 1 );
 finalize_it:
 	/* Accept appears to be done here */
 	pThis->pEngine->dbgprint("relpTcpAcceptConnReqInitTLS: END iRet = %d, pThis=[%p], pThis->rtryCall=%d\n",
-		iRet, pThis, pThis->rtryOp);
+		iRet, (void *) pThis, pThis->rtryOp);
 	if(iRet != RELP_RET_OK) {
 		if (client != NULL) {
 			BIO_free(client);
@@ -1561,7 +1598,7 @@ BIO_set_nbio( conn, 1 );
 	pThis->sslState = osslClient; /*set client state */
 
 	/* Perform the TLS handshake */
-	pThis->pEngine->dbgprint("relpTcpConnectTLSInit: try handshake for [%p}\n", pThis);
+	pThis->pEngine->dbgprint("relpTcpConnectTLSInit: try handshake for [%p]\n", (void *)pThis);
 	CHKRet(relpTcpRtryHandshake(pThis));
 
 	/* set the socket to non-blocking IO (we do this on the recv() for non-TLS */
@@ -1579,7 +1616,7 @@ BIO_set_nbio( conn, 1 );
 finalize_it:
 	/* Connect appears to be done here */
 	pThis->pEngine->dbgprint("relpTcpConnectTLSInit: END iRet = %d, pThis=[%p], pNsd->rtryOp=%d\n",
-		iRet, pThis, pThis->rtryOp);
+		iRet, (void *) pThis, pThis->rtryOp);
 	if(iRet != RELP_RET_OK)	{
 		if (conn != NULL) {
 			BIO_free(conn);
@@ -2183,12 +2220,12 @@ relpTcpChkPeerName(relpTcp_t *const pThis, gnutls_x509_crt_t cert)
 	if(ret < 0) {
 		callOnAuthErr(pThis, "", "certificate validation failed",
 			RELP_RET_AUTH_CERT_INVL);
-		r = GNUTLS_E_CERTIFICATE_ERROR; goto done;
+		ABORT_FINALIZE(GNUTLS_E_CERTIFICATE_ERROR);
 	}
 	if(status != 0) { /* Certificate is not trusted */
 		callOnAuthErr(pThis, "", "certificate validation failed",
 			RELP_RET_AUTH_CERT_INVL);
-		r = GNUTLS_E_CERTIFICATE_ERROR; goto done;
+		ABORT_FINALIZE(GNUTLS_E_CERTIFICATE_ERROR);
 	}
 
 	bFoundPositiveMatch = 0;
@@ -2204,7 +2241,8 @@ relpTcpChkPeerName(relpTcp_t *const pThis, gnutls_x509_crt_t cert)
 			break;
 		else if(gnuRet == GNUTLS_SAN_DNSNAME) {
 			pThis->pEngine->dbgprint("relpTcpChkPeerName: subject alt dnsName: '%s'\n", szAltName);
-			if (relpTcpAddToCertNamesBuffer(pThis, allNames, sizeof(allNames), &iAllNames, szAltName) != 0) {
+			if (relpTcpAddToCertNamesBuffer(pThis, allNames, sizeof(allNames),
+					&iAllNames, szAltName) != 0) {
 				ABORT_FINALIZE(GNUTLS_E_CERTIFICATE_ERROR);
 			}
 			relpTcpChkOnePeerName(pThis, szAltName, &bFoundPositiveMatch);
@@ -2226,9 +2264,8 @@ relpTcpChkPeerName(relpTcp_t *const pThis, gnutls_x509_crt_t cert)
 
 	if(!bFoundPositiveMatch) {
 		callOnAuthErr(pThis, allNames, "no permited name found", RELP_RET_AUTH_ERR_NAME);
-		r = GNUTLS_E_CERTIFICATE_ERROR; goto done;
+		ABORT_FINALIZE(GNUTLS_E_CERTIFICATE_ERROR);
 	}
-	r = 0;
 finalize_it:
 
 	LEAVE_RELPFUNC;
@@ -2685,7 +2722,8 @@ relpTcpRcv(relpTcp_t *const pThis, relpOctet_t *pRcvBuf, ssize_t *pLenBuf)
 
 			err = SSL_get_error(pThis->ssl, lenRcvd);
 			if(	err == SSL_ERROR_ZERO_RETURN ) {
-				pThis->pEngine->dbgprint("relpTcpRcv: SSL_ERROR_ZERO_RETURN received, connection may closed already\n");
+				pThis->pEngine->dbgprint("relpTcpRcv: SSL_ERROR_ZERO_RETURN received, "
+					"connection may closed already\n");
 				pThis->rtryOp = relpTCP_RETRY_none;
 				ABORT_FINALIZE(RELP_RET_IO_ERR);
 			}
@@ -2709,8 +2747,8 @@ relpTcpRcv(relpTcp_t *const pThis, relpOctet_t *pRcvBuf, ssize_t *pLenBuf)
 	}
 #endif /* #ifdef ENABLE_TLS | ENABLE_TLS_OPENSSL*/
 finalize_it:
-	pThis->pEngine->dbgprint("relpTcpRcv return. relptcp %p, iRet %d, lenRcvd %d, pLenBuf %ld\n",
-		pThis, iRet, lenRcvd, *pLenBuf);
+	pThis->pEngine->dbgprint("relpTcpRcv return. relptcp [%p], iRet %d, lenRcvd %d, pLenBuf %zd\n",
+		(void *) pThis, iRet, lenRcvd, *pLenBuf);
 	LEAVE_RELPFUNC;
 }
 
@@ -2791,7 +2829,8 @@ relpTcpSend(relpTcp_t *const pThis, relpOctet_t *pBuf, ssize_t *pLenBuf)
 		} else {
 			err = SSL_get_error(pThis->ssl, written);
 			if(	err == SSL_ERROR_ZERO_RETURN ) {
-				pThis->pEngine->dbgprint("relpTcpSend: SSL_ERROR_ZERO_RETURN received, retry next time\n");
+				pThis->pEngine->dbgprint("relpTcpSend: SSL_ERROR_ZERO_RETURN received, "
+					"retry next time\n");
 				pThis->rtryOp = relpTCP_RETRY_send;
 				written = 0;
 			}

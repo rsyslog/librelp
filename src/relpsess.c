@@ -171,6 +171,7 @@ relpSessDestruct(relpSess_t **ppThis)
 	free(pThis->srvAddr);
 	free(pThis->clientIP);
 	free(pThis->pristring);
+	free(pThis->caCertFile);
 	free(pThis->ownCertFile);
 	free(pThis->privKeyFile);
 	relpSessFreePermittedPeers(pThis);

@@ -3,6 +3,7 @@
 echo 'Start Receiver...'
 . ${srcdir}/test-framework.sh
 
+# NOT USING startup_receiver!
 ./receive -p $TESTPORT -T -a "name" -y ${srcdir}/tls-certs/cert.pem -z ${srcdir}/tls-certs/key.pem -P "rsyslog" > librelp.out.log
 
 check_output "receive: parameter missing; certificates and permittedPeer required"
