@@ -19,6 +19,7 @@ TESTS=  basic.sh \
 	tls-basic-fingerprint.sh \
 	tls-wrong-permittedPeer.sh \
 	tls-wrong-authname.sh \
+	tls-basic-brokencert.sh \
 	tls-missing-param-sender.sh \
 	tls-missing-param-receiver.sh \
 	long-msg.sh \
@@ -37,4 +38,13 @@ EXTRA_DIST=$(TESTS) \
 	send.c \
 	tls-certs/ca.pem \
 	tls-certs/cert.pem \
-	tls-certs/key.pem
+	tls-certs/key.pem \
+	tls-certs/ossl-ca.pem \
+	tls-certs/ossl-ca-key.pem \
+	tls-certs/ossl-client-cert.pem \
+	tls-certs/ossl-client-key.pem \
+	tls-certs/ossl-clientbrok-cert.pem \
+	tls-certs/ossl-clientbrok-key.pem \
+	tls-certs/ossl-server-cert.pem \
+	tls-certs/ossl-server-key.pem
+
