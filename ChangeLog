@@ -1,4 +1,12 @@
 ----------------------------------------------------------------------
+Version 1.2.17 - 2018-??-??
+- added support for openssl
+  now, at configure time, openssl (--enable-tls-openssl) or gnutls
+  (--enable-tls) can be enabled. Openssl is recommended as it permits
+  better error messages and has more robust certificate handling,
+  but the default remains gnutls so that packagers do not need to
+  change without specific need.
+----------------------------------------------------------------------
 Version 1.2.16 - 2018-05-14
 - API changes
   * add new API: relpSrvSetOversizeMode()
