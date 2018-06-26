@@ -5,8 +5,9 @@
 
 # "config settings" for the testbench
 TB_TIMEOUT_STARTUP=400  # 40 seconds - Solaris sometimes needs this...
-TESTPORT=30514
-#OPT_VERBOSE=-v # uncomment to get verbose output
+TESTPORT=31514
+export valgrind="valgrind --malloc-fill=ff --free-fill=fe --log-fd=1"
+export OPT_VERBOSE=-v # We need verbose now for propper error checking!
 
 ######################################################################
 # functions
@@ -28,23 +29,41 @@ function wait_process_startup_via_pidfile() {
 	printf "program started up, pidfile $1 contains $(cat $1)\n"
 }
 
+# start receiver WITH valgrind, add receiver command line parameters after function name
+function startup_receiver_valgrind() {
+	printf 'Starting Receiver...\n'
+	$valgrind ./receive -p $TESTPORT -F $srcdir/receive.pid $OPT_VERBOSE $* 1>>librelp.out.log 2>&1 &
+	export RECEIVE_PID=$!
+	printf "got receive pid $RECEIVE_PID\n"
+	wait_process_startup_via_pidfile $srcdir/receive.pid
+	sleep 1
+	printf 'Receiver running\n'
+}
 
 # start receiver, add receiver command line parameters after function name
 function startup_receiver() {
 	printf 'Starting Receiver...\n'
-	./receive -p $TESTPORT -F receive.pid $OPT_VERBOSE $* > librelp.out.log &
+	./receive -p $TESTPORT -F $srcdir/receive.pid $OPT_VERBOSE $* 1>>librelp.out.log 2>&1 &
 	export RECEIVE_PID=$!
 	printf "got receive pid $RECEIVE_PID\n"
-	wait_process_startup_via_pidfile receive.pid
+	wait_process_startup_via_pidfile $srcdir/receive.pid
 	sleep 1
 	printf 'Receiver running\n'
 }
 
 # stop receiver
 function stop_receiver() {
-	kill $(cat receive.pid)
-	wait $(cat receive.pid) &> /dev/null
-	#kill $RECEIVE_PID
+	if [ -f $srcdir/receive.pid ]; then
+		kill $(cat $srcdir/receive.pid) &> /dev/null
+	fi
+	wait -n 5 $(cat $srcdir/receive.pid) &> /dev/null
+#kill $RECEIVE_PID
+	if [ -f $srcdir/receive.pid ]; then
+		# FORCE
+		kill -9 $(cat $srcdir/receive.pid) &> /dev/null
+	fi
+	sleep 1
+
 	printf "receiver stopped\n"
 }
 
@@ -67,6 +86,28 @@ function check_output() {
 	fi
 }
 
+# $1 is the value to check for
+# $2 (optinal) is the file to check
+function check_output_only() {
+	EXPECTED="$1"
+	if [ "$2" == "" ] ; then
+		FILE_TO_CHECK="librelp.out.log"
+	else
+		FILE_TO_CHECK="$2"
+	fi
+#	printf "\ncheck_output_only on $FILE_TO_CHECK with '$EXPECTED'\n"
+	grep -q "$EXPECTED" $FILE_TO_CHECK;
+	if [ $? -ne 0 ]; then
+		# False
+#		printf "\ncheck_output_only FALSE \n";
+		return 1;
+	else
+		# true
+#		printf "\ncheck_output_only TRUE \n";
+		return 0;
+	fi
+}
+
 # cleanup temporary
 # note: on solaris,
 # get full command line: /usr/ucb/ps awwx
@@ -78,6 +119,11 @@ function cleanup() {
 		pkill -x receive
 		echo pkill result $?
 	fi
+
+	if [ -f $srcdir/receive.pid ]; then
+		kill -9 `cat $srcdir/receive.pid` &> /dev/null
+	fi
+
 	rm -f receive.pid librelp.out.log *.err.log
 }
 

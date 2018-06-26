@@ -37,6 +37,9 @@
 #ifdef ENABLE_TLS
 #       include <gnutls/gnutls.h>
 #endif
+#ifdef ENABLE_TLS_OPENSSL
+#	include <openssl/ssl.h>
+#endif
 #include "relp.h"
 
 typedef enum { relpTCP_RETRY_none = 0,
@@ -83,6 +86,19 @@ typedef struct tcpPermittedPeers_s {
 	tcpPermittedPeerEntry_t *peer;
 } tcpPermittedPeers_t;
 
+#ifdef ENABLE_TLS_OPENSSL
+typedef enum {
+	osslRtry_None = 0,	/**< no call needs to be retried */
+	osslRtry_handshake = 1,
+	osslRtry_recv = 2
+} osslRtryCall_t;		/**< IDs of calls that needs to be retried */
+
+typedef enum {
+	osslServer = 0,		/**< Server SSL Object */
+	osslClient = 1		/**< Client SSL Object */
+} osslSslState_t;
+#endif
+
 /* the RELPTCP object
  * rgerhards, 2008-03-16
  */
@@ -120,6 +136,10 @@ typedef struct relpTcp_s {
 #ifdef ENABLE_TLS
 	gnutls_session_t session;
 	gnutls_dh_params_t dh_params; /**< server DH parameters for anon mode */
+#endif
+#ifdef ENABLE_TLS_OPENSSL
+	SSL *ssl;		/* OpenSSL main SSL obj */
+	osslSslState_t sslState;/**< what must we retry? */
 #endif
 	relpTcpRtryState_t rtryOp;
 } relpTcp_t;
@@ -162,5 +182,37 @@ void relpTcpHintBurstBegin(relpTcp_t *pThis);
 void relpTcpHintBurstEnd(relpTcp_t *pThis);
 int relpTcpGetRtryDirection(relpTcp_t *pThis);
 int relpTcpWaitWriteable(relpTcp_t *pThis, struct timespec *timeout);
+
+#ifdef ENABLE_TLS_OPENSSL
+/*-----------------------------------------------------------------------------*/
+#define MUTEX_TYPE       pthread_mutex_t
+#define MUTEX_SETUP(x)   pthread_mutex_init(&(x), NULL)
+#define MUTEX_CLEANUP(x) pthread_mutex_destroy(&(x))
+#define MUTEX_LOCK(x)    pthread_mutex_lock(&(x))
+#define MUTEX_UNLOCK(x)  pthread_mutex_unlock(&(x))
+#define THREAD_ID        pthread_self()
+
+/* This array will store all of the mutexes available to OpenSSL. */
+struct CRYPTO_dynlock_value
+{
+	MUTEX_TYPE mutex;
+};
+
+void dyn_destroy_function(struct CRYPTO_dynlock_value *l,
+	__attribute__((unused)) const char *file, __attribute__((unused)) int line);
+void dyn_lock_function(int mode, struct CRYPTO_dynlock_value *l,
+	__attribute__((unused)) const char *file, __attribute__((unused)) int line);
+struct CRYPTO_dynlock_value * dyn_create_function(
+	__attribute__((unused)) const char *file, __attribute__((unused)) int line);
+unsigned long id_function(void);
+void locking_function(int mode, int n,
+	__attribute__((unused)) const char * file, __attribute__((unused)) int line);
+/*-----------------------------------------------------------------------------*/
+
+/* Helper to detect when OpenSSL is initialized */
+static int called_openssl_global_init = 0;
+/* Main OpenSSL CTX pointer */
+static SSL_CTX *ctx;
+#endif
 
 #endif /* #ifndef RELPTCP_H_INCLUDED */

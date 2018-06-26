@@ -24,7 +24,7 @@
 #include <string.h>
 #include "librelp.h"
 
-#define TRY(f) if(f != RELP_RET_OK) { printf("failure in: %s\n", #f); return 1; }
+#define TRY(f) if(f != RELP_RET_OK) { fprintf(stderr, "send.c: FAILURE in: '%s'\n", #f); return 1; }
 
 static relpEngine_t *pRelpEngine;
 
@@ -38,9 +38,8 @@ dbgprintf(char *fmt, ...)
 	vsnprintf(pszWriteBuf, sizeof(pszWriteBuf), fmt, ap);
 	va_end(ap);
 	fprintf(stderr, "send.c: %s", pszWriteBuf);
+	fflush(stderr);
 }
-
-
 
 void print_usage(void)
 {

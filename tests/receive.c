@@ -25,7 +25,7 @@
 #include <limits.h>
 #include "librelp.h"
 
-#define TRY(f) if(f != RELP_RET_OK) { printf("failure in: %s\n", #f); return 1; }
+#define TRY(f) if(f != RELP_RET_OK) { fprintf(stderr, "receive.c: FAILURE in '%s'\n", #f); return 1; }
 
 static relpEngine_t *pRelpEngine;
 
@@ -38,7 +38,8 @@ dbgprintf(char *fmt, ...)
 	va_start(ap, fmt);
 	vsnprintf(pszWriteBuf, sizeof(pszWriteBuf), fmt, ap);
 	va_end(ap);
-	fprintf(stderr, "receive.c: %s", pszWriteBuf); fflush(stderr);
+	fprintf(stderr, "receive.c: %s", pszWriteBuf);
+	fflush(stderr);
 }
 
 static relpRetVal onSyslogRcv(unsigned char *pHostname __attribute__((unused)),

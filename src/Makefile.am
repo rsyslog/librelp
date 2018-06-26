@@ -44,8 +44,8 @@ librelp_la_SOURCES = \
 	cserverclose.c \
 	dbllinklist.h \
 	cmdif.h
-librelp_la_CPPFLAGS = $(AM_CLFAGS) $(PTHREADS_CFLAGS) $(GNUTLS_CFLAGS) $(WARN_CFLAGS)
-librelp_la_LIBADD = $(rt_libs) $(GNUTLS_LIBS)
+librelp_la_CPPFLAGS = $(AM_CLFAGS) $(PTHREADS_CFLAGS) $(GNUTLS_CFLAGS) $(OPENSSL_CFLAGS) $(WARN_CFLAGS)
+librelp_la_LIBADD = $(rt_libs) $(GNUTLS_LIBS) $(OPENSSL_LIBS)
 # info on version-info:
 # http://www.gnu.org/software/libtool/manual/html_node/Updating-version-info.html
 librelp_la_LDFLAGS = -version-info 4:0:4
