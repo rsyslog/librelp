@@ -39,6 +39,20 @@
 #include "sendbuf.h"
 
 
+/* a portable way to put the current thread asleep. Note that
+ * using the sleep() API family may result in the whole process
+ * to be put asleep on some platforms.
+ */
+static void
+doSleep(int iSeconds, int iuSeconds)
+{
+	struct timeval tvSelectTimeout;
+	tvSelectTimeout.tv_sec = iSeconds;
+	tvSelectTimeout.tv_usec = iuSeconds; /* micro seconds */
+	select(0, NULL, NULL, NULL, &tvSelectTimeout);
+}
+
+
 /** Construct a RELP sendbuf instance
  * This is the first thing that a caller must do before calling any
  * RELP function. The relp sendbuf must only destructed after all RELP
@@ -165,6 +179,10 @@ relpSendbufSendAll(relpSendbuf_t *pThis, relpSess_t *pSess, int bAddToUnacked)
 	clock_gettime(CLOCK_REALTIME, &tTimeout);
 	tTimeout.tv_sec += pSess->timeout;
 	lenToWrite = pThis->lenData - pThis->bufPtr;
+
+	// simulate a sleepy rsyslog pipeline (sleep 1 second)
+	doSleep(1, 0)
+
 	/* we compute the absolute timeout, as we may need to use it multiple
 	 * times in the loop below. Using the relative value would potentially
 	 * prolong it for quite some time!
