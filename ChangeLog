@@ -6,6 +6,14 @@ Version 1.2.17 - 2018-??-??
   better error messages and has more robust certificate handling,
   but the default remains gnutls so that packagers do not need to
   change without specific need.
+- improve code quality: replace strerror() by portable equivalent
+- improve error message on connection failure
+  it now contains the OS-provided error message
+  Thanks to Justin Azoff for the patch.
+- bugfix: do not expose symbols that are not part of public API
+  Some other symbols were exported. Now only symbols starting with
+  "relp" are exported.
+  Thanks to Michael Biebl for the patch.
 ----------------------------------------------------------------------
 Version 1.2.16 - 2018-05-14
 - API changes
