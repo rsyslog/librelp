@@ -234,5 +234,6 @@ static inline int relpEngineShouldStop(relpEngine_t *pThis) {
 relpRetVal relpEngineDispatchFrame(relpEngine_t *pThis, relpSess_t *pSess, relpFrame_t *pFrame);
 void __attribute__((format(printf, 4, 5))) relpEngineCallOnGenericErr(relpEngine_t *pThis,
 	char *eobj, relpRetVal ecode, char *fmt, ...);
+const char * _relpEngine_strerror_r(const int errnum, char *buf, const size_t buflen);
 
 #endif /* #ifndef RELP_H_INCLUDED */
