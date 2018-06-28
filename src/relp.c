@@ -69,9 +69,8 @@ relpEngineCallOnGenericErr(relpEngine_t *pThis, char *eobj, relpRetVal ecode, ch
 	}
 }
 
-#if defined(HAVE_EPOLL_CREATE1) || defined(HAVE_EPOLL_CREATE)
-static char *
-relpEngine_strerror_r(int errnum, char *buf, size_t buflen) {
+const char *
+_relpEngine_strerror_r(const int errnum, char *buf, const size_t buflen) {
 #ifndef HAVE_STRERROR_R
 	char *p;
 	p = strerror(errnum);
@@ -92,6 +91,7 @@ relpEngine_strerror_r(int errnum, char *buf, size_t buflen) {
 	return buf;
 }
 
+#if defined(HAVE_EPOLL_CREATE1) || defined(HAVE_EPOLL_CREATE)
 static relpRetVal
 addToEpollSet(relpEngine_t *pThis, epolld_type_t typ, void *ptr, int sock, epolld_t **pepd)
 {
@@ -111,7 +111,7 @@ addToEpollSet(relpEngine_t *pThis, epolld_type_t typ, void *ptr, int sock, epoll
 		int eno = errno;
 		relpEngineCallOnGenericErr(pThis, "librelp", RELP_RET_ERR_EPOLL_CTL,
 			"os error (%d) during EPOLL_CTL_ADD: %s",
-			eno, relpEngine_strerror_r(eno, errStr, sizeof(errStr)));
+			eno, _relpEngine_strerror_r(eno, errStr, sizeof(errStr)));
 		ABORT_FINALIZE(RELP_RET_ERR_EPOLL_CTL);
 	}
 	*pepd = epd;
@@ -136,7 +136,7 @@ delFromEpollSet(relpEngine_t *pThis, epolld_t *epd)
 		int eno = errno;
 		relpEngineCallOnGenericErr(pThis, "librelp", RELP_RET_ERR_EPOLL_CTL,
 			"os error (%d) during EPOLL_CTL_DEL: %s",
-			eno, relpEngine_strerror_r(eno, errStr, sizeof(errStr)));
+			eno, _relpEngine_strerror_r(eno, errStr, sizeof(errStr)));
 	}
 	free(epd);
 }
@@ -621,7 +621,7 @@ epoll_set_events(relpEngine_t *pThis, relpEngSessLst_t *pSessEtry, int sock, uin
 			int eno = errno;
 			relpEngineCallOnGenericErr(pThis, "librelp", RELP_RET_ERR_EPOLL_CTL,
 				"os error (%d) during EPOLL_CTL_MOD: %s",
-				eno, relpEngine_strerror_r(eno, errStr, sizeof(errStr)));
+				eno, _relpEngine_strerror_r(eno, errStr, sizeof(errStr)));
 			ABORT_FINALIZE(RELP_RET_ERR_EPOLL_CTL);
 		}
 	}

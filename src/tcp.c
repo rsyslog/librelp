@@ -1752,10 +1752,10 @@ relpTcpAcceptConnReq(relpTcp_t **ppThis, const int sock, relpSrv_t *const pSrv)
 	assert(ppThis != NULL);
 
 	iNewSock = accept(sock, (struct sockaddr*) &addr, &addrlen);
-	int errnosave = errno;
 	if(iNewSock < 0) {
-		pSrv->pEngine->dbgprint("error during accept, sleeping 20ms: %s\n",
-			strerror(errnosave));
+		char errStr[1024];
+		_relpEngine_strerror_r(errno, errStr, sizeof(errStr));
+		pSrv->pEngine->dbgprint("error during accept, sleeping 20ms: %s\n", errStr);
 		doSleep(0, 20000);
 		pSrv->pEngine->dbgprint("END SLEEP\n");
 		ABORT_FINALIZE(RELP_RET_ACCEPT_ERR);
@@ -3055,7 +3055,9 @@ relpTcpConnect(relpTcp_t *const pThis,
 	}
 	if(connect(pThis->sock, res->ai_addr, res->ai_addrlen) == -1) {
 		if(errno != EINPROGRESS) {
-			snprintf(errmsg, sizeof(errmsg), "error connecting: '%s'", strerror(errno));
+			char errStr[1024];
+			_relpEngine_strerror_r(errno, errStr, sizeof(errStr));
+			snprintf(errmsg, sizeof(errmsg), "error connecting: '%s'", errStr);
 			callOnErr(pThis, errmsg, RELP_RET_IO_ERR);
 			ABORT_FINALIZE(RELP_RET_IO_ERR);
 		}
