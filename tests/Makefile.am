@@ -19,6 +19,7 @@ TESTS=  basic.sh \
 	tls-basic-fingerprint.sh \
 	tls-wrong-permittedPeer.sh \
 	tls-wrong-authname.sh \
+	tls-wrong-signedcert.sh \
 	tls-basic-brokencert.sh \
 	tls-missing-param-sender.sh \
 	tls-missing-param-receiver.sh \
