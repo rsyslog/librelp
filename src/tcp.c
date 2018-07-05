@@ -383,9 +383,7 @@ static relpRetVal
 GenFingerprintStr(unsigned char *pFingerprint, size_t sizeFingerprint,
 	char * fpBuf,const size_t bufLen)
 {
-	char buf[4];
 	size_t iSrc, iDst;
-	size_t i;
 	ENTER_RELPFUNC;
 
 	if (bufLen <= 5) {
@@ -543,6 +541,7 @@ int verify_callback(int status, X509_STORE_CTX *store)
 {
 	char szdbgdata1[256];
 	char szdbgdata2[256];
+	char szdberrmsg[1024];
 
 	/* Get current SSL object in order to obtain relpTcp_t obj */
 	SSL* ssl = X509_STORE_CTX_get_ex_data(store, SSL_get_ex_data_X509_STORE_CTX_idx());
@@ -561,21 +560,30 @@ int verify_callback(int status, X509_STORE_CTX *store)
 
 		/* Log Warning only on EXPIRED */
 		if (err == X509_V_OK || err == X509_V_ERR_CERT_HAS_EXPIRED) {
-			pThis->pEngine->dbgprint(
-				"verify_callback: Certificate warning at depth: %d \n\t"
+			snprintf(szdberrmsg, sizeof(szdberrmsg),
+				"Certificate expired in verify_callback at depth: %d \n\t"
 				"issuer  = %s\n\t"
 				"subject = %s\n\t"
 				"err %d:%s\n",
 				depth, szdbgdata1, szdbgdata2, err, X509_verify_cert_error_string(err));
-			/* Set Status to OK*/
+			pThis->pEngine->dbgprint("verify_callback: %s", szdberrmsg);
+
+			callOnAuthErr(pThis, (char*)X509_verify_cert_error_string(err),
+				szdberrmsg, RELP_RET_AUTH_CERT_INVL);
+
+			/* Set Status to OK ?!*/
 			status = 1;
 		} else {
-			pThis->pEngine->dbgprint(
-				"verify_callback: Certificate error at depth: %d \n\t"
+			snprintf(szdberrmsg, sizeof(szdberrmsg),
+				"Certificate error in verify_callback at depth: %d \n\t"
 				"issuer  = %s\n\t"
 				"subject = %s\n\t"
 				"err %d:%s\n",
 				depth, szdbgdata1, szdbgdata2, err, X509_verify_cert_error_string(err));
+			pThis->pEngine->dbgprint("verify_callback: %s", szdberrmsg);
+
+			callOnAuthErr(pThis, (char*)X509_verify_cert_error_string(err),
+				szdberrmsg, RELP_RET_AUTH_CERT_INVL);
 		}
 	} else {
 		pThis->pEngine->dbgprint("verify_callback: certificate validation success!\n");
@@ -1083,7 +1091,9 @@ relpTcpSetDHBits(relpTcp_t *const pThis, const int bits)
 static relpRetVal
 relpTcpTLSSetPrio(relpTcp_t *const pThis)
 {
+#if defined(ENABLE_TLS)
 	int r;
+#endif
 	char pristringBuf[4096];
 	char *pristring;
 	ENTER_RELPFUNC;
@@ -1468,7 +1478,6 @@ finalize_it:
 static relpRetVal
 relpTcpAcceptConnReqInitTLS(relpTcp_t *const pThis, relpSrv_t *const pSrv)
 {
-	int r;
 	BIO *client = NULL;
 	ENTER_RELPFUNC;
 
@@ -1522,10 +1531,8 @@ finalize_it:
 	pThis->pEngine->dbgprint("relpTcpAcceptConnReqInitTLS: END iRet = %d, pThis=[%p], pThis->rtryCall=%d\n",
 		iRet, (void *) pThis, pThis->rtryOp);
 	if(iRet != RELP_RET_OK) {
-		if (client != NULL) {
-			BIO_free(client);
-		}
 		if (pThis->ssl != NULL) {
+			/* Client BIO is freed within SSL_free() */
 			SSL_free(pThis->ssl);
 			pThis->ssl = NULL;
 		}
@@ -1539,7 +1546,6 @@ finalize_it:
 static relpRetVal
 relpTcpConnectTLSInit(relpTcp_t *const pThis)
 {
-	int r;
 	int sockflags;
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
@@ -1555,7 +1561,7 @@ relpTcpConnectTLSInit(relpTcp_t *const pThis)
 	}
 
 	if(sockflags == -1) {
-		pThis->pEngine->dbgprint("error %d unsetting fcntl(O_NONBLOCK) on relp socket", errno);
+		pThis->pEngine->dbgprint("error %d unsetting fcntl(O_NONBLOCK) on relp socket\n", errno);
 		ABORT_FINALIZE(RELP_RET_IO_ERR);
 	}
 
@@ -1629,7 +1635,6 @@ finalize_it:
 static relpRetVal
 relpTcpLstnInitTLS(relpTcp_t *const pThis)
 {
-	int r;
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
 
@@ -2461,7 +2466,7 @@ AddPermittedPeerWildcard(tcpPermittedPeerEntry_t *pEtry, char* pszStr, const int
 	 * properly terminate the domain component string.
 	 */
 	pNew->pszDomainPart[iDst] = '\0';
-	pNew->lenDomainPart = strlen((char*)pNew->pszDomainPart);
+	pNew->lenDomainPart = (int16_t) strlen((char*)pNew->pszDomainPart);
 
 finalize_it:
 	if(iRet != RELP_RET_OK) {
@@ -2734,7 +2739,7 @@ relpTcpRcv(relpTcp_t *const pThis, relpOctet_t *pRcvBuf, ssize_t *pLenBuf)
 				pThis->rtryOp = relpTCP_RETRY_none;
 				ABORT_FINALIZE(RELP_RET_IO_ERR);
 			} else {
-				pThis->pEngine->dbgprint("relpTcpRcv: SSL_get_error = %d\n", err);
+				pThis->pEngine->dbgprint("relpTcpRcv: SSL_get_error = %d, setting RETRY \n", err);
 				pThis->rtryOp =  relpTCP_RETRY_recv;
 			}
 		}
@@ -2745,8 +2750,9 @@ relpTcpRcv(relpTcp_t *const pThis, relpOctet_t *pRcvBuf, ssize_t *pLenBuf)
 			*pLenBuf, pThis->sock);
 #if defined(ENABLE_TLS) || defined(ENABLE_TLS_OPENSSL)
 	}
-#endif /* #ifdef ENABLE_TLS | ENABLE_TLS_OPENSSL*/
+
 finalize_it:
+#endif /* #ifdef ENABLE_TLS | ENABLE_TLS_OPENSSL*/
 	pThis->pEngine->dbgprint("relpTcpRcv return. relptcp [%p], iRet %d, lenRcvd %d, pLenBuf %zd\n",
 		(void *) pThis, iRet, lenRcvd, *pLenBuf);
 	LEAVE_RELPFUNC;
