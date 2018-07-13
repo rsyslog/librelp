@@ -130,7 +130,9 @@ relpSendbufSend(relpSendbuf_t *pThis, relpTcp_t *pTcp)
 
 	CHKRet(relpTcpSend(pTcp, pThis->pData + (9 - pThis->lenTxnr) + pThis->bufPtr, &lenWritten));
 
-	if(lenWritten != lenToWrite) {
+	if(lenWritten == 0) {
+		iRet = RELP_RET_EAGAIN;
+	} else if(lenWritten != lenToWrite) {
 		pThis->bufPtr += lenWritten;
 		iRet = RELP_RET_PARTIAL_WRITE;
 	}

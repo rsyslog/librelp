@@ -253,6 +253,11 @@ relpSendqSend(relpSendq_t *pThis, relpTcp_t *pTcp)
 			 */
 			CHKRet(relpSendqDelFirstBuf(pThis));
 			pEntry = pThis->pRoot; /* as we deleted from the root, the is our next entry */
+		} else if(localRet == RELP_RET_EAGAIN) {
+			/* The underlying socket is no longer accepting writes.
+			* Try again later (after select/epoll).
+			*/
+			break;
 		} else if(localRet != RELP_RET_PARTIAL_WRITE) {
 			ABORT_FINALIZE(localRet);
 		}
