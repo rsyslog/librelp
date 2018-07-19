@@ -10,6 +10,10 @@ Version 1.2.17 - 2018-??-??
 - improve error message on connection failure
   it now contains the OS-provided error message
   Thanks to Justin Azoff for the patch.
+- bugfix: 100% CPU utilization due to busy loop
+  happend because EAGAIN was not properly handled
+  Thanks to Lex Neva for the patch.
+  closes https://github.com/rsyslog/librelp/issues/13
 - bugfix: do not expose symbols that are not part of public API
   Some other symbols were exported. Now only symbols starting with
   "relp" are exported.
