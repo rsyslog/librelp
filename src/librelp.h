@@ -156,6 +156,7 @@ typedef enum relpCmdEnaState_e relpCmdEnaState_t;
 #define RELP_RET_ERR_NO_TLS	RELPERR_BASE + 45	/**< librelp compiled without TLS support */
 #define RELP_RET_ERR_NO_TLS_AUTH RELPERR_BASE + 46	/**< platform does not provide TLS auth support */
 #define RELP_RET_SESSION_OPEN	RELPERR_BASE + 47	/**< RELP session is (already) open */
+#define RELP_RET_EAGAIN		RELPERR_BASE + 48	/**< I/O operation would block; try again later */
 
 /* relp frame oversize modes */
 #define RELP_OVERSIZE_ABORT 0				/**< abort connection on oversize frame */
