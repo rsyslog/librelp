@@ -3025,6 +3025,9 @@ relpTcpConnect(relpTcp_t *const pThis,
 	struct addrinfo *reslocal = NULL;
 	struct pollfd pfd;
 	char errmsg[1024];
+	int so_error;
+	socklen_t len = sizeof so_error;
+	int r;
 
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
@@ -3077,10 +3080,7 @@ relpTcpConnect(relpTcp_t *const pThis,
 		ABORT_FINALIZE(RELP_RET_TIMED_OUT);
 	}
 
-	int so_error;
-	socklen_t len = sizeof so_error;
-
-	int r = getsockopt(pThis->sock, SOL_SOCKET, SO_ERROR, &so_error, &len);
+	r = getsockopt(pThis->sock, SOL_SOCKET, SO_ERROR, &so_error, &len);
 	if (r == -1 || so_error != 0) {
 		pThis->pEngine->dbgprint("socket has an error %d\n", so_error);
 		ABORT_FINALIZE(RELP_RET_IO_ERR);
