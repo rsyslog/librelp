@@ -854,7 +854,7 @@ relpTcpSetRemHost(relpTcp_t *const pThis, struct sockaddr *pAddr)
 	relpEngine_t *pEngine;
 	int error;
 	unsigned char szIP[NI_MAXHOST] = "";
-	unsigned char szHname[NI_MAXHOST] = "";
+	unsigned char szHname[1045] = "";
 	struct addrinfo hints, *res;
 	size_t len;
 
@@ -884,7 +884,7 @@ relpTcpSetRemHost(relpTcp_t *const pThis, struct sockaddr *pAddr)
 			if(getaddrinfo((char*)szHname, NULL, &hints, &res) == 0) {
 				freeaddrinfo (res);
 				/* OK, we know we have evil, so let's indicate this to our caller */
-				snprintf((char*)szHname, NI_MAXHOST, "[MALICIOUS:IP=%s]", szIP);
+				snprintf((char*)szHname, sizeof(szHname), "[MALICIOUS:IP=%s]", szIP);
 				pEngine->dbgprint("Malicious PTR record, IP = \"%s\" HOST = \"%s\"", szIP, szHname);
 				iRet = RELP_RET_MALICIOUS_HNAME;
 			}
