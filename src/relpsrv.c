@@ -415,7 +415,7 @@ relpSrvRun(relpSrv_t *pThis)
 
 finalize_it:
 	if(iRet != RELP_RET_OK) {
-		if(pTcp != NULL)
+		if(pThis->pTcp != NULL)
 			relpTcpDestruct(&pTcp);
 	}
 
