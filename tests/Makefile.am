@@ -11,7 +11,8 @@ send_LDADD=../src/.libs/librelp.la
 send_CFLAGS=$(AM_CFLAGS) -I${top_srcdir}/src $(WARN_CFLAGS)
 
 VALGRIND_TESTS= \
-	tls-basic-vg.sh
+	tls-basic-vg.sh \
+	duplicate-receiver-vg.sh
 
 TESTS=  basic.sh \
 	tls-basic-anon.sh \
