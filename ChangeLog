@@ -1,11 +1,13 @@
 ----------------------------------------------------------------------
-Version 1.2.17 - 2018-??-??
+Version 1.2.17 - 2018-08-02
 - added support for openssl
   now, at configure time, openssl (--enable-tls-openssl) or gnutls
   (--enable-tls) can be enabled. Openssl is recommended as it permits
   better error messages and has more robust certificate handling,
   but the default remains gnutls so that packagers do not need to
   change without specific need.
+  Note: if openssl is selected, setting the gnutls priority string
+  does not have any effect. This will be worked on in later releases.
 - improve code quality: replace strerror() by portable equivalent
 - improve error message on connection failure
   it now contains the OS-provided error message
@@ -19,8 +21,8 @@ Version 1.2.17 - 2018-??-??
   "relp" are exported.
   Thanks to Michael Biebl for the patch.
 - bugfix: potential segfault when listener could not be bound
-  This was a side-effect of refactoring some static analyzer warnings,
-  exact commit is not flagged.
+  This was fixed as a side-effect of refactoring some static analyzer
+  warnings, exact commit is not flagged.
   see also https://github.com/rsyslog/rsyslog/issues/2874
 ----------------------------------------------------------------------
 Version 1.2.16 - 2018-05-14
