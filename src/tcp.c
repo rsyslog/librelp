@@ -854,7 +854,7 @@ relpTcpSetRemHost(relpTcp_t *const pThis, struct sockaddr *pAddr)
 	relpEngine_t *pEngine;
 	int error;
 	unsigned char szIP[NI_MAXHOST] = "";
-	unsigned char szHname[NI_MAXHOST] = "";
+	unsigned char szHname[1045] = "";
 	struct addrinfo hints, *res;
 	size_t len;
 
@@ -884,7 +884,7 @@ relpTcpSetRemHost(relpTcp_t *const pThis, struct sockaddr *pAddr)
 			if(getaddrinfo((char*)szHname, NULL, &hints, &res) == 0) {
 				freeaddrinfo (res);
 				/* OK, we know we have evil, so let's indicate this to our caller */
-				snprintf((char*)szHname, NI_MAXHOST, "[MALICIOUS:IP=%s]", szIP);
+				snprintf((char*)szHname, sizeof(szHname), "[MALICIOUS:IP=%s]", szIP);
 				pEngine->dbgprint("Malicious PTR record, IP = \"%s\" HOST = \"%s\"", szIP, szHname);
 				iRet = RELP_RET_MALICIOUS_HNAME;
 			}
@@ -3025,6 +3025,9 @@ relpTcpConnect(relpTcp_t *const pThis,
 	struct addrinfo *reslocal = NULL;
 	struct pollfd pfd;
 	char errmsg[1024];
+	int so_error;
+	socklen_t len = sizeof so_error;
+	int r;
 
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
@@ -3077,10 +3080,7 @@ relpTcpConnect(relpTcp_t *const pThis,
 		ABORT_FINALIZE(RELP_RET_TIMED_OUT);
 	}
 
-	int so_error;
-	socklen_t len = sizeof so_error;
-
-	int r = getsockopt(pThis->sock, SOL_SOCKET, SO_ERROR, &so_error, &len);
+	r = getsockopt(pThis->sock, SOL_SOCKET, SO_ERROR, &so_error, &len);
 	if (r == -1 || so_error != 0) {
 		pThis->pEngine->dbgprint("socket has an error %d\n", so_error);
 		ABORT_FINALIZE(RELP_RET_IO_ERR);
