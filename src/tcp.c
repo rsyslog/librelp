@@ -854,7 +854,7 @@ relpTcpSetRemHost(relpTcp_t *const pThis, struct sockaddr *pAddr)
 	relpEngine_t *pEngine;
 	int error;
 	unsigned char szIP[NI_MAXHOST] = "";
-	unsigned char szHname[1045] = "";
+	unsigned char szHname[NI_MAXHOST+64] = ""; /* 64 extra bytes for message text */
 	struct addrinfo hints, *res;
 	size_t len;
 
