@@ -17,7 +17,7 @@ export OPT_VERBOSE=-v # We need verbose now for propper error checking!
 function wait_process_startup_via_pidfile() {
 	let "i=0"
 	while test ! -f $1 ; do
-		printf "startup wait %s\n" $i
+		printf "startup wait %s: %s\n" $1 $i
 		sleep .100
 		let "i++"
 		if test $i -gt $TB_TIMEOUT_STARTUP
@@ -32,10 +32,10 @@ function wait_process_startup_via_pidfile() {
 # start receiver WITH valgrind, add receiver command line parameters after function name
 function startup_receiver_valgrind() {
 	printf 'Starting Receiver...\n'
-	$valgrind ./receive -p $TESTPORT -F $srcdir/receive.pid $OPT_VERBOSE $* 1>>librelp.out.log 2>&1 &
+	$valgrind ./receive -p $TESTPORT -F receive.pid $OPT_VERBOSE $* 1>>librelp.out.log &
 	export RECEIVE_PID=$!
 	printf "got receive pid $RECEIVE_PID\n"
-	wait_process_startup_via_pidfile $srcdir/receive.pid
+	wait_process_startup_via_pidfile receive.pid
 	sleep 1
 	printf 'Receiver running\n'
 }
@@ -43,24 +43,24 @@ function startup_receiver_valgrind() {
 # start receiver, add receiver command line parameters after function name
 function startup_receiver() {
 	printf 'Starting Receiver...\n'
-	./receive -p $TESTPORT -F $srcdir/receive.pid $OPT_VERBOSE $* 1>>librelp.out.log 2>&1 &
+	./receive -p $TESTPORT -F receive.pid $OPT_VERBOSE $* 1>>librelp.out.log &
 	export RECEIVE_PID=$!
 	printf "got receive pid $RECEIVE_PID\n"
-	wait_process_startup_via_pidfile $srcdir/receive.pid
+	wait_process_startup_via_pidfile receive.pid
 	sleep 1
 	printf 'Receiver running\n'
 }
 
 # stop receiver
 function stop_receiver() {
-	if [ -f $srcdir/receive.pid ]; then
-		kill $(cat $srcdir/receive.pid) &> /dev/null
+	if [ -f receive.pid ]; then
+		kill $(cat receive.pid) &> /dev/null
 	fi
-	wait -n 5 $(cat $srcdir/receive.pid) &> /dev/null
+	wait -n 5 $(cat receive.pid) &> /dev/null
 #kill $RECEIVE_PID
-	if [ -f $srcdir/receive.pid ]; then
+	if [ -f receive.pid ]; then
 		# FORCE
-		kill -9 $(cat $srcdir/receive.pid) &> /dev/null
+		kill -9 $(cat receive.pid) &> /dev/null
 	fi
 	sleep 1
 
@@ -120,11 +120,11 @@ function cleanup() {
 		echo pkill result $?
 	fi
 
-	if [ -f $srcdir/receive.pid ]; then
-		kill -9 `cat $srcdir/receive.pid` &> /dev/null
+	if [ -f receive.pid ]; then
+		kill -9 `cat receive.pid` &> /dev/null
 	fi
 
-	rm -f receive.pid librelp.out.log *.err.log
+	rm -f receive.pid librelp.out.log *.err.log error.out.log
 }
 
 # cleanup at end of regular test run

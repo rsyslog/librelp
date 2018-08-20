@@ -23,10 +23,12 @@
 #include <getopt.h>
 #include <string.h>
 #include <limits.h>
+#include <errno.h>
 #include "librelp.h"
 
-#define TRY(f) if(f != RELP_RET_OK) { fprintf(stderr, "receive.c: FAILURE in '%s'\n", #f); return 1; }
+#define TRY(f) if(f != RELP_RET_OK) { fprintf(stderr, "receive.c: FAILURE in '%s'\n", #f); ret = 1; goto done; }
 
+static FILE *errFile = NULL;
 static relpEngine_t *pRelpEngine;
 
 static void __attribute__((format(printf, 1, 2)))
@@ -70,12 +72,18 @@ static void
 onErr( __attribute__((unused)) void *pUsr, char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
 {
 	fprintf(stderr, "receive: error '%s', object '%s'\n", errmesg, objinfo);
+	if(errFile != NULL) {
+		fprintf(errFile, "receive: error '%s', object '%s'\n", errmesg, objinfo);
+	}
 }
 
 static void
 onGenericErr(char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
 {
 	fprintf(stderr, "receive: librelp error '%s', object '%s'\n", errmesg, objinfo);
+	if(errFile != NULL) {
+		fprintf(errFile, "receive: librelp error '%s', object '%s'\n", errmesg, objinfo);
+	}
 }
 
 static void
@@ -83,6 +91,17 @@ onAuthErr( __attribute__((unused)) void *pUsr, char *authinfo,
 	char* errmesg, __attribute__((unused)) relpRetVal errcode)
 {
 	fprintf(stderr, "receive: authentication error '%s', object '%s'\n", errmesg, authinfo);
+	if(errFile != NULL) {
+		fprintf(errFile, "receive: authentication error '%s', object '%s'\n", errmesg, authinfo);
+	}
+}
+
+static void
+exit_hdlr(void)
+{
+	if(errFile != NULL) {
+		fclose(errFile);
+	}
 }
 
 int main(int argc, char *argv[]) {
@@ -92,6 +111,7 @@ int main(int argc, char *argv[]) {
 	unsigned char *port = NULL;
 	int verbose = 0;
 	char *pidFileName = NULL;
+	char *errFileName = NULL;
 	int protFamily = 2; /* IPv4=2, IPv6=10 */
 	relpSrv_t *pRelpSrv;
 	int bEnableTLS = 0;
@@ -102,6 +122,7 @@ int main(int argc, char *argv[]) {
 	char *authMode = NULL;
 	int maxDataSize = 0;
 	int oversizeMode = 0;
+	int ret = 0;
 
 	static struct option long_options[] =
 	{
@@ -111,14 +132,18 @@ int main(int argc, char *argv[]) {
 		{"peer", required_argument, 0, 'P'},
 		{"authmode", required_argument, 0, 'a'},
 		{"pidfile", required_argument, 0, 'F'},
+		{"errorfile", required_argument, 0, 'e'},
 		{0, 0, 0, 0}
 	};
 
 
-	while((c = getopt_long(argc, argv, "a:F:m:o:P:p:Tvx:y:z:", long_options, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "a:e:F:m:o:P:p:Tvx:y:z:", long_options, &option_index)) != -1) {
 		switch(c) {
 		case 'a':
 			authMode = optarg;
+			break;
+		case 'e':
+			errFileName = optarg;
 			break;
 		case 'v':
 			verbose = 1;
@@ -175,17 +200,28 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
+	atexit(exit_hdlr);
+
+	if(errFileName != NULL) {
+		printf("errfile %s\n", errFileName);
+		if((errFile = fopen((char*) errFileName, "w")) == NULL) {
+			perror(errFileName);
+			goto done;
+		}
+		setvbuf(errFile, NULL, _IONBF, 128);
+	}
+
 	if(port == NULL) {
 		printf("Port is missing\n");
 		print_usage();
-		exit(1);
+		goto done;
 	}
 
 	if(authMode != NULL) {
 		if(permittedPeer == NULL || caCertFile == NULL || myCertFile == NULL
 		|| myPrivKeyFile == NULL) {
 			printf("receive: parameter missing; certificates and permittedPeer required\n");
-			exit(1);
+			goto done;
 		}
 	}
 
@@ -196,7 +232,7 @@ int main(int argc, char *argv[]) {
 			printf("receive: Certificates were specified, but TLS was "
 			       "not enabled! Will continue without TLS. To enable "
 			       "it use parameter \"-T\"\n");
-			exit(1);
+			goto done;
 		}
 	}
 
@@ -238,9 +274,19 @@ int main(int argc, char *argv[]) {
 		FILE *fp;
 		if((fp = fopen((char*) pidFileName, "w")) == NULL) {
 			fprintf(stderr, "receive: couldn't open PidFile\n");
+			if(errFile != NULL) {
+				fprintf(errFile, "receive: couldn't open PidFile\n");
+			}
+			ret = 1;
+			goto done;
 		}
 		if(fprintf(fp, "%d", getpid()) < 0) {
 			fprintf(stderr, "receive: couldn't write to PidFile\n");
+			if(errFile != NULL) {
+				fprintf(errFile, "receive: couldn't write to PidFile\n");
+			}
+			ret = 1;
+			goto done;
 		}
 		fclose(fp);
 	}
@@ -249,6 +295,11 @@ int main(int argc, char *argv[]) {
 
 	TRY(relpEngineSetStop(pRelpEngine));
 	TRY(relpEngineDestruct(&pRelpEngine));
+	
+done:
+	if(errFile != NULL) {
+		fclose(errFile);
+	}
 
-	return 0;
+	return ret;
 }
