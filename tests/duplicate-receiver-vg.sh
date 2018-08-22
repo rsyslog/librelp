@@ -11,7 +11,6 @@ fi
 . ${srcdir}/test-framework.sh
 
 startup_receiver_valgrind
-startup_receiver_valgrind
 
 echo 'Send Message...'
 ./send -t 127.0.0.1 -p $TESTPORT -m "testmessage"
