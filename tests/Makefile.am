@@ -15,19 +15,24 @@ VALGRIND_TESTS= \
 	duplicate-receiver-vg.sh
 
 TESTS=  basic.sh \
-	tls-basic-anon.sh \
 	tls-basic.sh \
+	tls-basic-anon.sh \
 	tls-basic-fingerprint.sh \
-	tls-wrong-permittedPeer.sh \
-	tls-wrong-authname.sh \
-	tls-wrong-signedcert.sh \
-	tls-basic-brokencert.sh \
+	tls-basic-wildcard.sh \
 	tls-missing-param-sender.sh \
 	tls-missing-param-receiver.sh \
 	long-msg.sh \
 	oversize-msg-abort-errmsg.sh \
 	oversize-msg-accept-errmsg.sh \
 	truncate-oversize-msg.sh
+# OpenSSL tests only!
+if ENABLE_TLS_OPENSSL
+TESTS += tls-wrong-permittedPeer.sh \
+	tls-wrong-authname.sh \
+	tls-wrong-signedcert.sh
+# reenable tests when stable
+#	tls-basic-brokencert.sh
+endif
 
 if HAVE_VALGRIND
 TESTS += $(VALGRIND_TESTS)
