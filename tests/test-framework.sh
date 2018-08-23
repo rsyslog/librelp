@@ -7,7 +7,7 @@
 TB_TIMEOUT_STARTUP=400  # 40 seconds - Solaris sometimes needs this...
 TESTPORT=31514
 export valgrind="valgrind --malloc-fill=ff --free-fill=fe --log-fd=1"
-export OPT_VERBOSE=-v # We need verbose now for propper error checking!
+#	 export OPT_VERBOSE=-v # uncomment for debugging 
 
 ######################################################################
 # functions
@@ -76,7 +76,7 @@ function check_output() {
 	else
 		FILE_TO_CHECK="$2"
 	fi
-	grep "$EXPECTED" $FILE_TO_CHECK > /dev/null
+	grep $3 "$EXPECTED" $FILE_TO_CHECK > /dev/null
 	if [ $? -ne 0 ]; then
 		printf "\nFAIL: expected message not found. Expected:\n"
 		printf "%s\n" "$EXPECTED"

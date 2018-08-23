@@ -24,8 +24,9 @@
 #include <string.h>
 #include "librelp.h"
 
-#define TRY(f) if(f != RELP_RET_OK) { fprintf(stderr, "send.c: FAILURE in: '%s'\n", #f); return 1; }
+#define TRY(f) if(f != RELP_RET_OK) { fprintf(stderr, "send.c: FAILURE in '%s'\n", #f); ret = 1; goto done; }
 
+static FILE *errFile = NULL;
 static relpEngine_t *pRelpEngine;
 
 static void __attribute__((format(printf, 1, 2)))
@@ -50,12 +51,19 @@ static void
 onErr( __attribute__((unused)) void *pUsr, char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
 {
 	printf("send: error '%s', object '%s'\n", errmesg, objinfo);
+	if(errFile != NULL) {
+		fprintf(errFile, "send: error '%s', object '%s'\n", errmesg, objinfo);
+	}
 }
 
 static void
 onGenericErr(char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
 {
 	printf("send: librelp error '%s', object '%s'\n", errmesg, objinfo);
+	if(errFile != NULL) {
+		fprintf(errFile, "send: librelp error '%s', object '%s'\n", errmesg, objinfo);
+	}
+
 }
 
 static void
@@ -63,6 +71,17 @@ onAuthErr( __attribute__((unused)) void *pUsr, char *authinfo,
 	char* errmesg, __attribute__((unused)) relpRetVal errcode)
 {
 	printf("send: authentication error '%s', object '%s'\n", errmesg, authinfo);
+	if(errFile != NULL) {
+		fprintf(errFile, "send: authentication error '%s', object '%s'\n", errmesg, authinfo);
+	}
+}
+
+static void
+exit_hdlr(void)
+{
+	if(errFile != NULL) {
+		fclose(errFile);
+	}
 }
 
 int main(int argc, char *argv[]) {
@@ -75,6 +94,7 @@ int main(int argc, char *argv[]) {
 	size_t lenMsg = 0;
 	unsigned timeout = 90;
 	int verbose = 0;
+	char *errFileName = NULL;
 	int protFamily = 2; /* IPv4=2, IPv6=10 */
 	relpClt_t *pRelpClt = NULL;
 	int bEnableTLS = 0;
@@ -86,6 +106,7 @@ int main(int argc, char *argv[]) {
 	size_t msgDataLen = 0;
 	int len = 0;
 	char *msgData = NULL;;
+	int ret = 0;
 
 	static struct option long_options[] =
 	{
@@ -94,13 +115,17 @@ int main(int argc, char *argv[]) {
 		{"key", required_argument, 0, 'z'},
 		{"peer", required_argument, 0, 'P'},
 		{"authmode", required_argument, 0, 'a'},
+		{"errorfile", required_argument, 0, 'e'},
 		{0, 0, 0, 0}
 	};
 
-	while((c = getopt_long(argc, argv, "a:d:m:P:p:Tt:vx:y:z:", long_options, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "a:e:d:m:P:p:Tt:vx:y:z:", long_options, &option_index)) != -1) {
 		switch(c) {
 		case 'a':
 			authMode = optarg;
+			break;
+		case 'e':
+			errFileName = optarg;
 			break;
 		case 'd':
 			len = atoi(optarg);
@@ -146,6 +171,16 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
+	atexit(exit_hdlr);
+
+	if(errFileName != NULL) {
+		printf("errfile %s\n", errFileName);
+		if((errFile = fopen((char*) errFileName, "w")) == NULL) {
+			perror(errFileName);
+			goto done;
+		}
+		setvbuf(errFile, NULL, _IONBF, 128);
+	}
 
 	if(msgDataLen != 0 && msgDataLen < lenMsg) {
 		fprintf(stderr, "send.c: message is larger than configured message size!\n");
@@ -224,5 +259,10 @@ int main(int argc, char *argv[]) {
 	TRY(relpEngineCltDestruct(pRelpEngine, &pRelpClt));
 	TRY(relpEngineDestruct(&pRelpEngine));
 
-	return 0;
+done:
+	if(errFile != NULL) {
+		fclose(errFile);
+	}
+
+	return ret;
 }
