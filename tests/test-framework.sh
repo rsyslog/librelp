@@ -7,7 +7,7 @@
 TB_TIMEOUT_STARTUP=400  # 40 seconds - Solaris sometimes needs this...
 TESTPORT=31514
 export valgrind="valgrind --malloc-fill=ff --free-fill=fe --log-fd=1"
-#	 export OPT_VERBOSE=-v # uncomment for debugging 
+export OPT_VERBOSE=-v # uncomment for debugging 
 
 ######################################################################
 # functions

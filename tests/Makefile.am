@@ -18,6 +18,7 @@ TESTS=  basic.sh \
 	tls-basic.sh \
 	tls-basic-anon.sh \
 	tls-basic-fingerprint.sh \
+	tls-basic-wildcard.sh \
 	tls-missing-param-sender.sh \
 	tls-missing-param-receiver.sh \
 	long-msg.sh \
