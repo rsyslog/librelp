@@ -72,7 +72,8 @@ typedef enum relpObjID_e {
 typedef enum relpAuthMode_e {
 	eRelpAuthMode_None = 0,
 	eRelpAuthMode_Fingerprint = 1,
-	eRelpAuthMode_Name = 2
+	eRelpAuthMode_Name = 2,
+	eRelpAuthMode_CertValid = 3
 } relpAuthMode_t;
 
 enum relpCmdEnaState_e { /* command enabled state - what are we permitted to do/request? */

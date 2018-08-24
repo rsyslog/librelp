@@ -265,6 +265,8 @@ relpCltSetAuthMode(relpClt_t *pThis, char *mode)
 		pThis->authmode = eRelpAuthMode_Fingerprint;
 	else if(!strcasecmp(mode, "name"))
 		pThis->authmode = eRelpAuthMode_Name;
+	else if(!strcasecmp(mode, "certvalid"))
+		pThis->authmode = eRelpAuthMode_CertValid;
 	else
 		ABORT_FINALIZE(RELP_RET_INVLD_AUTH_MD);
 
