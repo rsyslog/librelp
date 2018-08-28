@@ -1319,7 +1319,9 @@ relpTcpChkPeerAuth(relpTcp_t *const pThis)
 		}
 
 		/* Now check for auth modes */
-		if(pThis->authmode == eRelpAuthMode_Name ) {
+		if(pThis->authmode == eRelpAuthMode_CertValid ) {
+			pThis->pEngine->dbgprint("relpTcpChkPeerAuth: certvalid mode - success\n");
+		} else if(pThis->authmode == eRelpAuthMode_Name ) {
 			CHKRet(relpTcpChkPeerName(pThis, certpeer));
 			pThis->pEngine->dbgprint("relpTcpChkPeerAuth: name mode - success\n");
 		} else if(pThis->authmode == eRelpAuthMode_Fingerprint) {
@@ -2314,9 +2316,10 @@ relpTcpVerifyCertificateCallback(gnutls_session_t session)
 	gnutls_x509_crt_import(cert, &cert_list[0], GNUTLS_X509_FMT_DER);
 	if(pThis->authmode == eRelpAuthMode_Fingerprint) {
 		r = relpTcpChkPeerFingerprint(pThis, cert);
-	} else {
+	} else if(pThis->authmode == eRelpAuthMode_Name){
 		r = relpTcpChkPeerName(pThis, cert);
 	}
+
 	if(r != 0) goto done;
 
 	/* notify gnutls to continue handshake normally */

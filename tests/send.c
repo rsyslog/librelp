@@ -194,9 +194,10 @@ int main(int argc, char *argv[]) {
 	}
 
 	if(authMode != NULL) {
-		if(permittedPeer == NULL || caCertFile == NULL || myCertFile == NULL
-		|| myPrivKeyFile == NULL) {
-			printf("send: parameter missing; certificates and permittedPeer required\n");
+		if(	(strcasecmp(authMode, "certvalid")  != 0 && permittedPeer == NULL) ||
+			caCertFile == NULL || myCertFile == NULL || myPrivKeyFile == NULL) {
+			printf("send: mode '%s' parameter missing; certificates and permittedPeer required\n",
+				authMode);
 			exit(1);
 		}
 	}
@@ -230,7 +231,9 @@ int main(int argc, char *argv[]) {
 			TRY(relpCltSetCACert(pRelpClt, caCertFile));
 			TRY(relpCltSetOwnCert(pRelpClt, myCertFile));
 			TRY(relpCltSetPrivKey(pRelpClt, myPrivKeyFile));
-			TRY(relpCltAddPermittedPeer(pRelpClt, permittedPeer));
+			if (permittedPeer != NULL) {
+				TRY(relpCltAddPermittedPeer(pRelpClt, permittedPeer));
+			}
 		}
 	}
 
