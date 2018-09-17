@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------
-Version 1.2.18 - 2018-0?-??
+Version 1.2.18 - 2018-09-18
 - added non-standard "certvalid" auth mode to TLS authentication
 - bugfix CI: make distcheck did not work
 ----------------------------------------------------------------------
