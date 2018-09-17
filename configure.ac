@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([librelp], [1.2.18], [rgerhards@adiscon.com])
+AC_INIT([librelp], [1.2.19.master], [rgerhards@adiscon.com])
 AM_INIT_AUTOMAKE
 AM_INIT_AUTOMAKE
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
