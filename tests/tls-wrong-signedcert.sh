@@ -1,5 +1,5 @@
 #!/bin/bash
-. ${srcdir}/test-framework.sh
+. ${srcdir:=$(pwd)}/test-framework.sh
 startup_receiver -T -a "name" -x ${srcdir}/tls-certs/ossl-ca.pem -y ${srcdir}/tls-certs/ossl-server-cert.pem -z ${srcdir}/tls-certs/ossl-server-key.pem -P 'client.testbench.rsyslog.com' -e error.out.log
 
 echo 'Send Message...'

@@ -15,11 +15,11 @@ export valgrind="valgrind --malloc-fill=ff --free-fill=fe --log-fd=1"
 
 # $1 is name of pidfile to wait for
 function wait_process_startup_via_pidfile() {
-	let "i=0"
+	i=0
 	while test ! -f $1 ; do
 		printf "startup wait %s: %s\n" $1 $i
 		sleep .100
-		let "i++"
+		(( i++ ))
 		if test $i -gt $TB_TIMEOUT_STARTUP
 		then
 		   printf "ABORT! Timeout waiting on startup\n"
@@ -121,10 +121,10 @@ function cleanup() {
 	fi
 
 	if [ -f receive.pid ]; then
-		kill -9 `cat receive.pid` &> /dev/null
+		kill -9 $(cat receive.pid) &> /dev/null
 	fi
 
-	rm -f receive.pid librelp.out.log *.err.log error.out.log
+	rm -f -- receive.pid librelp.out.log *.err.log error.out.log
 }
 
 # cleanup at end of regular test run

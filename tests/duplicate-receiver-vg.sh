@@ -8,7 +8,7 @@ if [ `uname` = "FreeBSD" ] ; then
    exit 77
 fi
 
-. ${srcdir}/test-framework.sh
+. ${srcdir:=$(pwd)}/test-framework.sh
 
 startup_receiver_valgrind
 

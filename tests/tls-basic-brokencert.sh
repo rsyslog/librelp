@@ -2,7 +2,7 @@
 # ***
 # *** TEST currently UNSTABLE because SSL Server sometimes discard connection before certificate can even be checked for length!
 # ***
-. ${srcdir}/test-framework.sh
+. ${srcdir:=$(pwd)}/test-framework.sh
 startup_receiver -T -a "name" -x ${srcdir}/tls-certs/ossl-ca.pem -y ${srcdir}/tls-certs/ossl-server-cert.pem -z ${srcdir}/tls-certs/ossl-server-key.pem -P 'clientbrok.testbench.rsyslog.com' -e error.out.log
 
 echo 'Send Message...'

@@ -1,5 +1,5 @@
 #!/bin/bash
-. ${srcdir}/test-framework.sh
+. ${srcdir:=$(pwd)}/test-framework.sh
 startup_receiver $OPT_VERBOSE
 
 echo 'Send Message...'

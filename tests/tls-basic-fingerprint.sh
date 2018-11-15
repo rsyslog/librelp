@@ -1,5 +1,5 @@
 #!/bin/bash
-. ${srcdir}/test-framework.sh
+. ${srcdir:=$(pwd)}/test-framework.sh
 startup_receiver -T -a "fingerprint" -x ${srcdir}/tls-certs/ca.pem -y ${srcdir}/tls-certs/cert.pem -z ${srcdir}/tls-certs/key.pem -P 'SHA1:5C:C6:62:D5:9D:25:9F:BC:F3:CB:61:FA:D2:B3:8B:61:88:D7:06:C3' -e error.out.log
 
 echo 'Send Message...'
