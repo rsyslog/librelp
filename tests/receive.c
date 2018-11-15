@@ -31,10 +31,13 @@
 #include <signal.h>
 #include "librelp.h"
 
-#define TRY(f) if(f != RELP_RET_OK) { fprintf(stderr, "receive.c: FAILURE in '%s'\n", #f); ret = 1; goto done; }
+#define TRY(f) if(f != RELP_RET_OK) { fprintf(stderr, "receive: FAILURE in '%s'\n", #f); ret = 1; goto done; }
 
 static FILE *errFile = NULL;
 static FILE *outFile = NULL;
+static char *pidFileName = NULL;
+
+static int immediate_exit = 0; /* if set to 1, force-exit as soon as possible */
 
 static relpEngine_t *pRelpEngine;
 
@@ -60,6 +63,15 @@ terminate(__attribute__((unused)) const int sig)
 	relpEngineSetStop(pRelpEngine);
 }
 
+/* handler to unconditionally exit the code - required for test where
+ * server must "suddenly" abort.
+ */
+void
+do_exit(__attribute__((unused)) const int sig)
+{
+	immediate_exit = 1;
+}
+
 
 static void __attribute__((format(printf, 1, 2)))
 dbgprintf(char *fmt, ...)
@@ -70,7 +82,7 @@ dbgprintf(char *fmt, ...)
 	va_start(ap, fmt);
 	vsnprintf(pszWriteBuf, sizeof(pszWriteBuf), fmt, ap);
 	va_end(ap);
-	fprintf(stderr, "receive.c: %s", pszWriteBuf);
+	fprintf(stderr, "receive: %s", pszWriteBuf);
 	fflush(stderr);
 }
 
@@ -86,8 +98,14 @@ static relpRetVal onSyslogRcv(unsigned char *pHostname __attribute__((unused)),
 	memcpy(pMsg, msg, lenMsg);
 
 	fprintf(outFile, "%s\n", pMsg);
+	fflush(outFile);
 
 	free(pMsg);
+
+	if(immediate_exit) {
+		fprintf(stderr, "receive: force-exit %lld by user request\n", (long long) getpid());
+		exit(1);
+	}
 
 	return RELP_RET_OK;
 }
@@ -146,6 +164,10 @@ exit_hdlr(void)
 	if(outFile != NULL) {
 		fclose(outFile);
 	}
+	if(pidFileName != NULL) {
+		unlink(pidFileName);
+	}
+
 }
 
 int main(int argc, char *argv[]) {
@@ -154,7 +176,6 @@ int main(int argc, char *argv[]) {
 	int option_index = 0;
 	unsigned char *port = NULL;
 	int verbose = 0;
-	char *pidFileName = NULL;
 	int protFamily = 2; /* IPv4=2, IPv6=10 */
 	relpSrv_t *pRelpSrv;
 	int bEnableTLS = 0;
@@ -166,6 +187,8 @@ int main(int argc, char *argv[]) {
 	int maxDataSize = 0;
 	int oversizeMode = 0;
 	int ret = 0;
+	int append_outfile = 0;
+	const char* outfile_name = NULL;
 
 	static struct option long_options[] =
 	{
@@ -177,19 +200,23 @@ int main(int argc, char *argv[]) {
 		{"pidfile", required_argument, 0, 'F'},
 		{"errorfile", required_argument, 0, 'e'},
 		{"outfile", required_argument, 0, 'O'},
+		{"append-outfile", no_argument, 0, 'A'},
 		{0, 0, 0, 0}
 	};
 
 
-	while((c = getopt_long(argc, argv, "a:e:F:m:o:O:P:p:Tvx:y:z:", long_options, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "a:Ae:F:m:o:O:P:p:Tvx:y:z:", long_options, &option_index)) != -1) {
 		switch(c) {
 		case 'a':
 			authMode = optarg;
 			break;
+		case 'A':
+			append_outfile = 1;
+			break;
 		case 'e':
 			if((errFile = fopen((char*) optarg, "w")) == NULL) {
 				perror(optarg);
-				fprintf(stderr, "error opening error file\n");
+				fprintf(stderr, "receive: error opening error file\n");
 				exit(1);
 			}
 			break;
@@ -214,11 +241,7 @@ int main(int argc, char *argv[]) {
 			}
 			break;
 		case 'O': /* output file */
-			if((outFile = fopen(optarg, "w")) == NULL) {
-				perror(optarg);
-				fprintf(stderr, "error opening output file\n");
-				exit(1);
-			}
+			outfile_name = optarg;
 			break;
 		case 'o': /* oversize mode */
 			if(strcmp("truncate", optarg) == 0) {
@@ -288,6 +311,15 @@ int main(int argc, char *argv[]) {
 	}
 
 	hdlr_enable(SIGTERM, terminate);
+	hdlr_enable(SIGUSR1, do_exit);
+
+	if(outfile_name != NULL) {
+		if((outFile = fopen(outfile_name, append_outfile ? "a" : "w")) == NULL) {
+			perror(outfile_name);
+			fprintf(stderr, "receive: error opening output file\n");
+			exit(1);
+		}
+	}
 
 	TRY(relpEngineConstruct(&pRelpEngine));
 	TRY(relpEngineSetDbgprint(pRelpEngine, verbose ? dbgprintf : NULL));
@@ -350,13 +382,18 @@ int main(int argc, char *argv[]) {
 		fclose(fp);
 	}
 
-	TRY(relpEngineRun(pRelpEngine)); /* Abort via SIGHUP */
+	int i = 0;
+	while(relpEngineRun(pRelpEngine) != RELP_RET_OK) {
+		fprintf(stderr, "receive: error starting relp engine, try %d\n", i);
+		++i;
+		if(i >= 10) {
+			fprintf(stderr, "receive: giving up starting relp engine\n");
+			break;
+		}
+		sleep(1);
+	}
 
 	TRY(relpEngineDestruct(&pRelpEngine));
-
-	if(pidFileName != NULL) {
-		unlink(pidFileName);
-	}
 
 done:
 	return ret;

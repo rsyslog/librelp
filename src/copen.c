@@ -143,7 +143,6 @@ BEGINcommand(S, Init)
 		relpSessSendResponse(pSess, pFrame->txnr, replymsg, sizeof(replymsg) - 1);
 		ABORT_FINALIZE(RELP_RET_SESSION_OPEN);
 	}
-
 	CHKRet(relpOffersConstructFromFrame(&pCltOffers, pFrame));
 	CHKRet(selectOffers(pSess, pCltOffers, &pSrvOffers));
 

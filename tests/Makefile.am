@@ -1,14 +1,14 @@
-check_PROGRAMS=receive send
+check_PROGRAMS=receive send chkseq
 
 receive_SOURCES=receive.c
-#receive_LDADD=-lrelp
 receive_LDADD=../src/.libs/librelp.la
 receive_CFLAGS=$(AM_CFLAGS) -I${top_srcdir}/src $(WARN_CFLAGS)
 
 send_SOURCES=send.c
-#send_LDADD=-lrelp
 send_LDADD=../src/.libs/librelp.la
 send_CFLAGS=$(AM_CFLAGS) -I${top_srcdir}/src $(WARN_CFLAGS)
+
+chkseq_SOURCES=chkseq.c
 
 VALGRIND_TESTS= \
 	tls-basic-vg.sh \
@@ -16,6 +16,7 @@ VALGRIND_TESTS= \
 
 TESTS=  basic.sh \
 	basic-realistic.sh \
+	receiver-abort.sh \
 	tls-basic.sh \
 	tls-basic-anon.sh \
 	tls-basic-certvalid.sh \
@@ -46,6 +47,7 @@ endif
 EXTRA_DIST=$(TESTS) \
 	$(VALGRIND_TESTS) \
 	dummyclient.py \
+	dummyserver.py \
 	test-framework.sh \
 	receive.c \
 	send.c \

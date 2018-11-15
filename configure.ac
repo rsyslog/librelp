@@ -3,8 +3,11 @@
 
 AC_PREREQ(2.61)
 AC_INIT([librelp], [1.2.19.master], [rgerhards@adiscon.com])
-AM_INIT_AUTOMAKE
-AM_INIT_AUTOMAKE
+
+# change to the one below if Travis has a timeout
+#AM_INIT_AUTOMAKE([subdir-objects serial-tests])
+AM_INIT_AUTOMAKE([subdir-objects])
+
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 AC_CONFIG_SRCDIR([src/relp.c])
 AC_CONFIG_HEADER([config.h])

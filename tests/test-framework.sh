@@ -49,16 +49,27 @@ startup_receiver() {
 	printf 'Receiver running\n'
 }
 
-# stop receiver
 stop_receiver() {
-	pid=$(cat receive.pid 2> /dev/null)
-	if [ "$pid" == "" ]; then
-		printf 'oops - we do not find the pid file in stop_receiver\n'
+	if [ "$RECEIVE_PID" == "" ]; then
+		printf 'oops - receiver pid not found in stop_receiver\n'
 		return
 	fi
-	kill $pid &> /dev/null
-	wait $pid
-	printf 'receiver %d stopped\n' $pid
+	kill $RECEIVE_PID &> /dev/null
+	wait $RECEIVE_PID
+	printf 'receiver %d stopped\n' $RECEIVE_PID
+}
+
+abort_receiver() {
+	if [ "$RECEIVE_PID" == "" ]; then
+		printf 'oops - receiver pid not found in abort_receiver\n'
+		return
+	fi
+set -x; set +v
+	printf 'stopping receiver %d via abort method\n' $RECEIVE_PID
+	kill -USR1 $RECEIVE_PID # &> /dev/null
+	wait $RECEIVE_PID
+	printf 'receiver %d stopped via abort method\n' $RECEIVE_PID
+set +x; set +v
 }
 
 # $1 is the value to check for
@@ -79,6 +90,21 @@ check_output() {
 		exit 1
 	fi
 }
+
+
+# wait until $TESTPORT is no longer bound, e.g. for session closure
+# TODO: evaluate if this function is really used and, if not,
+# TODO: remove again - 2018-11-19 rgerhards
+wait_testport_available() {
+	while true; do
+		printf 'checking NETSTAT\n'
+		if ! netstat -tp | grep -q $TESTPORT; then
+			break
+		fi
+		sleep 1
+	done
+}
+
 
 # $1 is the value to check for
 # $2 (optinal) is the file to check
@@ -131,6 +157,11 @@ terminate() {
 # Works on $OUTFILE
 # TODO: check sequence, so that we do not have duplicates...
 check_msg_count() {
+	printf 'We have %s lines in %s\n' $(wc -l < $OUTFILE) $OUTFILE
+	if ! ./chkseq -s1 -e$NUMMESSAGES -f$OUTFILE -d ; then
+		exit 1
+	fi
+	return
 	lines=$(wc -l < $OUTFILE)
 	if [ "$lines" -ne $NUMMESSAGES ]; then
 		printf 'FAIL: message count not correct for %s\n' $OUTFILE
@@ -149,7 +180,8 @@ printf "============================================================\n"
 # on Solaris we still have some issues sometimes. Please keep this
 # informational info inside the framework until this can be totally
 # considered revolved - rgerhards, 2018-04-17
-if [ "$(uname)" == "SunOS" ] ; then
+ps -ef|grep receive
+if [ "$(uname)" == "XXSunOS" ] ; then
 	/usr/ucb/ps awwx
 	echo pgrep
 	pgrep receive

@@ -26,17 +26,23 @@
 #include <unistd.h>
 #include <getopt.h>
 #include <string.h>
+#include <sys/types.h>
+#include <signal.h>
 #include "librelp.h"
 
-#define TRY(f) if(f != RELP_RET_OK) { fprintf(stderr, "send.c: FAILURE in '%s'\n", #f); ret = 1; goto done; }
+#define TRY(f) if(f != RELP_RET_OK) { fprintf(stderr, "send: FAILURE in '%s'\n", #f); ret = 1; goto done; }
 
 static const char *under_ci = NULL; /* if non-null, we run under CI, so be even more sparse with stdout */
 static FILE *errFile = NULL;
+static FILE *dbgFile = NULL;
 static relpEngine_t *pRelpEngine;
 static size_t msgDataLen = 0;
 static int num_messages = 0;
 static size_t lenMsg = 0;
 static relpClt_t *pRelpClt = NULL;
+static int kill_on_msg = 0;	/* 0 - do not kill, else exact message */
+static int kill_signal = SIGUSR1;	/* signal to use when we kill */
+static pid_t kill_pid = 0;
 
 #define USR_MAGIC 0x1234FFee
 struct usrdata { /* used for testing user pointer pass-back */
@@ -55,8 +61,7 @@ dbgprintf(char *fmt, ...)
 	va_start(ap, fmt);
 	vsnprintf(pszWriteBuf, sizeof(pszWriteBuf), fmt, ap);
 	va_end(ap);
-	fprintf(stderr, "send.c: %s", pszWriteBuf);
-	fflush(stderr);
+	fprintf(dbgFile, "send.c: %s", pszWriteBuf);
 }
 
 void print_usage(void)
@@ -111,27 +116,58 @@ exit_hdlr(void)
 	if(errFile != NULL) {
 		fclose(errFile);
 	}
+	if(dbgFile != NULL) {
+		fclose(dbgFile);
+	}
 }
+
+
+static void
+retry_connect(void)
+{
+	relpRetVal ret;
+	int try = 0;
+	while(try++ < 15) {
+		ret = relpCltReconnect(pRelpClt);
+		if(ret == RELP_RET_OK)
+			return;
+		sleep(1);
+	}
+	fprintf(stderr, "send: send giving up after max retries\n");
+	exit(1);
+}
+
 
 static int
 send_msgs_counter(void)
 {
 	int ret;
 	char buf[10];
-	if(!under_ci) {
-		printf("%8.8d msgs sent", 0);
-	}
+	relpRetVal r;
 	for(int i = 1 ; i <= num_messages ; ++i) {
 		const ssize_t len = snprintf(buf, sizeof(buf), "%8.8d", i);
 		if(len < 0 || len >= (ssize_t) sizeof(buf)) {
-			fprintf(stderr, "ERROR: snprintf failed with %lld\n", (long long) len);
+			fprintf(stderr, "send: ERROR: snprintf failed with %lld\n", (long long) len);
 			exit(1);
 		}
 		if(!under_ci && (i % 1000 == 0)) {
-			printf("\r%8.8d", i);
-			fflush(stdout);
+			printf("\r%8.8d msgs sent", i);
 		}
-		TRY(relpCltSendSyslog(pRelpClt, (unsigned char*)buf, len));
+		r = relpCltSendSyslog(pRelpClt, (unsigned char*)buf, len);
+		if(r != RELP_RET_OK) {
+			fprintf(stderr, "send: failure %d in relpCltSendSyslog, msg %d\n", r, i);
+			if(dbgFile != NULL)
+				fprintf(dbgFile, "\n\nfailure %d in relpCltSendSyslog, msg %d\n\n\n", r, i);
+			retry_connect();
+			--i; /* we need to-resend the failed message */
+		}
+		if(kill_on_msg == i) {
+			kill_on_msg = 0; /* do this only once, even in retry mode */
+			fprintf(stderr, " sending signal %d to %lld\n", kill_signal, (long long) kill_pid);
+			if(kill(kill_pid, kill_signal) != 0) {
+				perror("kill process");
+			}
+		}
 	}
 	printf("\r%8.8d msgs sent\n", num_messages);
 done:	return ret;
@@ -186,7 +222,12 @@ int main(int argc, char *argv[]) {
 	int ret = 0;
 
 	under_ci = getenv("UNDER_CI");
+	dbgFile = stdout;
 
+	#define KILL_ON_MSG	256
+	#define KILL_SIGNAL	257
+	#define KILL_PID	258
+	#define DBGFILE		259
 	static struct option long_options[] =
 	{
 		{"ca", required_argument, 0, 'x'},
@@ -195,7 +236,11 @@ int main(int argc, char *argv[]) {
 		{"peer", required_argument, 0, 'P'},
 		{"authmode", required_argument, 0, 'a'},
 		{"errorfile", required_argument, 0, 'e'},
+		{"debugfile", required_argument, 0, DBGFILE},
 		{"num-messages", required_argument, 0, 'n'},
+		{"kill-on-msg", required_argument, 0, KILL_ON_MSG},
+		{"kill-signal", required_argument, 0, KILL_SIGNAL},
+		{"kill-pid", required_argument, 0, KILL_PID},
 		{0, 0, 0, 0}
 	};
 
@@ -208,6 +253,13 @@ int main(int argc, char *argv[]) {
 			if((errFile = fopen(optarg, "w")) == NULL) {
 				perror(optarg);
 				fprintf(stderr, "error opening error file\n");
+				exit(1);
+			}
+			break;
+		case DBGFILE:
+			if((dbgFile = fopen(optarg, "w")) == NULL) {
+				perror(optarg);
+				fprintf(stderr, "error opening debug file\n");
 				exit(1);
 			}
 			break;
@@ -252,6 +304,15 @@ int main(int argc, char *argv[]) {
 		case 'z':
 			myPrivKeyFile = optarg;
 			break;
+		case KILL_ON_MSG:
+			kill_on_msg = atoi(optarg);
+			break;
+		case KILL_SIGNAL:
+			kill_signal = atoi(optarg);
+			break;
+		case KILL_PID:
+			kill_pid = atoi(optarg);
+			break;
 		default:
 			print_usage();
 			exit(1);
@@ -261,7 +322,7 @@ int main(int argc, char *argv[]) {
 	atexit(exit_hdlr);
 
 	if(msgDataLen != 0 && msgDataLen < lenMsg) {
-		fprintf(stderr, "send.c: message is larger than configured message size!\n");
+		fprintf(stderr, "send: message is larger than configured message size!\n");
 		exit(1);
 	}
 
@@ -330,9 +391,5 @@ int main(int argc, char *argv[]) {
 	TRY(relpEngineDestruct(&pRelpEngine));
 
 done:
-	if(errFile != NULL) {
-		fclose(errFile);
-	}
-
 	return ret;
 }

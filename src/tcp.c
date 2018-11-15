@@ -658,14 +658,17 @@ relpTcpDestruct(relpTcp_t **ppThis)
 	RELPOBJ_assert(pThis, Tcp);
 
 	if(pThis->sock != -1) {
+		shutdown(pThis->sock, SHUT_RDWR);
 		close(pThis->sock);
 		pThis->sock = -1;
 	}
 
 	if(pThis->socks != NULL) {
 		/* if we have some sockets at this stage, we need to close them */
-		for(i = 1 ; i <= pThis->socks[0] ; ++i)
+		for(i = 1 ; i <= pThis->socks[0] ; ++i) {
+			shutdown(pThis->socks[i], SHUT_RDWR);
 			close(pThis->socks[i]);
+		}
 		free(pThis->socks);
 	}
 
@@ -2860,6 +2863,7 @@ relpTcpSend(relpTcp_t *const pThis, relpOctet_t *pBuf, ssize_t *pLenBuf)
 #endif /* defined(ENABLE_TLS) | defined(ENABLE_TLS_OPENSSL */
 		written = send(pThis->sock, pBuf, *pLenBuf, 0);
 		const int errno_save = errno;
+		pThis->pEngine->dbgprint("relpTcpSend: send data: %.*s\n", (int) *pLenBuf, pBuf);
 		pThis->pEngine->dbgprint("relpTcpSend: sock %d, lenbuf %zd, send returned %d [errno %d]\n",
 			(int)pThis->sock, *pLenBuf, (int) written, errno_save);
 		if(written == -1) {
