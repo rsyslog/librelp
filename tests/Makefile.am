@@ -15,6 +15,7 @@ VALGRIND_TESTS= \
 	duplicate-receiver-vg.sh
 
 TESTS=  basic.sh \
+	basic-realistic.sh \
 	tls-basic.sh \
 	tls-basic-anon.sh \
 	tls-basic-certvalid.sh \
