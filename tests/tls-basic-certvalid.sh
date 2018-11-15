@@ -1,5 +1,5 @@
 #!/bin/bash
-. ${srcdir}/test-framework.sh
+. ${srcdir:=$(pwd)}/test-framework.sh
 startup_receiver -T -a "certvalid" -x ${srcdir}/tls-certs/ca.pem -y ${srcdir}/tls-certs/cert.pem -z ${srcdir}/tls-certs/key.pem  -e error.out.log
 
 echo 'Send Message...'

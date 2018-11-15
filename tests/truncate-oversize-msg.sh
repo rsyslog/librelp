@@ -1,5 +1,5 @@
 #!/bin/bash
-. ${srcdir}/test-framework.sh
+. ${srcdir:=$(pwd)}/test-framework.sh
 startup_receiver -o truncate -m 144 -e error.out.log
 
 echo 'Send Message...'

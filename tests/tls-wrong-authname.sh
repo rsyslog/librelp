@@ -1,5 +1,5 @@
 #!/bin/bash
-. ${srcdir}/test-framework.sh
+. ${srcdir:=$(pwd)}/test-framework.sh
 # NOT USING startup_receiver here!
 ./receive -p $TESTPORT -T -a "anon" -x ${srcdir}/tls-certs/ca.pem -y ${srcdir}/tls-certs/cert.pem -z ${srcdir}/tls-certs/key.pem -P "rsyslog" $OPT_VERBOSE $* 1>>librelp.out.log 2>&1
 check_output "relpSrvSetAuthMode(pRelpSrv, authMode)"
