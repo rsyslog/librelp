@@ -1,7 +1,10 @@
-/* A minimal RELP receiver using librelp
+/* A RELP receiver for testing.
  *
  * Copyright 2014 Mathias Nyman
  * Copyright 2018 Adiscon GmbH
+ *
+ * See getopt() call below for command line options. There is a brief
+ * (buf hopefully sufficient) comment describing what each option does.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,6 +34,8 @@
 #define TRY(f) if(f != RELP_RET_OK) { fprintf(stderr, "receive.c: FAILURE in '%s'\n", #f); ret = 1; goto done; }
 
 static FILE *errFile = NULL;
+static FILE *outFile = NULL;
+
 static relpEngine_t *pRelpEngine;
 
 static void
@@ -44,9 +49,8 @@ hdlr_enable(int sig, void (*hdlr)())
 }
 
 void
-terminate(int sig)
+terminate(__attribute__((unused)) const int sig)
 {
-	fprintf(stderr, "terminating on signal %d\n", sig);
 	relpEngineSetStop(pRelpEngine);
 }
 
@@ -75,8 +79,7 @@ static relpRetVal onSyslogRcv(unsigned char *pHostname __attribute__((unused)),
 	memset(pMsg, '\0', lenMsg+1);
 	memcpy(pMsg, msg, lenMsg);
 
-	printf("%s\n", pMsg);
-	fflush(stdout);
+	fprintf(outFile, "%s\n", pMsg);
 
 	free(pMsg);
 
@@ -122,6 +125,9 @@ exit_hdlr(void)
 	if(errFile != NULL) {
 		fclose(errFile);
 	}
+	if(outFile != NULL) {
+		fclose(outFile);
+	}
 }
 
 int main(int argc, char *argv[]) {
@@ -131,7 +137,6 @@ int main(int argc, char *argv[]) {
 	unsigned char *port = NULL;
 	int verbose = 0;
 	char *pidFileName = NULL;
-	char *errFileName = NULL;
 	int protFamily = 2; /* IPv4=2, IPv6=10 */
 	relpSrv_t *pRelpSrv;
 	int bEnableTLS = 0;
@@ -153,25 +158,30 @@ int main(int argc, char *argv[]) {
 		{"authmode", required_argument, 0, 'a'},
 		{"pidfile", required_argument, 0, 'F'},
 		{"errorfile", required_argument, 0, 'e'},
+		{"outfile", required_argument, 0, 'O'},
 		{0, 0, 0, 0}
 	};
 
 
-	while((c = getopt_long(argc, argv, "a:e:F:m:o:P:p:Tvx:y:z:", long_options, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "a:e:F:m:o:O:P:p:Tvx:y:z:", long_options, &option_index)) != -1) {
 		switch(c) {
 		case 'a':
 			authMode = optarg;
 			break;
 		case 'e':
-			errFileName = optarg;
+			if((errFile = fopen((char*) optarg, "w")) == NULL) {
+				perror(optarg);
+				fprintf(stderr, "error opening error file\n");
+				exit(1);
+			}
 			break;
 		case 'v':
 			verbose = 1;
 			break;
-		case 'F':
+		case 'F': /* pid file name */
 			pidFileName = optarg;
 			break;
-		case 'm':
+		case 'm': /* message size */
 			maxDataSize = atoi(optarg);
 			if(maxDataSize < 128) {
 				printf("maxMessageSize tried to set to %d, "
@@ -185,7 +195,14 @@ int main(int argc, char *argv[]) {
 				maxDataSize = INT_MAX;
 			}
 			break;
-		case 'o':
+		case 'O': /* output file */
+			if((outFile = fopen(optarg, "w")) == NULL) {
+				perror(optarg);
+				fprintf(stderr, "error opening output file\n");
+				exit(1);
+			}
+			break;
+		case 'o': /* oversize mode */
 			if(strcmp("truncate", optarg) == 0) {
 				oversizeMode = RELP_OVERSIZE_TRUNCATE;
 			} else if(strcmp("abort", optarg) == 0) {
@@ -222,13 +239,8 @@ int main(int argc, char *argv[]) {
 
 	atexit(exit_hdlr);
 
-	if(errFileName != NULL) {
-		printf("errfile %s\n", errFileName);
-		if((errFile = fopen((char*) errFileName, "w")) == NULL) {
-			perror(errFileName);
-			goto done;
-		}
-		setvbuf(errFile, NULL, _IONBF, 128);
+	if(outFile == NULL) {
+		outFile = stdout;
 	}
 
 	if(port == NULL) {

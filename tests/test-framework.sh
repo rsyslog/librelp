@@ -14,10 +14,9 @@ export valgrind="valgrind --malloc-fill=ff --free-fill=fe --log-fd=1"
 ######################################################################
 
 # $1 is name of pidfile to wait for
-function wait_process_startup_via_pidfile() {
+wait_process_startup_via_pidfile() {
 	i=0
 	while test ! -f $1 ; do
-		printf "startup wait %s: %s\n" $1 $i
 		sleep .100
 		(( i++ ))
 		if test $i -gt $TB_TIMEOUT_STARTUP
@@ -30,46 +29,40 @@ function wait_process_startup_via_pidfile() {
 }
 
 # start receiver WITH valgrind, add receiver command line parameters after function name
-function startup_receiver_valgrind() {
+startup_receiver_valgrind() {
 	printf 'Starting Receiver...\n'
-	$valgrind ./receive -p $TESTPORT -F receive.pid $OPT_VERBOSE $* 1>librelp.out.log &
+	$valgrind ./receive -p $TESTPORT --outfile librelp.out.log -F receive.pid $OPT_VERBOSE $* &
 	export RECEIVE_PID=$!
 	printf "got receive pid $RECEIVE_PID\n"
 	wait_process_startup_via_pidfile receive.pid
-	sleep 1
 	printf 'Receiver running\n'
 }
 
 # start receiver, add receiver command line parameters after function name
-function startup_receiver() {
+startup_receiver() {
 	printf 'Starting Receiver...\n'
-	./receive -p $TESTPORT -F receive.pid $OPT_VERBOSE $* 1>librelp.out.log &
+	./receive -p $TESTPORT -F receive.pid --outfile librelp.out.log $OPT_VERBOSE $* &
 	export RECEIVE_PID=$!
 	printf "got receive pid $RECEIVE_PID\n"
 	wait_process_startup_via_pidfile receive.pid
-	sleep 1
 	printf 'Receiver running\n'
 }
 
 # stop receiver
-function stop_receiver() {
-	if [ -f receive.pid ]; then
-		kill $(cat receive.pid) &> /dev/null
+stop_receiver() {
+	pid=$(cat receive.pid 2> /dev/null)
+	if [ "$pid" == "" ]; then
+		printf 'oops - we do not find the pid file in stop_receiver\n'
+		return
 	fi
-	wait -n 5 $(cat receive.pid) &> /dev/null
-#kill $RECEIVE_PID
-	if [ -f receive.pid ]; then
-		# FORCE
-		kill -9 $(cat receive.pid) &> /dev/null
-	fi
-	sleep 1
-
-	printf "receiver stopped\n"
+	kill $pid &> /dev/null
+	wait $pid
+	printf 'receiver %d stopped\n' $pid
 }
 
 # $1 is the value to check for
 # $2 (optinal) is the file to check
-function check_output() {
+check_output() {
 	EXPECTED="$1"
 	if [ "$2" == "" ] ; then
 		FILE_TO_CHECK="librelp.out.log"
@@ -88,7 +81,7 @@ function check_output() {
 
 # $1 is the value to check for
 # $2 (optinal) is the file to check
-function check_output_only() {
+check_output_only() {
 	EXPECTED="$1"
 	if [ "$2" == "" ] ; then
 		FILE_TO_CHECK="librelp.out.log"
@@ -114,7 +107,7 @@ function check_output_only() {
 # find who listens on port:
 # netstat -an | grep $TESTPORT
 # ./CI/solaris-findport.sh $TESTPORT
-function cleanup() {
+cleanup() {
 	if [ "$(uname)" == "SunOS" ] ; then
 		pkill -x receive
 		echo pkill result $?
@@ -128,7 +121,7 @@ function cleanup() {
 }
 
 # cleanup at end of regular test run
-function terminate() {
+terminate() {
 	cleanup
 	printf "$0 SUCCESS\n"
 }
