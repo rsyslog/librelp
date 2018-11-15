@@ -8,7 +8,7 @@ echo "e.g. $0 22"
 exit
 fi
 echo "Greping for your port, please be patient (CTRL+C breaks) ... "
-for i in `ls /proc`
+for i in $(ls /proc)
 do
 pfiles $i | grep AF_INET | grep $1
 if [ $? -eq 0 ]

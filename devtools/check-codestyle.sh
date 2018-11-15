@@ -1,3 +1,3 @@
 #!/bin/bash
 set -e
-find . -name "*.[ch]" | xargs rsyslog_stylecheck
+find . -name "*.[ch]" -exec rsyslog_stylecheck {} +

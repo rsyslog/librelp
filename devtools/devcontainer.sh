@@ -10,12 +10,12 @@ if [ "$PROJ_HOME" == "" ]; then
 	echo info: PROJ_HOME not set, using $PROJ_HOME
 fi
 
-DEV_CONTAINER=`cat $PROJ_HOME/devtools/default_dev_container`
+DEV_CONTAINER=$(cat $PROJ_HOME/devtools/default_dev_container)
 
 printf "/rsyslog is mapped to $PROJ_HOME\n"
 docker pull $DEV_CONTAINER
 docker run \
-	-u `id -u`:`id -g` \
+	-u $(id -u):$(id -g) \
 	-e PROJ_CONFIGURE_OPTIONS_EXTRA \
 	-e CC \
 	-e CFLAGS \
