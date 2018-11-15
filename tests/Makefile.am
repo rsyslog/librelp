@@ -25,7 +25,8 @@ TESTS=  basic.sh \
 	long-msg.sh \
 	oversize-msg-abort-errmsg.sh \
 	oversize-msg-accept-errmsg.sh \
-	truncate-oversize-msg.sh
+	truncate-oversize-msg.sh \
+	selftest_receive_usage.sh
 # OpenSSL tests only!
 if ENABLE_TLS_OPENSSL
 TESTS += tls-wrong-permittedPeer.sh \

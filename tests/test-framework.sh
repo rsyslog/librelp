@@ -32,7 +32,7 @@ function wait_process_startup_via_pidfile() {
 # start receiver WITH valgrind, add receiver command line parameters after function name
 function startup_receiver_valgrind() {
 	printf 'Starting Receiver...\n'
-	$valgrind ./receive -p $TESTPORT -F receive.pid $OPT_VERBOSE $* 1>>librelp.out.log &
+	$valgrind ./receive -p $TESTPORT -F receive.pid $OPT_VERBOSE $* 1>librelp.out.log &
 	export RECEIVE_PID=$!
 	printf "got receive pid $RECEIVE_PID\n"
 	wait_process_startup_via_pidfile receive.pid
@@ -43,7 +43,7 @@ function startup_receiver_valgrind() {
 # start receiver, add receiver command line parameters after function name
 function startup_receiver() {
 	printf 'Starting Receiver...\n'
-	./receive -p $TESTPORT -F receive.pid $OPT_VERBOSE $* 1>>librelp.out.log &
+	./receive -p $TESTPORT -F receive.pid $OPT_VERBOSE $* 1>librelp.out.log &
 	export RECEIVE_PID=$!
 	printf "got receive pid $RECEIVE_PID\n"
 	wait_process_startup_via_pidfile receive.pid

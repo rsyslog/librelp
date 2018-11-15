@@ -3027,7 +3027,7 @@ relpTcpConnect(relpTcp_t *const pThis,
 	struct addrinfo hints;
 	struct addrinfo *reslocal = NULL;
 	struct pollfd pfd;
-	char errmsg[1024];
+	char errmsg[1424];
 	int so_error;
 	socklen_t len = sizeof so_error;
 	int r;
@@ -3067,7 +3067,7 @@ relpTcpConnect(relpTcp_t *const pThis,
 	}
 	if(connect(pThis->sock, res->ai_addr, res->ai_addrlen) == -1) {
 		if(errno != EINPROGRESS) {
-			char errStr[1024];
+			char errStr[1200];
 			_relpEngine_strerror_r(errno, errStr, sizeof(errStr));
 			snprintf(errmsg, sizeof(errmsg), "error connecting: '%s'", errStr);
 			callOnErr(pThis, errmsg, RELP_RET_IO_ERR);
