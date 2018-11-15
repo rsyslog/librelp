@@ -19,7 +19,7 @@ addons:
     - uuid-dev
     - bison
     - flex
-    - python-docutils 
+    - python-docutils
 
 
 # now come those components that we need to install via sudo
