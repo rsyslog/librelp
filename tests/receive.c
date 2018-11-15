@@ -1,6 +1,7 @@
 /* A minimal RELP receiver using librelp
  *
  * Copyright 2014 Mathias Nyman
+ * Copyright 2018 Adiscon GmbH
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,12 +25,31 @@
 #include <string.h>
 #include <limits.h>
 #include <errno.h>
+#include <signal.h>
 #include "librelp.h"
 
 #define TRY(f) if(f != RELP_RET_OK) { fprintf(stderr, "receive.c: FAILURE in '%s'\n", #f); ret = 1; goto done; }
 
 static FILE *errFile = NULL;
 static relpEngine_t *pRelpEngine;
+
+static void
+hdlr_enable(int sig, void (*hdlr)())
+{
+	struct sigaction sigAct;
+	memset(&sigAct, 0, sizeof (sigAct));
+	sigemptyset(&sigAct.sa_mask);
+	sigAct.sa_handler = hdlr;
+	sigaction(sig, &sigAct, NULL);
+}
+
+void
+terminate(int sig)
+{
+	fprintf(stderr, "terminating on signal %d\n", sig);
+	relpEngineSetStop(pRelpEngine);
+}
+
 
 static void __attribute__((format(printf, 1, 2)))
 dbgprintf(char *fmt, ...)
@@ -237,6 +257,8 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
+	hdlr_enable(SIGTERM, terminate);
+
 	TRY(relpEngineConstruct(&pRelpEngine));
 	TRY(relpEngineSetDbgprint(pRelpEngine, verbose ? dbgprintf : NULL));
 	TRY(relpEngineSetEnableCmd(pRelpEngine, (unsigned char*) "syslog", eRelpCmdState_Required));
@@ -294,10 +316,13 @@ int main(int argc, char *argv[]) {
 		fclose(fp);
 	}
 
-	TRY(relpEngineRun(pRelpEngine)); /* Abort with ctrl-c */
+	TRY(relpEngineRun(pRelpEngine)); /* Abort via SIGHUP */
 
-	TRY(relpEngineSetStop(pRelpEngine));
 	TRY(relpEngineDestruct(&pRelpEngine));
+
+	if(pidFileName != NULL) {
+		unlink(pidFileName);
+	}
 
 done:
 	return ret;
