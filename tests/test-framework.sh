@@ -6,6 +6,7 @@
 # "config settings" for the testbench
 TB_TIMEOUT_STARTUP=400  # 40 seconds - Solaris sometimes needs this...
 TESTPORT=31514
+export OUTFILE=librelp.out.log
 export valgrind="valgrind --malloc-fill=ff --free-fill=fe --log-fd=1"
 #export OPT_VERBOSE=-v # uncomment for debugging 
 
@@ -31,7 +32,7 @@ wait_process_startup_via_pidfile() {
 # start receiver WITH valgrind, add receiver command line parameters after function name
 startup_receiver_valgrind() {
 	printf 'Starting Receiver...\n'
-	$valgrind ./receive -p $TESTPORT --outfile librelp.out.log -F receive.pid $OPT_VERBOSE $* &
+	$valgrind ./receive -p $TESTPORT --outfile $OUTFILE -F receive.pid $OPT_VERBOSE $* &
 	export RECEIVE_PID=$!
 	printf "got receive pid $RECEIVE_PID\n"
 	wait_process_startup_via_pidfile receive.pid
@@ -41,7 +42,7 @@ startup_receiver_valgrind() {
 # start receiver, add receiver command line parameters after function name
 startup_receiver() {
 	printf 'Starting Receiver...\n'
-	./receive -p $TESTPORT -F receive.pid --outfile librelp.out.log $OPT_VERBOSE $* &
+	./receive -p $TESTPORT -F receive.pid --outfile $OUTFILE $OPT_VERBOSE $* &
 	export RECEIVE_PID=$!
 	printf "got receive pid $RECEIVE_PID\n"
 	wait_process_startup_via_pidfile receive.pid
@@ -65,7 +66,7 @@ stop_receiver() {
 check_output() {
 	EXPECTED="$1"
 	if [ "$2" == "" ] ; then
-		FILE_TO_CHECK="librelp.out.log"
+		FILE_TO_CHECK="$OUTFILE"
 	else
 		FILE_TO_CHECK="$2"
 	fi
@@ -84,7 +85,7 @@ check_output() {
 check_output_only() {
 	EXPECTED="$1"
 	if [ "$2" == "" ] ; then
-		FILE_TO_CHECK="librelp.out.log"
+		FILE_TO_CHECK="$OUTFILE"
 	else
 		FILE_TO_CHECK="$2"
 	fi
@@ -117,13 +118,25 @@ cleanup() {
 		kill -9 $(cat receive.pid) &> /dev/null
 	fi
 
-	rm -f -- receive.pid librelp.out.log *.err.log error.out.log
+	rm -f -- receive.pid $OUTFILE *.err.log error.out.log
 }
 
 # cleanup at end of regular test run
 terminate() {
 	cleanup
 	printf "$0 SUCCESS\n"
+}
+
+# check that the output file contains correct number of messages
+# Works on $OUTFILE
+# TODO: check sequence, so that we do not have duplicates...
+check_msg_count() {
+	lines=$(wc -l < $OUTFILE)
+	if [ "$lines" -ne $NUMMESSAGES ]; then
+		printf 'FAIL: message count not correct for %s\n' $OUTFILE
+		printf 'Have %s lines, expected %d\n' "$lines" $NUMMESSAGES
+		exit 1
+	fi
 }
 
 ######################################################################

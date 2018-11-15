@@ -1,6 +1,10 @@
-/* A minimal RELP sender using librelp
+/* A RELP sender for the testbench.
  *
+ * Copyright 2018 Adiscon GmbH
  * Copyright 2014 Mathias Nyman
+ *
+ * See getopt() call below for command line options. There is a brief
+ * (buf hopefully sufficient) comment describing what each option does.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,8 +30,14 @@
 
 #define TRY(f) if(f != RELP_RET_OK) { fprintf(stderr, "send.c: FAILURE in '%s'\n", #f); ret = 1; goto done; }
 
+static const char *under_ci = NULL; /* if non-null, we run under CI, so be even more sparse with stdout */
 static FILE *errFile = NULL;
 static relpEngine_t *pRelpEngine;
+static size_t msgDataLen = 0;
+static int num_messages = 0;
+static size_t lenMsg = 0;
+static relpClt_t *pRelpClt = NULL;
+
 
 static void __attribute__((format(printf, 1, 2)))
 dbgprintf(char *fmt, ...)
@@ -84,6 +94,59 @@ exit_hdlr(void)
 	}
 }
 
+static int
+send_msgs_counter(void)
+{
+	int ret;
+	char buf[10];
+	if(!under_ci) {
+		printf("%8.8d msgs sent", 0);
+	}
+	for(int i = 1 ; i <= num_messages ; ++i) {
+		const ssize_t len = snprintf(buf, sizeof(buf), "%8.8d", i);
+		if(len < 0 || len >= (ssize_t) sizeof(buf)) {
+			fprintf(stderr, "ERROR: snprintf failed with %lld\n", (long long) len);
+			exit(1);
+		}
+		if(!under_ci && (i % 1000 == 0)) {
+			printf("\r%8.8d", i);
+			fflush(stdout);
+		}
+		TRY(relpCltSendSyslog(pRelpClt, (unsigned char*)buf, len));
+	}
+	printf("\r%8.8d msgs sent\n", num_messages);
+done:	return ret;
+}
+
+static int
+send_msgs_single(const char *pMsg)
+{
+	int ret;
+	char *msgData = NULL;
+
+	if(msgDataLen != 0) {
+		msgData = malloc(msgDataLen+1);
+		strcpy(msgData, pMsg);
+
+		/* fill with 01234567890123... digit sequence */
+		size_t i;
+		for(i=0; i < (msgDataLen-lenMsg); i++) {
+			*(msgData+lenMsg+i) = i%10 + '0';
+		}
+		msgData[msgDataLen] = '\0';
+		pMsg = msgData;
+		lenMsg = msgDataLen;
+	}
+
+	TRY(relpCltSendSyslog(pRelpClt, (unsigned char *)pMsg, lenMsg));
+
+	if(msgDataLen != 0) {
+		free((void *)pMsg);
+	}
+done:	return ret;
+}
+
+
 int main(int argc, char *argv[]) {
 
 	int c;
@@ -91,22 +154,19 @@ int main(int argc, char *argv[]) {
 	unsigned char *port = NULL;
 	unsigned char *target = NULL;
 	const char *pMsg = NULL;
-	size_t lenMsg = 0;
 	unsigned timeout = 90;
 	int verbose = 0;
-	char *errFileName = NULL;
 	int protFamily = 2; /* IPv4=2, IPv6=10 */
-	relpClt_t *pRelpClt = NULL;
 	int bEnableTLS = 0;
 	char *caCertFile = NULL;
 	char *myCertFile = NULL;
 	char *myPrivKeyFile = NULL;
 	char *permittedPeer = NULL;
 	char *authMode = NULL;
-	size_t msgDataLen = 0;
 	int len = 0;
-	char *msgData = NULL;;
 	int ret = 0;
+
+	under_ci = getenv("UNDER_CI");
 
 	static struct option long_options[] =
 	{
@@ -116,16 +176,21 @@ int main(int argc, char *argv[]) {
 		{"peer", required_argument, 0, 'P'},
 		{"authmode", required_argument, 0, 'a'},
 		{"errorfile", required_argument, 0, 'e'},
+		{"num-messages", required_argument, 0, 'n'},
 		{0, 0, 0, 0}
 	};
 
-	while((c = getopt_long(argc, argv, "a:e:d:m:P:p:Tt:vx:y:z:", long_options, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "a:e:d:m:n:P:p:Tt:vx:y:z:", long_options, &option_index)) != -1) {
 		switch(c) {
 		case 'a':
 			authMode = optarg;
 			break;
 		case 'e':
-			errFileName = optarg;
+			if((errFile = fopen(optarg, "w")) == NULL) {
+				perror(optarg);
+				fprintf(stderr, "error opening error file\n");
+				exit(1);
+			}
 			break;
 		case 'd':
 			len = atoi(optarg);
@@ -140,9 +205,12 @@ int main(int argc, char *argv[]) {
 		case 'v':
 			verbose = 1;
 			break;
-		case 'm':
+		case 'm': /* message text to send */
 			pMsg = (const char*)optarg;
 			lenMsg = strlen(pMsg);
+			break;
+		case 'n':
+			num_messages = atoi(optarg);
 			break;
 		case 'P':
 			permittedPeer = optarg;
@@ -173,21 +241,12 @@ int main(int argc, char *argv[]) {
 
 	atexit(exit_hdlr);
 
-	if(errFileName != NULL) {
-		printf("errfile %s\n", errFileName);
-		if((errFile = fopen((char*) errFileName, "w")) == NULL) {
-			perror(errFileName);
-			goto done;
-		}
-		setvbuf(errFile, NULL, _IONBF, 128);
-	}
-
 	if(msgDataLen != 0 && msgDataLen < lenMsg) {
 		fprintf(stderr, "send.c: message is larger than configured message size!\n");
 		exit(1);
 	}
 
-	if (target == NULL || port == NULL || pMsg == NULL) {
+	if (target == NULL || port == NULL || (pMsg == NULL && num_messages == 0)) {
 		printf("Missing parameter\n");
 		print_usage();
 		exit(1);
@@ -205,8 +264,7 @@ int main(int argc, char *argv[]) {
 	if(caCertFile != NULL || myCertFile != NULL || myPrivKeyFile != NULL) {
 		if(bEnableTLS == 0) {
 			printf("send: Certificates were specified, but TLS was "
-			       "not enabled! Will continue without TLS. To enable "
-			       "it use parameter \"-T\"\n");
+			       "not enabled! To enable it use parameter \"-T\"\n");
 			exit(1);
 		}
 	}
@@ -239,26 +297,12 @@ int main(int argc, char *argv[]) {
 
 	TRY(relpCltConnect(pRelpClt, protFamily, port, target));
 
-	if(msgDataLen != 0) {
-
-		msgData = malloc(msgDataLen+1);
-		strcpy(msgData, pMsg);
-
-		size_t i;
-		for(i=0; i < (msgDataLen-lenMsg); i++) {
-			*(msgData+lenMsg+i) = i%10 + '0';
-		}
-
-		msgData[msgDataLen] = '\0';
-		pMsg = msgData;
-		lenMsg = msgDataLen;
+	if(num_messages == 0) {
+		send_msgs_single(pMsg);
+	} else {
+		send_msgs_counter();
 	}
 
-	TRY(relpCltSendSyslog(pRelpClt, (unsigned char *)pMsg, lenMsg));
-
-	if(msgDataLen != 0) {
-		free((char *)pMsg);
-	}
 	TRY(relpEngineCltDestruct(pRelpEngine, &pRelpClt));
 	TRY(relpEngineDestruct(&pRelpEngine));
 
