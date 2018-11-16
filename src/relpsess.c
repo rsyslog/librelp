@@ -39,6 +39,8 @@
  * development.
  */
 #include "config.h"
+#include <stdio.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <ctype.h>
 #include <assert.h>
@@ -57,6 +59,36 @@
 static relpRetVal relpSessCltDoDisconnect(relpSess_t *pThis);
 static relpRetVal relpSessFixCmdStates(relpSess_t *pThis);
 static relpRetVal relpSessSrvDoDisconnect(relpSess_t *pThis);
+
+/* helper to call onErr if set */
+static void
+callOnErr(const relpSess_t *__restrict__ const pThis,
+	char *__restrict__ const emsg,
+	const relpRetVal ecode)
+{
+	char objinfo[1024];
+	//pThis->pEngine->dbgprint("librelp: generic error: ecode %d, "
+		//"emsg '%s'\n", ecode, emsg);
+	if(pThis->pEngine->onErr != NULL) {
+#if 0 // TODO: FIXME
+		if(pThis->pSrv == NULL) { /* client */
+			snprintf(objinfo, sizeof(objinfo), "conn to srvr %s:%s",
+				 pThis->pClt->pSess->srvAddr,
+				 pThis->pClt->pSess->srvPort);
+		} else if(pThis->pRemHostIP == NULL) { /* server listener */
+			snprintf(objinfo, sizeof(objinfo), "lstn %s",
+				 pThis->pSrv->pLstnPort);
+		} else { /* server connection to client */
+			snprintf(objinfo, sizeof(objinfo), "lstn %s: conn to clt %s/%s",
+				 pThis->pSrv->pLstnPort, pThis->pRemHostIP,
+				 pThis->pRemHostName);
+		}
+		objinfo[sizeof(objinfo)-1] = '\0';
+#endif
+		pThis->pEngine->onErr(pThis->pUsr, "session", emsg, ecode);
+	}
+}
+
 
 /* helper to free permittedPeer structure */
 static inline void
@@ -235,6 +267,7 @@ relpSessRcvData(relpSess_t *pThis)
 	CHKRet(relpTcpRcv(pThis->pTcp, rcvBuf, &lenBuf));
 
 	if(lenBuf == 0) {
+		callOnErr(pThis, "server closed relp session, session broken", RELP_RET_SESSION_BROKEN);
 		pThis->pEngine->dbgprint("server closed relp session %p, session broken\n", (void*)pThis);
 		/* even though we had a "normal" close, it is unexpected at this
 		 * stage. Consequently, we consider the session to be broken, because
@@ -390,6 +423,7 @@ relpSessAddUnacked(relpSess_t *pThis, relpSendbuf_t *pSendbuf)
 		ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
 
 	pUnackedLstEntry->pSendbuf = pSendbuf;
+pThis->pEngine->dbgprint("sess state %d, adding to unacked list: %s\n", relpSessGetSessState(pThis), pSendbuf->pData + (9 - pSendbuf->lenTxnr));
 
 	DLL_Add(pUnackedLstEntry, pThis->pUnackedLstRoot, pThis->pUnackedLstLast);
 	++pThis->lenUnackedLst;
@@ -842,6 +876,7 @@ relpSessConnect(relpSess_t *pThis, int protFamily, unsigned char *port, unsigned
 	CHKRet(relpOffersToString(pOffers, NULL, 0, &pszOffers, &lenOffers));
 	CHKRet(relpOffersDestruct(&pOffers));
 
+pThis->pEngine->dbgprint("sending open command\n");
 	CHKRet(relpSessRawSendCommand(pThis, (unsigned char*)"open", 4, pszOffers, lenOffers,
 				      relpSessCBrspOpen));
 	relpSessSetSessState(pThis, eRelpSessState_INIT_CMD_SENT);
