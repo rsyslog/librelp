@@ -1,6 +1,6 @@
 /* The command handler for server-based "open" (after reception)
  *
- * Copyright 2008 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2018 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
@@ -134,10 +134,11 @@ BEGINcommand(S, Init)
 	pSess->pEngine->dbgprint("in open command handler\n");
 
 	if(pSess->bServerConnOpen) {
-		relpSessSendResponse(pSess, pFrame->txnr,
-		(unsigned char*) "500 connection already open",
-		sizeof("500 connection already open") - 1);
-		ABORT_FINALIZE(RELP_RET_SESSION_OPEN);
+		/* work around for cases where librelp invalidly sents open commands
+		 * inside active sessions. This is considered harmless. 2018-11-16 rgerhards */
+		unsigned char replymsg[] = "200 connection already open - ignored";
+		relpSessSendResponse(pSess, pFrame->txnr, replymsg, sizeof(replymsg) - 1);
+		FINALIZE;
 	}
 
 	CHKRet(relpOffersConstructFromFrame(&pCltOffers, pFrame));
