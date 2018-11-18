@@ -1,5 +1,19 @@
 ----------------------------------------------------------------------
 Version 1.2.19 - 2018-??-??
+- improved error reporting
+- gracefully handle multiple open commands
+  librelp sometimes sends multiple open commands WITHIN the open
+  session, intermixed with app-layer data. As of the relp spec,
+  this leads to session closure. However, we have relaxed this
+  so that the multiple opens are ignored, as that "feature"
+  caused quite some trouble in practice.
+  That said, the client part of librelp should also be fixed to
+  not send multiple open commands any longer. However, we must
+  expect that old versions will exist for years, so we really
+  need to handle this at the server level.
+  Special thanks to github user perlei for proposing the base
+  idea for this fix (it just needed small adjustments).
+  see also https://github.com/rsyslog/librelp/issues/129
 ----------------------------------------------------------------------
 Version 1.2.18 - 2018-09-18
 - added non-standard "certvalid" auth mode to TLS authentication
