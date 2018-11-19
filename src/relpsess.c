@@ -423,7 +423,6 @@ relpSessAddUnacked(relpSess_t *pThis, relpSendbuf_t *pSendbuf)
 		ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
 
 	pUnackedLstEntry->pSendbuf = pSendbuf;
-pThis->pEngine->dbgprint("sess state %d, adding to unacked list: %s\n", relpSessGetSessState(pThis), pSendbuf->pData + (9 - pSendbuf->lenTxnr));
 
 	DLL_Add(pUnackedLstEntry, pThis->pUnackedLstRoot, pThis->pUnackedLstLast);
 	++pThis->lenUnackedLst;
@@ -892,9 +891,19 @@ pThis->pEngine->dbgprint("sending open command\n");
 	relpSessSetSessState(pThis, eRelpSessState_READY_TO_SEND); /* indicate session startup */
 
 finalize_it:
-pThis->pEngine->dbgprint("end relpSessConnect, iRet %d\n", iRet);
-	if(pszOffers != NULL)
-		free(pszOffers);
+	free(pszOffers);
+	if(iRet != RELP_RET_OK) {
+		callOnErr(pThis, "error opening connection to remote peer", iRet);
+		if((pThis->pUnackedLstLast != NULL) &&
+		   !strncmp((char*)pThis->pUnackedLstLast->pSendbuf->pData + 9, " open ", 6)) {
+			pThis->pEngine->dbgprint("relpSessConnect remove 'open' from unacked list\n");
+			relpSessUnacked_t *pDel = pThis->pUnackedLstLast;
+			DLL_Del(pDel, pThis->pUnackedLstRoot, pThis->pUnackedLstLast);
+			--pThis->lenUnackedLst;
+			relpSendbufDestruct(&pDel->pSendbuf);
+			free(pDel);
+		}
+	}
 
 	LEAVE_RELPFUNC;
 }
