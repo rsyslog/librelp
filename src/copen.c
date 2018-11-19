@@ -134,15 +134,14 @@ BEGINcommand(S, Init)
 	pSess->pEngine->dbgprint("in open command handler\n");
 
 	if(pSess->bServerConnOpen) {
-		/* work around for cases where librelp invalidly sents open commands
-		 * inside active sessions. This is considered harmless. 2018-11-16 rgerhards */
 		if(pSess->pEngine->onErr) { // TODO: generalize!
 			pSess->pEngine->onErr(pSess->pUsr, "session", "received session open "
-				"request for already open session - ignored", RELP_RET_INVALID_FRAME);
+				"request for already open session - aborting session",
+				RELP_RET_INVALID_FRAME);
 		}
-		unsigned char replymsg[] = "200 connection already open - ignored";
+		unsigned char replymsg[] = "500 protocol error: connection already open";
 		relpSessSendResponse(pSess, pFrame->txnr, replymsg, sizeof(replymsg) - 1);
-		FINALIZE;
+		ABORT_FINALIZE(RELP_RET_SESSION_OPEN);
 	}
 
 	CHKRet(relpOffersConstructFromFrame(&pCltOffers, pFrame));
