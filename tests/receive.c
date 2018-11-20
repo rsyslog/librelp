@@ -38,6 +38,12 @@ static FILE *outFile = NULL;
 
 static relpEngine_t *pRelpEngine;
 
+#define USR_MAGIC 0x1234FFee
+struct usrdata { /* used for testing user pointer pass-back */
+	int magic;
+	char *progname;
+};
+struct usrdata *userdata = NULL;
 static void
 hdlr_enable(int sig, void (*hdlr)())
 {
@@ -92,9 +98,17 @@ void print_usage(void)
 }
 
 static void
-onErr( __attribute__((unused)) void *pUsr, char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
+onErr(void *pUsr, char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
 {
-	fprintf(stderr, "receive: error '%s', object '%s'\n", errmesg, objinfo);
+	struct usrdata *pThis = (struct usrdata*) pUsr;
+	if(pUsr != userdata) {
+		fprintf(stderr, "receive: pUsr NOT pointing to usrdata!\n");
+	}
+	if(pThis->magic != USR_MAGIC) {
+		fprintf(stderr, "receive: pUsr magic incorrect in onErr, magic %8.8x "
+			"pUsr %p\n", pThis->magic, (void*) pThis);
+	}
+	fprintf(stderr, "%s: error '%s', object '%s'\n", pThis->progname, errmesg, objinfo);
 	if(errFile != NULL) {
 		fprintf(errFile, "receive: error '%s', object '%s'\n", errmesg, objinfo);
 	}
@@ -122,6 +136,10 @@ onAuthErr( __attribute__((unused)) void *pUsr, char *authinfo,
 static void
 exit_hdlr(void)
 {
+	if(userdata != NULL) {
+		free(userdata->progname);
+		free(userdata);
+	}
 	if(errFile != NULL) {
 		fclose(errFile);
 	}
@@ -285,6 +303,10 @@ int main(int argc, char *argv[]) {
 
 	TRY(relpEngineListnerConstruct(pRelpEngine, &pRelpSrv));
 	TRY(relpSrvSetLstnPort(pRelpSrv, port));
+	userdata = calloc(1, sizeof(struct usrdata));
+	userdata->magic = USR_MAGIC;
+	userdata->progname = strdup("receive");
+	relpSrvSetUsrPtr(pRelpSrv, userdata);
 	if(maxDataSize != 0) {
 		TRY(relpSrvSetMaxDataSize(pRelpSrv, maxDataSize));
 	}
