@@ -27,6 +27,8 @@ TESTS=  basic.sh \
 	oversize-msg-abort-errmsg.sh \
 	oversize-msg-accept-errmsg.sh \
 	truncate-oversize-msg.sh \
+	send-noconnect.sh \
+	receive-emptyconnect.sh \
 	selftest_receive_usage.sh
 # OpenSSL tests only!
 if ENABLE_TLS_OPENSSL
@@ -43,6 +45,7 @@ endif
 
 EXTRA_DIST=$(TESTS) \
 	$(VALGRIND_TESTS) \
+	dummyclient.py \
 	test-framework.sh \
 	receive.c \
 	send.c \

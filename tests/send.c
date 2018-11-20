@@ -38,6 +38,13 @@ static int num_messages = 0;
 static size_t lenMsg = 0;
 static relpClt_t *pRelpClt = NULL;
 
+#define USR_MAGIC 0x1234FFee
+struct usrdata { /* used for testing user pointer pass-back */
+	int magic;
+	char *progname;
+};
+struct usrdata *userdata = NULL;
+
 
 static void __attribute__((format(printf, 1, 2)))
 dbgprintf(char *fmt, ...)
@@ -58,9 +65,17 @@ void print_usage(void)
 }
 
 static void
-onErr( __attribute__((unused)) void *pUsr, char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
+onErr(void *pUsr, char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
 {
-	printf("send: error '%s', object '%s'\n", errmesg, objinfo);
+	struct usrdata *pThis = (struct usrdata*) pUsr;
+	if(pUsr != userdata) {
+		fprintf(stderr, "send: pUsr NOT pointing to usrdata!\n");
+	}
+	if(pThis->magic != USR_MAGIC) {
+		fprintf(stderr, "send: pUsr magic incorrect in onErr, magic %8.8x "
+			"pUsr %p\n", pThis->magic, (void*) pThis);
+	}
+	printf("%s: error '%s', object '%s'\n", pThis->progname, errmesg, objinfo);
 	if(errFile != NULL) {
 		fprintf(errFile, "send: error '%s', object '%s'\n", errmesg, objinfo);
 	}
@@ -89,6 +104,10 @@ onAuthErr( __attribute__((unused)) void *pUsr, char *authinfo,
 static void
 exit_hdlr(void)
 {
+	if(userdata != NULL) {
+		free(userdata->progname);
+		free(userdata);
+	}
 	if(errFile != NULL) {
 		fclose(errFile);
 	}
@@ -281,6 +300,10 @@ int main(int argc, char *argv[]) {
 	TRY(relpEngineSetEnableCmd(pRelpEngine, (unsigned char*)"syslog", eRelpCmdState_Required));
 	TRY(relpEngineCltConstruct(pRelpEngine, &pRelpClt));
 	TRY(relpCltSetTimeout(pRelpClt, timeout));
+	userdata = calloc(1, sizeof(struct usrdata));
+	userdata->magic = USR_MAGIC;
+	userdata->progname = strdup("send");
+	TRY(relpCltSetUsrPtr(pRelpClt, userdata));
 
 	if(bEnableTLS) {
 		TRY(relpCltEnableTLS(pRelpClt));
