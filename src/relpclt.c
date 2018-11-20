@@ -116,12 +116,11 @@ relpCltConnect(relpClt_t *pThis, int protFamily, unsigned char *port, unsigned c
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Clt);
 
-	CHKRet(relpSessConstruct(&pThis->pSess, pThis->pEngine, RELP_CLT_CONN, pThis));
+	CHKRet(relpSessConstruct(&pThis->pSess, pThis->pEngine, RELP_CLT_CONN, pThis, pThis->pUsr));
 	CHKRet(relpSessSetTimeout(pThis->pSess, pThis->timeout));
 	CHKRet(relpSessSetConnTimeout(pThis->pSess, pThis->connTimeout));
 	CHKRet(relpSessSetWindowSize(pThis->pSess, pThis->sizeWindow));
 	CHKRet(relpSessSetClientIP(pThis->pSess, pThis->clientIP));
-	CHKRet(relpSessSetUsrPtr(pThis->pSess, pThis->pUsr));
 	if(pThis->bEnableTLS) {
 		CHKRet(relpSessEnableTLS(pThis->pSess));
 		if(pThis->bEnableTLSZip) {

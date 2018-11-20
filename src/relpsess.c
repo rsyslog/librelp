@@ -105,7 +105,7 @@ relpSessFreePermittedPeers(relpSess_t *pThis)
  *  the pSrv parameter may be set to NULL if the session object is for a client.
  */
 relpRetVal
-relpSessConstruct(relpSess_t **ppThis, relpEngine_t *pEngine, int connType, void *pParent)
+relpSessConstruct(relpSess_t **ppThis, relpEngine_t *pEngine, int connType, void *pParent, void *pUsr)
 {
 	relpSess_t *pThis;
 
@@ -118,6 +118,7 @@ relpSessConstruct(relpSess_t **ppThis, relpEngine_t *pEngine, int connType, void
 	}
 
 	RELP_CORE_CONSTRUCTOR(pThis, Sess);
+	pThis->pUsr = pUsr;
 	pThis->pEngine = pEngine;
 	/* use Engine's command enablement states as default */
 	pThis->stateCmdSyslog = pEngine->stateCmdSyslog;
@@ -128,7 +129,6 @@ relpSessConstruct(relpSess_t **ppThis, relpEngine_t *pEngine, int connType, void
 	}
 	pThis->txnr = 1; /* txnr start at 1 according to spec */
 	pThis->timeout = 90;
-	pThis->pUsr = NULL;
 	pThis->sizeWindow = RELP_DFLT_WINDOW_SIZE;
 	pThis->maxDataSize = RELP_DFLT_MAX_DATA_SIZE;
 	pThis->authmode = eRelpAuthMode_None;
@@ -231,7 +231,8 @@ relpSessAcceptAndConstruct(relpSess_t **ppThis, relpSrv_t *pSrv, int sock)
 	RELPOBJ_assert(pSrv, Srv);
 	assert(sock >= 0);
 
-	CHKRet(relpSessConstruct(&pThis, pSrv->pEngine, RELP_SRV_CONN, pSrv));
+	CHKRet(relpSessConstruct(&pThis, pSrv->pEngine, RELP_SRV_CONN, pSrv, pSrv->pUsr));
+
 	CHKRet(relpTcpAcceptConnReq(&pThis->pTcp, sock, pSrv));
 	CHKRet(relpSessSetMaxDataSize(pThis, pSrv->maxDataSize));
 

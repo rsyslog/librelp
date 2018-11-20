@@ -132,7 +132,7 @@ relpSessTcpRequiresRtry(relpSess_t *pThis)
 }
 
 /* prototypes */
-relpRetVal relpSessConstruct(relpSess_t **ppThis, relpEngine_t *pEngine, int connType, void *pParent);
+relpRetVal relpSessConstruct(relpSess_t **ppThis, relpEngine_t *pEngine, int connType, void *pParent, void*pUsr);
 relpRetVal relpSessDestruct(relpSess_t **ppThis);
 relpRetVal relpSessAcceptAndConstruct(relpSess_t **ppThis, relpSrv_t *pSrv, int sock);
 relpRetVal relpSessRcvData(relpSess_t *pThis);
