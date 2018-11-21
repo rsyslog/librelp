@@ -129,8 +129,8 @@ relpSrvAddPermittedPeer(relpSrv_t *pThis, char *peer)
 	char **newName;
 	int newMemb;
 	ENTER_RELPFUNC;
-	newMemb = pThis->permittedPeers.nmemb + 1;
 	RELPOBJ_assert(pThis, Srv);
+	newMemb = pThis->permittedPeers.nmemb + 1;
 	newName = realloc(pThis->permittedPeers.name, sizeof(char*) * newMemb);
 	if(newName == NULL) {
 		ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
