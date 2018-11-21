@@ -10,6 +10,12 @@ Version 1.2.19 - 2018-??-??
   session). This can happen e.g. with proxy servers which cannot
   connect to the actual server.
   closes https://github.com/rsyslog/librelp/issues/129
+- testbench:
+  * add test for receiver abort and restart
+  * much improved testbench framework and tools to support
+    this type of test. Done some general improvements to the
+    tooling.
+  * imported rsyslog tool "chkseq" for checking
 ----------------------------------------------------------------------
 Version 1.2.18 - 2018-09-18
 - added non-standard "certvalid" auth mode to TLS authentication
