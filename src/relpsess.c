@@ -51,6 +51,7 @@
 #include "relp.h"
 #include "relpsess.h"
 #include "relpframe.h"
+#include "relpclt.h"
 #include "sendq.h"
 #include "offers.h"
 #include "dbllinklist.h"
@@ -67,25 +68,24 @@ callOnErr(const relpSess_t *__restrict__ const pThis,
 	const relpRetVal ecode)
 {
 	char objinfo[1024];
+	relpTcp_t *const pTcp = pThis->pTcp;
 	//pThis->pEngine->dbgprint("librelp: generic error: ecode %d, "
 		//"emsg '%s'\n", ecode, emsg);
 	if(pThis->pEngine->onErr != NULL) {
-#if 0 // TODO: FIXME
-		if(pThis->pSrv == NULL) { /* client */
+		if(pTcp->pSrv == NULL) { /* client */
 			snprintf(objinfo, sizeof(objinfo), "conn to srvr %s:%s",
-				 pThis->pClt->pSess->srvAddr,
-				 pThis->pClt->pSess->srvPort);
-		} else if(pThis->pRemHostIP == NULL) { /* server listener */
+				 pTcp->pClt->pSess->srvAddr,
+				 pTcp->pClt->pSess->srvPort);
+		} else if(pTcp->pRemHostIP == NULL) { /* server listener */
 			snprintf(objinfo, sizeof(objinfo), "lstn %s",
-				 pThis->pSrv->pLstnPort);
+				 pTcp->pSrv->pLstnPort);
 		} else { /* server connection to client */
 			snprintf(objinfo, sizeof(objinfo), "lstn %s: conn to clt %s/%s",
-				 pThis->pSrv->pLstnPort, pThis->pRemHostIP,
-				 pThis->pRemHostName);
+				 pTcp->pSrv->pLstnPort, pTcp->pRemHostIP,
+				 pTcp->pRemHostName);
 		}
 		objinfo[sizeof(objinfo)-1] = '\0';
-#endif
-		pThis->pEngine->onErr(pThis->pUsr, "session", emsg, ecode);
+		pThis->pEngine->onErr(pThis->pUsr, objinfo, emsg, ecode);
 	}
 }
 
@@ -276,8 +276,9 @@ relpSessRcvData(relpSess_t *pThis)
 		 */
 		pThis->sessState = eRelpSessState_BROKEN;
 		ABORT_FINALIZE(RELP_RET_SESSION_BROKEN);
-	} else if ((int) lenBuf == -1) { /* I don't know why we need to cast to int, but we must... */
+	} else if ((int) lenBuf == -1) {
 		if(errno != EAGAIN) {
+			callOnErr(pThis, "error when receiving data, session broken", RELP_RET_SESSION_BROKEN);
 			pThis->pEngine->dbgprint("errno %d during relp session %p, session broken\n",
 				errno, (void*)pThis);
 			pThis->sessState = eRelpSessState_BROKEN;
@@ -318,6 +319,7 @@ relpSessSendResponse(relpSess_t *pThis, relpTxnr_t txnr, unsigned char *pData, s
 finalize_it:
 	if(iRet != RELP_RET_OK) {
 		if(iRet == RELP_RET_IO_ERR) {
+			callOnErr(pThis, "io error, session broken", RELP_RET_SESSION_BROKEN);
 			pThis->pEngine->dbgprint("relp session %p is broken, io error\n", (void*)pThis);
 			pThis->sessState = eRelpSessState_BROKEN;
 			}
@@ -565,7 +567,7 @@ relpSessWaitState(relpSess_t *const pThis, const relpSessState_t stateExpected, 
 		pfd.fd = sock;
 		pfd.events = POLLIN;
 		pThis->pEngine->dbgprint("relpSessWaitRsp waiting for data on "
-			"fd %d, timeout %d\n", sock, timeout);
+			"fd %d, timeout %d, state expected %d\n", sock, timeout, stateExpected);
 		nfds = poll(&pfd, 1, timeout*1000);
 		if(nfds == -1) {
 			if(errno == EINTR) {
@@ -597,6 +599,8 @@ finalize_it:
 		iRet == RELP_RET_SESSION_BROKEN ||
 		relpEngineShouldStop(pThis->pEngine)) {
 		/* the session is broken! */
+		callOnErr(pThis, "error waiting on required session state, session broken",
+			RELP_RET_SESSION_BROKEN);
 		pThis->sessState = eRelpSessState_BROKEN;
 	}
 
@@ -628,6 +632,7 @@ relpSessRawSendCommand(relpSess_t *pThis, unsigned char *pCmd, size_t lenCmd,
 
 	if(iRet == RELP_RET_IO_ERR) {
 		pThis->pEngine->dbgprint("relp session %p flagged as broken, IO error\n", (void*)pThis);
+		callOnErr(pThis, "io error in RawSendCommand, session broken", RELP_RET_SESSION_BROKEN);
 		pThis->sessState = eRelpSessState_BROKEN;
 		ABORT_FINALIZE(RELP_RET_SESSION_BROKEN);
 	}
@@ -791,6 +796,7 @@ relpSessCBrspOpen(relpSess_t *pThis, relpFrame_t *pFrame)
 			pEngine->dbgprint("ignoring unknown server offer '%s'\n", pOffer->szName);
 		}
 	}
+
 	relpSessSetSessState(pThis, eRelpSessState_INIT_RSP_RCVD);
 
 finalize_it:
@@ -816,8 +822,10 @@ relpSessCltConnChkOffers(relpSess_t *pThis)
 		ABORT_FINALIZE(RELP_RET_RQD_FEAT_MISSING);
 
 finalize_it:
-	if(iRet != RELP_RET_OK)
+	if(iRet != RELP_RET_OK) {
+		callOnErr(pThis, "error in CltConnChkOffers, session broken", RELP_RET_SESSION_BROKEN);
 		pThis->sessState = eRelpSessState_BROKEN;
+	}
 
 	LEAVE_RELPFUNC;
 }
@@ -876,7 +884,6 @@ relpSessConnect(relpSess_t *pThis, int protFamily, unsigned char *port, unsigned
 	CHKRet(relpOffersToString(pOffers, NULL, 0, &pszOffers, &lenOffers));
 	CHKRet(relpOffersDestruct(&pOffers));
 
-pThis->pEngine->dbgprint("sending open command\n");
 	CHKRet(relpSessRawSendCommand(pThis, (unsigned char*)"open", 4, pszOffers, lenOffers,
 				      relpSessCBrspOpen));
 	relpSessSetSessState(pThis, eRelpSessState_INIT_CMD_SENT);

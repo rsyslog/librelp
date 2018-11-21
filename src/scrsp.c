@@ -31,6 +31,7 @@
  * development.
  */
 #include "config.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
 #include <assert.h>
@@ -106,6 +107,10 @@ BEGINcommand(S, Rsp)
 		}
 		CHKRet(relpSendbufDestruct(&pSendbuf));
 	} else {
+		if(pSess->pEngine->onErr != NULL) {
+			pSess->pEngine->onErr(pSess->pUsr, "rsp command",
+				"peer sent error response", RELP_RET_RSP_STATE_ERR);
+		}
 		iRet = RELP_RET_RSP_STATE_ERR;
 		/* TODO: add a hock to a logger function of the caller */
 		relpSendbufDestruct(&pSendbuf); /* don't set error code */

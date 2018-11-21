@@ -4,7 +4,7 @@
 # of messages
 . ${srcdir:=$(pwd)}/test-framework.sh
 NUMMESSAGES=50000
-startup_receiver $OPT_VERBOSE
+startup_receiver
 ./send -t 127.0.0.1 -p $TESTPORT -n$NUMMESSAGES $OPT_VERBOSE
 stop_receiver
 check_msg_count
