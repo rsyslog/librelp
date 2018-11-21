@@ -1,6 +1,6 @@
 /* The RELP (reliable event logging protocol) core protocol library.
  *
- * Copyright 2008-2016 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2018 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
@@ -259,6 +259,12 @@ relpEngineConstruct(relpEngine_t **ppThis)
 	}
 
 	RELP_CORE_CONSTRUCTOR(pThis, Engine);
+	#if !defined(ENABLE_TLS) && defined(ENABLE_TLS_OPENSSL)
+		/* if we only have openssl, it's only sensible to use it by default ;-) */
+		pThis->tls_lib = RELP_USE_OPENSSL;
+	#else	/* otherwise, use GnuTLS for max compatibility */
+		pThis->tls_lib = RELP_USE_GNUTLS;
+	#endif
 	pThis->protocolVersion = RELP_CURR_PROTOCOL_VERSION;
 	pthread_mutex_init(&pThis->mutSrvLst, NULL);
 	pthread_mutex_init(&pThis->mutSessLst, NULL);
@@ -327,6 +333,65 @@ relpEngineSetDbgprint(relpEngine_t *pThis, void (*dbgprint)(char *fmt, ...) __at
 }
 
 
+relpRetVal
+relpEngineSetTLSLib(relpEngine_t *const pThis, NOTLS_UNUSED const int tls_lib)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Engine);
+
+	if(pThis == NULL) {
+		ABORT_FINALIZE(RELP_RET_PARAM_ERROR);
+	}
+
+	pThis->dbgprint("relpEngineSetTLSLib, req lib is %d\n", tls_lib);
+	#if defined(WITH_TLS)
+		if(tls_lib == RELP_USE_GNUTLS) {
+			#if defined(ENABLE_TLS)
+				pThis->tls_lib = RELP_USE_GNUTLS;
+			#else
+				ABORT_FINALIZE(RELP_RET_NOT_SUPPORTED);
+			#endif
+		} else if(tls_lib == RELP_USE_OPENSSL) {
+			#if defined(ENABLE_TLS_OPENSSL)
+				pThis->tls_lib = RELP_USE_OPENSSL;
+			#else
+				ABORT_FINALIZE(RELP_RET_NOT_SUPPORTED);
+			#endif
+		} else {
+			ABORT_FINALIZE(RELP_RET_PARAM_ERROR);
+		}
+	#else /* defined(WITH_TLS) */
+		pThis->dbgprint("relpEngineSetTLSLib, error, librelp not with TLS support\n");
+		ABORT_FINALIZE(RELP_RET_NOT_SUPPORTED);
+	#endif
+
+finalize_it:
+	pThis->dbgprint("relpEngineSetTLSLib, lib now %d, ret %d\n", pThis->tls_lib, iRet);
+	LEAVE_RELPFUNC;
+}
+
+
+relpRetVal
+relpEngineSetTLSLibByName(relpEngine_t *const pThis, const char *const name)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Engine);
+
+	if(pThis == NULL || name == NULL) {
+		ABORT_FINALIZE(RELP_RET_PARAM_ERROR);
+	}
+
+	if(!strcasecmp(name, "gnutls")) {
+		relpEngineSetTLSLib(pThis, RELP_USE_GNUTLS);
+	}else if(!strcasecmp(name, "openssl")) {
+		relpEngineSetTLSLib(pThis, RELP_USE_OPENSSL);
+	} else {
+		ABORT_FINALIZE(RELP_RET_NOT_SUPPORTED);
+	}
+
+finalize_it:
+	LEAVE_RELPFUNC;
+}
 
 /* create a new listener to be added to the engine. This is the new-style
  * calling convention, which permits us to set various properties before
@@ -670,12 +735,11 @@ static inline relpRetVal
 engineEventLoopExit(relpEngine_t __attribute__((unused)) *pThis)
 {
 	relpEngSrvLst_t *pSrvEtry;
-	int i;
 	int nLstn;
 	ENTER_RELPFUNC;
 	for(pSrvEtry = pThis->pSrvLstRoot ; pSrvEtry != NULL ; pSrvEtry = pSrvEtry->pNext) {
 		nLstn = relpSrvGetNumLstnSocks(pSrvEtry->pSrv);
-		for(i = 0 ; i < nLstn ; ++i) {
+		for(int i = 0 ; i < nLstn ; ++i) {
 			delFromEpollSet(pThis, pSrvEtry->epevts[i]);
 		}
 		free(pSrvEtry->epevts);
@@ -691,21 +755,17 @@ static relpRetVal
 handleSessIO(relpEngine_t *pThis, epolld_t *epd)
 {
 	relpEngSessLst_t *pSessEtry;
-	relpTcp_t *pTcp;
-#	if defined(ENABLE_TLS) || defined(ENABLE_TLS_OPENSSL)
-	relpRetVal localRet;
-#	endif
 
 	pSessEtry = (relpEngSessLst_t*) epd->ptr;
 	if(relpSessTcpRequiresRtry(pSessEtry->pSess)) {
-		pTcp = pSessEtry->pSess->pTcp;
+		relpTcp_t *const pTcp = pSessEtry->pSess->pTcp;
 		if(relpTcpRtryOp(pTcp) == relpTCP_RETRY_send) {
 			doSend(pThis, pSessEtry, epd->sock);
 		} else if(relpTcpRtryOp(pTcp) == relpTCP_RETRY_recv) {
 			doRecv(pThis, pSessEtry, epd->sock);
 		} else {
 #			if defined(ENABLE_TLS) || defined(ENABLE_TLS_OPENSSL)
-				localRet = relpTcpRtryHandshake(pTcp);
+				const relpRetVal localRet = relpTcpRtryHandshake(pTcp);
 				if(localRet != RELP_RET_OK) {
 					pThis->dbgprint("relp session %d handshake iRet %d, tearing it down\n",
 							epd->sock, localRet);
@@ -808,7 +868,6 @@ engineEventLoopRun(relpEngine_t *pThis)
 	relpRetVal localRet;
 	int iSocks;
 	int sock;
-	int maxfds;
 	int nfds;
 	fd_set readfds;
 	fd_set writefds;
@@ -818,7 +877,7 @@ engineEventLoopRun(relpEngine_t *pThis)
 
 	pThis->bStop = 0;
 	while(!relpEngineShouldStop(pThis)) {
-	        maxfds = 0;
+	        int maxfds = 0;
 	        FD_ZERO(&readfds);
 	        FD_ZERO(&writefds);
 

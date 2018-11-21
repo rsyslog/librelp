@@ -1,4 +1,4 @@
-check_PROGRAMS=receive send chkseq
+check_PROGRAMS=receive send chkseq have_tlslib
 
 receive_SOURCES=receive.c
 receive_LDADD=../src/.libs/librelp.la
@@ -9,6 +9,7 @@ send_LDADD=../src/.libs/librelp.la
 send_CFLAGS=$(AM_CFLAGS) -I${top_srcdir}/src $(WARN_CFLAGS)
 
 chkseq_SOURCES=chkseq.c
+have_tlslib_SOURCES=have_tlslib.c
 
 VALGRIND_TESTS= \
 	duplicate-receiver-vg.sh
@@ -16,6 +17,7 @@ VALGRIND_TESTS= \
 # TLS tests that work both with gnutls and openssl
 TLS_TESTS=  \
 	tls-basic.sh \
+	tls-basic-realistic.sh \
 	tls-basic-anon.sh \
 	tls-basic-certvalid.sh \
 	tls-basic-fingerprint.sh \

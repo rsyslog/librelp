@@ -218,6 +218,7 @@ int main(int argc, char *argv[]) {
 	char *myPrivKeyFile = NULL;
 	char *permittedPeer = NULL;
 	char *authMode = NULL;
+	const char *tlslib = NULL;
 	int len = 0;
 	int ret = 0;
 
@@ -236,6 +237,7 @@ int main(int argc, char *argv[]) {
 		{"peer", required_argument, 0, 'P'},
 		{"authmode", required_argument, 0, 'a'},
 		{"errorfile", required_argument, 0, 'e'},
+		{"tls-lib", required_argument, 0, 'l'},
 		{"debugfile", required_argument, 0, DBGFILE},
 		{"num-messages", required_argument, 0, 'n'},
 		{"kill-on-msg", required_argument, 0, KILL_ON_MSG},
@@ -244,7 +246,7 @@ int main(int argc, char *argv[]) {
 		{0, 0, 0, 0}
 	};
 
-	while((c = getopt_long(argc, argv, "a:e:d:m:n:P:p:Tt:vx:y:z:", long_options, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "a:e:d:l:m:n:P:p:Tt:vx:y:z:", long_options, &option_index)) != -1) {
 		switch(c) {
 		case 'a':
 			authMode = optarg;
@@ -275,6 +277,9 @@ int main(int argc, char *argv[]) {
 			break;
 		case 'v':
 			verbose = 1;
+			break;
+		case 'l': /* tls lib */
+			tlslib = optarg;
 			break;
 		case 'm': /* message text to send */
 			pMsg = (const char*)optarg;
@@ -353,10 +358,14 @@ int main(int argc, char *argv[]) {
 
 	TRY(relpEngineConstruct(&pRelpEngine));
 	TRY(relpEngineSetDbgprint(pRelpEngine, verbose ? dbgprintf : NULL));
+	if(tlslib != NULL) {
+		TRY(relpEngineSetTLSLibByName(pRelpEngine, tlslib));
+	}
 
 	TRY(relpEngineSetOnErr(pRelpEngine, onErr));
 	TRY(relpEngineSetOnGenericErr(pRelpEngine, onGenericErr));
 	TRY(relpEngineSetOnAuthErr(pRelpEngine, onAuthErr));
+
 
 	TRY(relpEngineSetEnableCmd(pRelpEngine, (unsigned char*)"syslog", eRelpCmdState_Required));
 	TRY(relpEngineCltConstruct(pRelpEngine, &pRelpClt));

@@ -31,7 +31,9 @@
 #include <signal.h>
 #include "librelp.h"
 
-#define TRY(f) if(f != RELP_RET_OK) { fprintf(stderr, "receive: FAILURE in '%s'\n", #f); ret = 1; goto done; }
+#define TRY(f) { const int TRY_r = f; if(TRY_r != RELP_RET_OK) { \
+	fprintf(stderr, "receive: FAILURE %d in '%s'\n", TRY_r, #f); ret = 1; goto done; }\
+	}
 
 static FILE *errFile = NULL;
 static FILE *outFile = NULL;
@@ -188,6 +190,7 @@ int main(int argc, char *argv[]) {
 	int oversizeMode = 0;
 	int ret = 0;
 	int append_outfile = 0;
+	const char *tlslib = NULL;
 	const char* outfile_name = NULL;
 
 	static struct option long_options[] =
@@ -201,11 +204,12 @@ int main(int argc, char *argv[]) {
 		{"errorfile", required_argument, 0, 'e'},
 		{"outfile", required_argument, 0, 'O'},
 		{"append-outfile", no_argument, 0, 'A'},
+		{"tls-lib", required_argument, 0, 'l'},
 		{0, 0, 0, 0}
 	};
 
 
-	while((c = getopt_long(argc, argv, "a:Ae:F:m:o:O:P:p:Tvx:y:z:", long_options, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "a:Ae:F:l:m:o:O:P:p:Tvx:y:z:", long_options, &option_index)) != -1) {
 		switch(c) {
 		case 'a':
 			authMode = optarg;
@@ -225,6 +229,9 @@ int main(int argc, char *argv[]) {
 			break;
 		case 'F': /* pid file name */
 			pidFileName = optarg;
+			break;
+		case 'l': /* tls lib */
+			tlslib = optarg;
 			break;
 		case 'm': /* message size */
 			maxDataSize = atoi(optarg);
@@ -293,8 +300,8 @@ int main(int argc, char *argv[]) {
 	if(authMode != NULL) {
 		if(	(strcasecmp(authMode, "certvalid") != 0 && permittedPeer == NULL) ||
 			caCertFile == NULL || myCertFile == NULL || myPrivKeyFile == NULL) {
-			printf("receive: mode '%s' parameter missing; certificates and permittedPeer required\n",
-				authMode);
+			fprintf(stderr, "receive: mode '%s' parameter missing; certificates and "
+				"permittedPeer required\n", authMode);
 			goto done;
 		}
 	}
@@ -303,7 +310,7 @@ int main(int argc, char *argv[]) {
 
 	if(caCertFile != NULL || myCertFile != NULL || myPrivKeyFile != NULL) {
 		if(bEnableTLS == 0) {
-			printf("receive: Certificates were specified, but TLS was "
+			fprintf(stderr, "receive: Certificates were specified, but TLS was "
 			       "not enabled! Will continue without TLS. To enable "
 			       "it use parameter \"-T\"\n");
 			goto done;
@@ -323,14 +330,17 @@ int main(int argc, char *argv[]) {
 
 	TRY(relpEngineConstruct(&pRelpEngine));
 	TRY(relpEngineSetDbgprint(pRelpEngine, verbose ? dbgprintf : NULL));
-	TRY(relpEngineSetEnableCmd(pRelpEngine, (unsigned char*) "syslog", eRelpCmdState_Required));
-	TRY(relpEngineSetFamily(pRelpEngine, protFamily));
-	TRY(relpEngineSetSyslogRcv(pRelpEngine, onSyslogRcv));
-
 	TRY(relpEngineSetOnErr(pRelpEngine, onErr));
 	TRY(relpEngineSetOnGenericErr(pRelpEngine, onGenericErr));
 	TRY(relpEngineSetOnAuthErr(pRelpEngine, onAuthErr));
 
+	if(tlslib != NULL) {
+		TRY(relpEngineSetTLSLibByName(pRelpEngine, tlslib));
+	}
+
+	TRY(relpEngineSetEnableCmd(pRelpEngine, (unsigned char*) "syslog", eRelpCmdState_Required));
+	TRY(relpEngineSetFamily(pRelpEngine, protFamily));
+	TRY(relpEngineSetSyslogRcv(pRelpEngine, onSyslogRcv));
 	TRY(relpEngineSetDnsLookupMode(pRelpEngine, 0)); /* 0=disable */
 
 	TRY(relpEngineListnerConstruct(pRelpEngine, &pRelpSrv));
