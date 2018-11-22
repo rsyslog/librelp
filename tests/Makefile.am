@@ -11,19 +11,31 @@ send_CFLAGS=$(AM_CFLAGS) -I${top_srcdir}/src $(WARN_CFLAGS)
 chkseq_SOURCES=chkseq.c
 
 VALGRIND_TESTS= \
-	tls-basic-vg.sh \
 	duplicate-receiver-vg.sh
 
-TESTS=  basic.sh \
-	basic-realistic.sh \
-	receiver-abort.sh \
+# TLS tests that work both with gnutls and openssl
+TLS_TESTS=  \
 	tls-basic.sh \
 	tls-basic-anon.sh \
 	tls-basic-certvalid.sh \
 	tls-basic-fingerprint.sh \
 	tls-basic-wildcard.sh \
 	tls-missing-param-sender.sh \
-	tls-missing-param-receiver.sh \
+	tls-missing-param-receiver.sh
+TLS_VALGRIND_TESTS= \
+	tls-basic-vg.sh
+
+# test specific to openssl
+OSSL_TESTS= \
+	tls-wrong-permittedPeer.sh \
+	tls-wrong-authname.sh \
+	tls-wrong-signedcert.sh
+# reenable tests when stable
+#	tls-basic-brokencert.sh
+
+TESTS=  basic.sh \
+	basic-realistic.sh \
+	receiver-abort.sh \
 	long-msg.sh \
 	oversize-msg-abort-errmsg.sh \
 	oversize-msg-accept-errmsg.sh \
@@ -31,20 +43,24 @@ TESTS=  basic.sh \
 	send-noconnect.sh \
 	receive-emptyconnect.sh \
 	selftest_receive_usage.sh
-# OpenSSL tests only!
+if ENABLE_TLS_GENERIC
+TESTS+=$(TLS_TESTS)
+endif
 if ENABLE_TLS_OPENSSL
-TESTS += tls-wrong-permittedPeer.sh \
-	tls-wrong-authname.sh \
-	tls-wrong-signedcert.sh
-# reenable tests when stable
-#	tls-basic-brokencert.sh
+TESTS+=$(OSSL_TESTS)
 endif
 
 if HAVE_VALGRIND
-TESTS += $(VALGRIND_TESTS)
-endif
+TESTS+=$(VALGRIND_TESTS)
+if ENABLE_TLS_GENERIC
+TESTS+=$(TLS_VALGRIND_TESTS)
+endif # ENABLE_TLS_GENERIC
+endif # HAVE_VALGRIND
 
 EXTRA_DIST=$(TESTS) \
+	$(TLS_TESTS) \
+	$(OSSL_TESTS) \
+	$(TLS_VALGRIND_TESTS) \
 	$(VALGRIND_TESTS) \
 	dummyclient.py \
 	dummyserver.py \

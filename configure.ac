@@ -147,6 +147,7 @@ AC_ARG_ENABLE(tls-openssl,
 if test "$enable_tls_openssl" = "yes"; then
 	PKG_CHECK_MODULES(OPENSSL, openssl)
 	AC_DEFINE([ENABLE_TLS_OPENSSL], [1], [Indicator that openssl is present])
+	enable_tls_generic="yes"
 	save_CFLAGS="$CFLAGS"
 	CFLAGS="$CFLAGS $OPENSSL_CFLAGS"
 	save_LIBS="$LIBS"
@@ -162,11 +163,12 @@ if test "$enable_tls_openssl" = "yes"; then
 	fi
 
 fi
-AM_CONDITIONAL(ENABLE_TLS_OPENSSL, test x$enable_tls_openssl = xyes)
+AM_CONDITIONAL([ENABLE_TLS_OPENSSL], [test "$enable_tls_openssl" = "yes"])
 
 if test "$enable_tls" = "yes"; then
 	PKG_CHECK_MODULES(GNUTLS, gnutls >= 2.0.0)
         AC_DEFINE(ENABLE_TLS, 1, [Defined if TLS support is enabled])
+	enable_tls_generic="yes"
 	# Check if we have support for proper cert validation
 	AC_MSG_CHECKING(if we have gnutls_certificate_set_verify_function)
 	save_CFLAGS="$CFLAGS"
@@ -191,6 +193,8 @@ if test "$enable_tls" = "yes"; then
 	CFLAGS="$save_CFLAGS"
 	LIBS="$save_LIBS"
 fi
+AM_CONDITIONAL(ENABLE_TLS, test "$enable_tls" = "yes")
+AM_CONDITIONAL([ENABLE_TLS_GENERIC], [test "$enable_tls_generic" = "yes"])
 
 # debug mode settings
 AC_ARG_ENABLE(debug,
@@ -242,4 +246,5 @@ echo "Debug mode enabled:              $enable_debug"
 echo "GNUTLS enabled:                  $enable_tls"
 echo "GNUTLS authentication supported: $have_gnutls_certificate_set_verify_function"
 echo "OPENSSL enabled:                 $enable_tls_openssl"
+echo "generic TLS tests enabled:       $enable_tls_generic"
 
