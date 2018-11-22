@@ -1111,8 +1111,13 @@ relpTcpTLSSetPrio(relpTcp_t *const pThis)
 #endif /* defined(ENABLE_TLS)*/
 #if defined(ENABLE_TLS_OPENSSL)
 	if (pThis->authmode == eRelpAuthMode_None)
-		strncpy(pristringBuf, "ALL:+COMPLEMENTOFDEFAULT:+ADH:+ECDH:+aNULL" /* :+aNULL:+eNULL */,
+#	if OPENSSL_VERSION_NUMBER >= 0x10100000L
+		strncpy(pristringBuf, "ALL:+COMPLEMENTOFDEFAULT:+ADH:+ECDH:+aNULL@SECLEVEL=0" /* do not use: +eNULL */,
 			sizeof(pristringBuf));
+#	else
+		strncpy(pristringBuf, "ALL:+COMPLEMENTOFDEFAULT:+ADH:+ECDH:+aNULL" /* do not use: +eNULL */,
+			sizeof(pristringBuf));
+#	endif
 	else
 		strncpy(pristringBuf, "DEFAULT", sizeof(pristringBuf));
 
