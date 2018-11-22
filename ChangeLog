@@ -1,6 +1,8 @@
 ----------------------------------------------------------------------
 Version 1.2.19 - 2018-??-??
 - improved error reporting
+- bugfix openssl: anon mode did not work with openssl 1.1.0+
+  This was caused by "hardening" inside openssl, so not a real bug.
 - bugfix: do not send multiple open commands
   multiple open commands can happen when a session was broken
   and is being reestablished. Chances to experience this problem
