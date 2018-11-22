@@ -10,6 +10,7 @@ Version 1.2.19 - 2018-??-??
   session). This can happen e.g. with proxy servers which cannot
   connect to the actual server.
   closes https://github.com/rsyslog/librelp/issues/129
+- bugfix testbench: TLS tests were executed even when TLS was disabled
 - testbench:
   * add test for receiver abort and restart
   * much improved testbench framework and tools to support
