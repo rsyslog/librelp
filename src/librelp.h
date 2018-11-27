@@ -36,6 +36,20 @@
 #ifndef LIBRELP_H_INCLUDED
 #define	LIBRELP_H_INCLUDED
 
+#if defined(__GNUC__)
+	#define LIBRELP_ATTR_NORETURN __attribute__ ((noreturn))
+	#define LIBRELP_ATTR_NONNULL(...) __attribute__((nonnull(__VA_ARGS__)))
+	#define LIBRELP_ATTR_UNUSED __attribute__((unused))
+	#define LIBRELP_ATTR_DEPRECATED __attribute__((deprecated))
+	#define LIBRELP_ATTR_FORMAT(fmttype, n, m) __attribute__((format(fmttype, n, m)))
+#else
+	#define LIBRELP_ATTR_NORETURN
+	#define LIBRELP_ATTR_NONNULL(...)
+	#define LIBRELP_ATTR_UNUSED
+	#define LIBRELP_ATTR_DEPRECATED
+	#define LIBRELP_ATTR_FORMAT(fmttype, n, m)
+#endif
+
 /* define some of our types that a caller must know about */
 typedef unsigned char relpOctet_t;
 typedef int relpTxnr_t;
@@ -182,9 +196,9 @@ relpRetVal relpEngineDestruct(relpEngine_t **ppThis);
 relpRetVal relpEngineSetTLSLib(relpEngine_t *pThis, int tls_lib);
 relpRetVal relpEngineSetTLSLibByName(relpEngine_t *pThis, const char *name);
 relpRetVal relpEngineSetDbgprint(relpEngine_t *pThis,
-	void (*dbgprint)(char *fmt, ...) __attribute__((format(printf, 1, 2))));
-relpRetVal relpEngineAddListner(relpEngine_t *pThis, unsigned char *pLstnPort) __attribute__ ((deprecated));
-relpRetVal relpEngineAddListner2(relpEngine_t *pThis, unsigned char *pLstnPort, void*) __attribute__ ((deprecated));
+	void (*dbgprint)(char *fmt, ...) LIBRELP_ATTR_FORMAT(printf, 1, 2));
+relpRetVal relpEngineAddListner(relpEngine_t *pThis, unsigned char *pLstnPort) LIBRELP_ATTR_DEPRECATED;
+relpRetVal relpEngineAddListner2(relpEngine_t *pThis, unsigned char *pLstnPort, void*) LIBRELP_ATTR_DEPRECATED;
 relpRetVal relpEngineListnerConstruct(relpEngine_t *pThis, relpSrv_t **ppSrv);
 relpRetVal relpEngineListnerConstructFinalize(relpEngine_t *pThis, relpSrv_t *pSrv);
 relpRetVal relpEngineSetStop(relpEngine_t *pThis);
@@ -209,8 +223,8 @@ relpRetVal relpEngineSetOnGenericErr(relpEngine_t *pThis,
 relpRetVal relpSrvSetLstnPort(relpSrv_t *pThis, unsigned char *pLstnPort);
 relpRetVal relpSrvSetLstnAddr(relpSrv_t *pThis, unsigned char *pLstnAddr);
 relpRetVal relpSrvSetUsrPtr(relpSrv_t *pThis, void *pUsr);
-void relpSrvEnableTLS(relpSrv_t *pThis) __attribute__ ((deprecated));
-void relpSrvEnableTLSZip(relpSrv_t *pThis) __attribute__ ((deprecated));
+void relpSrvEnableTLS(relpSrv_t *pThis) LIBRELP_ATTR_DEPRECATED;
+void relpSrvEnableTLSZip(relpSrv_t *pThis) LIBRELP_ATTR_DEPRECATED;
 relpRetVal relpSrvEnableTLS2(relpSrv_t *pThis);
 relpRetVal relpSrvEnableTLSZip2(relpSrv_t *pThis);
 void relpSrvSetDHBits(relpSrv_t *pThis, int bits);

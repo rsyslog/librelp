@@ -172,13 +172,13 @@ relpRetVal relpTcpSetCACert(relpTcp_t *pThis, char *cert);
 relpRetVal relpTcpSetOwnCert(relpTcp_t *pThis, char *cert);
 relpRetVal relpTcpSetPrivKey(relpTcp_t *pThis, char *cert);
 relpRetVal relpTcpSetPermittedPeers(relpTcp_t *pThis, relpPermittedPeers_t *pPeers);
-relpRetVal ATTR_NONNULL() relpTcpRtryHandshake(relpTcp_t *pThis);
+relpRetVal LIBRELP_ATTR_NONNULL() relpTcpRtryHandshake(relpTcp_t *pThis);
 relpRetVal relpTcpSetUsrPtr(relpTcp_t *pThis, void *pUsr);
 relpRetVal relpTcpSetConnTimeout(relpTcp_t *pThis, int connTimeout);
 relpRetVal relpTcpSetAuthMode(relpTcp_t *pThis, relpAuthMode_t authmode);
 void relpTcpHintBurstBegin(relpTcp_t *pThis);
 void relpTcpHintBurstEnd(relpTcp_t *pThis);
-int ATTR_NONNULL() relpTcpGetRtryDirection(relpTcp_t *pThis);
+int LIBRELP_ATTR_NONNULL() relpTcpGetRtryDirection(relpTcp_t *pThis);
 int relpTcpWaitWriteable(relpTcp_t *pThis, struct timespec *timeout);
 
 #ifdef ENABLE_TLS_OPENSSL

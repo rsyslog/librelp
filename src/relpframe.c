@@ -93,7 +93,7 @@ relpFrameDestruct(relpFrame_t **ppThis)
  * caller can pass in a NULL pointer.
  * rgerhards, 2008-03-16
  */
-relpRetVal ATTR_NONNULL()
+relpRetVal LIBRELP_ATTR_NONNULL()
 relpFrameProcessOctetRcvd(relpFrame_t **const ppThis,
 	const relpOctet_t c,
 	relpSess_t *const pSess)
