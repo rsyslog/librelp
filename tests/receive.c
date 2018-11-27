@@ -29,6 +29,7 @@
 #include <limits.h>
 #include <errno.h>
 #include <signal.h>
+#include "relp.h"
 #include "librelp.h"
 
 #define TRY(f) { const int TRY_r = f; if(TRY_r != RELP_RET_OK) { \
@@ -60,7 +61,7 @@ hdlr_enable(int sig, void (*hdlr)())
 }
 
 void
-terminate(__attribute__((unused)) const int sig)
+terminate(LIBRELP_ATTR_UNUSED const int sig)
 {
 	relpEngineSetStop(pRelpEngine);
 }
@@ -69,13 +70,13 @@ terminate(__attribute__((unused)) const int sig)
  * server must "suddenly" abort.
  */
 void
-do_exit(__attribute__((unused)) const int sig)
+do_exit(LIBRELP_ATTR_UNUSED const int sig)
 {
 	immediate_exit = 1;
 }
 
 
-static void __attribute__((format(printf, 1, 2)))
+static void LIBRELP_ATTR_FORMAT(printf, 1, 2)
 dbgprintf(char *fmt, ...)
 {
 	va_list ap;
@@ -88,8 +89,8 @@ dbgprintf(char *fmt, ...)
 	fflush(stderr);
 }
 
-static relpRetVal onSyslogRcv(unsigned char *pHostname __attribute__((unused)),
-	unsigned char *pIP __attribute__((unused)), unsigned char *msg,
+static relpRetVal onSyslogRcv(unsigned char *pHostname LIBRELP_ATTR_UNUSED,
+	unsigned char *pIP LIBRELP_ATTR_UNUSED, unsigned char *msg,
 	size_t lenMsg)
 {
 
@@ -118,7 +119,7 @@ void print_usage(void)
 }
 
 static void
-onErr(void *pUsr, char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
+onErr(void *pUsr, char *objinfo, char* errmesg, LIBRELP_ATTR_UNUSED relpRetVal errcode)
 {
 	struct usrdata *pThis = (struct usrdata*) pUsr;
 	if(pUsr != userdata) {
@@ -135,7 +136,7 @@ onErr(void *pUsr, char *objinfo, char* errmesg, __attribute__((unused)) relpRetV
 }
 
 static void
-onGenericErr(char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
+onGenericErr(char *objinfo, char* errmesg, LIBRELP_ATTR_UNUSED relpRetVal errcode)
 {
 	fprintf(stderr, "receive: librelp error '%s', object '%s'\n", errmesg, objinfo);
 	if(errFile != NULL) {
@@ -144,8 +145,8 @@ onGenericErr(char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal er
 }
 
 static void
-onAuthErr( __attribute__((unused)) void *pUsr, char *authinfo,
-	char* errmesg, __attribute__((unused)) relpRetVal errcode)
+onAuthErr(LIBRELP_ATTR_UNUSED void *pUsr, char *authinfo,
+	char* errmesg, LIBRELP_ATTR_UNUSED relpRetVal errcode)
 {
 	fprintf(stderr, "receive: authentication error '%s', object '%s'\n", errmesg, authinfo);
 	if(errFile != NULL) {

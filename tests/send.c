@@ -28,6 +28,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <signal.h>
+#include "relp.h"
 #include "librelp.h"
 
 #define TRY(f) if(f != RELP_RET_OK) { fprintf(stderr, "send: FAILURE in '%s'\n", #f); ret = 1; goto done; }
@@ -52,7 +53,7 @@ struct usrdata { /* used for testing user pointer pass-back */
 struct usrdata *userdata = NULL;
 
 
-static void __attribute__((format(printf, 1, 2)))
+static void LIBRELP_ATTR_FORMAT(printf, 1, 2)
 dbgprintf(char *fmt, ...)
 {
 	va_list ap;
@@ -70,7 +71,7 @@ void print_usage(void)
 }
 
 static void
-onErr(void *pUsr, char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
+onErr(void *pUsr, char *objinfo, char* errmesg, LIBRELP_ATTR_UNUSED relpRetVal errcode)
 {
 	struct usrdata *pThis = (struct usrdata*) pUsr;
 	if(pUsr != userdata) {
@@ -87,7 +88,7 @@ onErr(void *pUsr, char *objinfo, char* errmesg, __attribute__((unused)) relpRetV
 }
 
 static void
-onGenericErr(char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
+onGenericErr(char *objinfo, char* errmesg, LIBRELP_ATTR_UNUSED relpRetVal errcode)
 {
 	printf("send: librelp error '%s', object '%s'\n", errmesg, objinfo);
 	if(errFile != NULL) {
@@ -97,8 +98,8 @@ onGenericErr(char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal er
 }
 
 static void
-onAuthErr( __attribute__((unused)) void *pUsr, char *authinfo,
-	char* errmesg, __attribute__((unused)) relpRetVal errcode)
+onAuthErr( LIBRELP_ATTR_UNUSED void *pUsr, char *authinfo,
+	char* errmesg, LIBRELP_ATTR_UNUSED relpRetVal errcode)
 {
 	printf("send: authentication error '%s', object '%s'\n", errmesg, authinfo);
 	if(errFile != NULL) {

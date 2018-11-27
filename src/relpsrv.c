@@ -167,7 +167,7 @@ relpRetVal relpSrvSetMaxDataSize(relpSrv_t *pThis, size_t maxSize) {
 	LEAVE_RELPFUNC;
 }
 
-relpRetVal ATTR_NONNULL()
+relpRetVal LIBRELP_ATTR_NONNULL()
 relpSrvSetOversizeMode(relpSrv_t *const pThis, const int oversizeMode)
 {
 	ENTER_RELPFUNC;
@@ -337,7 +337,7 @@ relpSrvSetDHBits(relpSrv_t *pThis, int bits)
 	pThis->dhBits = bits;
 }
 relpRetVal
-relpSrvEnableTLS2(relpSrv_t __attribute__((unused)) *pThis)
+relpSrvEnableTLS2(relpSrv_t LIBRELP_ATTR_UNUSED *pThis)
 {
 	ENTER_RELPFUNC;
 #if defined(ENABLE_TLS) || defined(ENABLE_TLS_OPENSSL)
@@ -348,7 +348,7 @@ relpSrvEnableTLS2(relpSrv_t __attribute__((unused)) *pThis)
 	LEAVE_RELPFUNC;
 }
 relpRetVal
-relpSrvEnableTLSZip2(relpSrv_t __attribute__((unused)) *pThis)
+relpSrvEnableTLSZip2(relpSrv_t LIBRELP_ATTR_UNUSED *pThis)
 {
 	ENTER_RELPFUNC;
 #if defined(ENABLE_TLS) || defined(ENABLE_TLS_OPENSSL)

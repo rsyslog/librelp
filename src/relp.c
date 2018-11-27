@@ -51,7 +51,7 @@
 
 /* ------------------------------ some internal functions ------------------------------ */
 
-void __attribute__((format(printf, 4, 5)))
+void LIBRELP_ATTR_FORMAT(printf, 4, 5)
 relpEngineCallOnGenericErr(relpEngine_t *pThis, char *eobj, relpRetVal ecode, char *fmt, ...)
 {
 	va_list ap;
@@ -317,13 +317,13 @@ relpEngineDestruct(relpEngine_t **ppThis)
 }
 
 
-static void dbgprintDummy(char __attribute__((unused)) *fmt, ...) {}
+static void dbgprintDummy(char LIBRELP_ATTR_UNUSED *fmt, ...) {}
 /* set a pointer to the debug function inside the engine. To reset a debug
  * function that already has been set, provide a NULL function pointer.
  * rgerhards, 2008-03-17
  */
 relpRetVal
-relpEngineSetDbgprint(relpEngine_t *pThis, void (*dbgprint)(char *fmt, ...) __attribute__((format(printf, 1, 2))))
+relpEngineSetDbgprint(relpEngine_t *pThis, void (*dbgprint)(char *fmt, ...) LIBRELP_ATTR_FORMAT(printf, 1, 2))
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Engine);
@@ -434,10 +434,10 @@ finalize_it:
  */
 
 /* a dummy for callbacks not set by the caller */
-static relpRetVal relpSrvSyslogRcvDummy2(void __attribute__((unused)) *pUsr,
-	unsigned char __attribute__((unused)) *pHostName,
-	unsigned char __attribute__((unused)) *pIP, unsigned char __attribute__((unused)) *pMsg,
-	size_t __attribute__((unused)) lenMsg)
+static relpRetVal relpSrvSyslogRcvDummy2(void LIBRELP_ATTR_UNUSED *pUsr,
+	unsigned char LIBRELP_ATTR_UNUSED *pHostName,
+	unsigned char LIBRELP_ATTR_UNUSED *pIP, unsigned char LIBRELP_ATTR_UNUSED *pMsg,
+	size_t LIBRELP_ATTR_UNUSED lenMsg)
 { return RELP_RET_NOT_IMPLEMENTED;
 }
 /* set the syslog receive callback. If NULL is provided, it is set to the
@@ -551,9 +551,9 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 /* a dummy for callbacks not set by the caller */
-static relpRetVal relpSrvSyslogRcvDummy(unsigned char __attribute__((unused)) *pHostName,
-	unsigned char __attribute__((unused)) *pIP, unsigned char __attribute__((unused)) *pMsg,
-	size_t __attribute__((unused)) lenMsg)
+static relpRetVal relpSrvSyslogRcvDummy(unsigned char LIBRELP_ATTR_UNUSED *pHostName,
+	unsigned char LIBRELP_ATTR_UNUSED *pIP, unsigned char LIBRELP_ATTR_UNUSED *pMsg,
+	size_t LIBRELP_ATTR_UNUSED lenMsg)
 { return RELP_RET_NOT_IMPLEMENTED;
 }
 
@@ -695,7 +695,7 @@ finalize_it:
 }
 
 static inline relpRetVal
-engineEventLoopInit(relpEngine_t __attribute__((unused)) *pThis)
+engineEventLoopInit(relpEngine_t LIBRELP_ATTR_UNUSED *pThis)
 {
 #	define NUM_EPOLL_EVENTS 10
 	relpEngSrvLst_t *pSrvEtry;
@@ -732,7 +732,7 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 static inline relpRetVal
-engineEventLoopExit(relpEngine_t __attribute__((unused)) *pThis)
+engineEventLoopExit(relpEngine_t LIBRELP_ATTR_UNUSED *pThis)
 {
 	relpEngSrvLst_t *pSrvEtry;
 	int nLstn;
@@ -856,8 +856,8 @@ engineEventLoopRun(relpEngine_t *pThis)
 	LEAVE_RELPFUNC;
 }
 #else /* no epoll support available */
-static inline relpRetVal engineEventLoopInit(relpEngine_t __attribute__((unused)) *pThis) { return RELP_RET_OK; }
-static inline relpRetVal engineEventLoopExit(relpEngine_t __attribute__((unused)) *pThis) { return RELP_RET_OK; }
+static inline relpRetVal engineEventLoopInit(relpEngine_t LIBRELP_ATTR_UNUSED *pThis) { return RELP_RET_OK; }
+static inline relpRetVal engineEventLoopExit(relpEngine_t LIBRELP_ATTR_UNUSED *pThis) { return RELP_RET_OK; }
 static relpRetVal
 engineEventLoopRun(relpEngine_t *pThis)
 {

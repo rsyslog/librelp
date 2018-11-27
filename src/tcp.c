@@ -91,16 +91,16 @@
 #define MSG_DONTWAIT    MSG_NONBLOCK
 #endif
 
-static relpRetVal ATTR_NONNULL() relpTcpAcceptConnReqInitTLS(NOTLS_UNUSED relpTcp_t *const pThis,
+static relpRetVal LIBRELP_ATTR_NONNULL() relpTcpAcceptConnReqInitTLS(NOTLS_UNUSED relpTcp_t *const pThis,
 	NOTLS_UNUSED relpSrv_t *const pSrv);
 static relpRetVal relpTcpPermittedPeerWildcardCompile(tcpPermittedPeerEntry_t *pEtry);
-static relpRetVal ATTR_NONNULL() relpTcpLstnInitTLS(relpTcp_t *const pThis);
-static relpRetVal ATTR_NONNULL() relpTcpTLSSetPrio(relpTcp_t *const pThis);
+static relpRetVal LIBRELP_ATTR_NONNULL() relpTcpLstnInitTLS(relpTcp_t *const pThis);
+static relpRetVal LIBRELP_ATTR_NONNULL() relpTcpTLSSetPrio(relpTcp_t *const pThis);
 
 
 #if  defined(WITH_TLS)
 /* forward definitions */
-static int ATTR_NONNULL() relpTcpGetCN(char *const namebuf, const size_t lenNamebuf, const char *const szDN);
+static int LIBRELP_ATTR_NONNULL() relpTcpGetCN(char *const namebuf, const size_t lenNamebuf, const char *const szDN);
 #ifdef HAVE_GNUTLS_CERTIFICATE_SET_VERIFY_FUNCTION
 static int relpTcpVerifyCertificateCallback(gnutls_session_t session);
 #endif /* #ifdef HAVE_GNUTLS_CERTIFICATE_SET_VERIFY_FUNCTION */
@@ -142,7 +142,7 @@ callOnAuthErr(relpTcp_t *const pThis, char *authdata, char *emsg, relpRetVal eco
 static MUTEX_TYPE *mutex_buf = NULL;
 
 void locking_function(int mode, int n,
-	__attribute__((unused)) const char * file, __attribute__((unused)) int line)
+	LIBRELP_ATTR_UNUSED const char * file, LIBRELP_ATTR_UNUSED int line)
 {
 	if (mode & CRYPTO_LOCK)
 		MUTEX_LOCK(mutex_buf[n]);
@@ -157,7 +157,7 @@ unsigned long id_function(void)
 
 
 struct CRYPTO_dynlock_value * dyn_create_function(
-	__attribute__((unused)) const char *file, __attribute__((unused)) int line)
+	LIBRELP_ATTR_UNUSED const char *file, LIBRELP_ATTR_UNUSED int line)
 {
 	struct CRYPTO_dynlock_value *value;
 	value = (struct CRYPTO_dynlock_value *)malloc(sizeof(struct CRYPTO_dynlock_value));
@@ -169,7 +169,7 @@ struct CRYPTO_dynlock_value * dyn_create_function(
 }
 
 void dyn_lock_function(int mode, struct CRYPTO_dynlock_value *l,
-	__attribute__((unused)) const char *file, __attribute__((unused)) int line)
+	LIBRELP_ATTR_UNUSED const char *file, LIBRELP_ATTR_UNUSED int line)
 {
 	if (mode & CRYPTO_LOCK)
 		MUTEX_LOCK(l->mutex);
@@ -178,7 +178,7 @@ void dyn_lock_function(int mode, struct CRYPTO_dynlock_value *l,
 }
 
 void dyn_destroy_function(struct CRYPTO_dynlock_value *l,
-	__attribute__((unused)) const char *file, __attribute__((unused)) int line)
+	LIBRELP_ATTR_UNUSED const char *file, LIBRELP_ATTR_UNUSED int line)
 {
 	MUTEX_CLEANUP(l->mutex);
 	free(l);
@@ -238,8 +238,8 @@ int opensslh_THREAD_cleanup(void)
  * alorbach, 2018-06-11
  */
 
-long BIO_debug_callback(BIO *bio, int cmd, const char __attribute__((unused)) *argp,
-			int argi, long __attribute__((unused)) argl, long ret)
+long BIO_debug_callback(BIO *bio, int cmd, const char LIBRELP_ATTR_UNUSED *argp,
+			int argi, long LIBRELP_ATTR_UNUSED argl, long ret)
 {
 	long r = 1;
 
@@ -649,7 +649,7 @@ finalize_it:
 
 
 #if defined(ENABLE_TLS)
-relpRetVal ATTR_NONNULL()
+relpRetVal LIBRELP_ATTR_NONNULL()
 relpTcpDestructTLS_gtls(relpTcp_t *pThis)
 {
 	int sslRet;
@@ -664,14 +664,14 @@ relpTcpDestructTLS_gtls(relpTcp_t *pThis)
 	LEAVE_RELPFUNC;
 }
 #else
-relpRetVal ATTR_NONNULL()
-relpTcpDestructTLS_gtls(ATTR_UNUSED relpTcp_t *pThis)
+relpRetVal LIBRELP_ATTR_NONNULL()
+relpTcpDestructTLS_gtls(LIBRELP_ATTR_UNUSED relpTcp_t *pThis)
 {
 	return RELP_RET_ERR_INTERNAL;
 }
 #endif  /* defined(ENABLE_TLS) */
 #if defined(ENABLE_TLS_OPENSSL)
-relpRetVal ATTR_NONNULL()
+relpRetVal LIBRELP_ATTR_NONNULL()
 relpTcpDestructTLS_ossl(relpTcp_t *pThis)
 {
 	int sslRet;
@@ -708,8 +708,8 @@ relpTcpDestructTLS_ossl(relpTcp_t *pThis)
 	LEAVE_RELPFUNC;
 }
 #else
-relpRetVal ATTR_NONNULL()
-relpTcpDestructTLS_ossl(ATTR_UNUSED relpTcp_t *pThis)
+relpRetVal LIBRELP_ATTR_NONNULL()
+relpTcpDestructTLS_ossl(LIBRELP_ATTR_UNUSED relpTcp_t *pThis)
 {
 	return RELP_RET_ERR_INTERNAL;
 }
@@ -717,7 +717,7 @@ relpTcpDestructTLS_ossl(ATTR_UNUSED relpTcp_t *pThis)
 /* TLS-part of RELP tcp instance destruction - brought to its own function
  * to make things easier.
  */
-relpRetVal ATTR_NONNULL()
+relpRetVal LIBRELP_ATTR_NONNULL()
 relpTcpDestructTLS(NOTLS_UNUSED relpTcp_t *pThis)
 {
 	ENTER_RELPFUNC;
@@ -961,8 +961,8 @@ finalize_it:
  * tcp object.
  */
 relpRetVal
-relpTcpSetPermittedPeers(relpTcp_t __attribute__((unused)) *pThis,
-	relpPermittedPeers_t __attribute__((unused)) *pPeers)
+relpTcpSetPermittedPeers(relpTcp_t LIBRELP_ATTR_UNUSED *pThis,
+	relpPermittedPeers_t LIBRELP_ATTR_UNUSED *pPeers)
 {
 	ENTER_RELPFUNC;
 #if  defined(WITH_TLS)
@@ -1092,7 +1092,7 @@ finalize_it:
 
 /* Enable TLS mode. */
 relpRetVal
-relpTcpEnableTLS(relpTcp_t __attribute__((unused)) *pThis)
+relpTcpEnableTLS(relpTcp_t LIBRELP_ATTR_UNUSED *pThis)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
@@ -1105,7 +1105,7 @@ relpTcpEnableTLS(relpTcp_t __attribute__((unused)) *pThis)
 }
 
 relpRetVal
-relpTcpEnableTLSZip(relpTcp_t __attribute__((unused)) *pThis)
+relpTcpEnableTLSZip(relpTcp_t LIBRELP_ATTR_UNUSED *pThis)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
@@ -1129,7 +1129,7 @@ relpTcpSetDHBits(relpTcp_t *const pThis, const int bits)
 
 #if  defined(ENABLE_TLS)
 /* set TLS priority string, common code both for client and server */
-static relpRetVal ATTR_NONNULL()
+static relpRetVal LIBRELP_ATTR_NONNULL()
 relpTcpTLSSetPrio_gtls(relpTcp_t *const pThis)
 {
 	int r;
@@ -1165,15 +1165,15 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 #else /* #ifdef ENABLE_TLS */
-relpRetVal ATTR_NONNULL()
-relpTcpTLSSetPrio_gtls(ATTR_UNUSED relpTcp_t *const pThis)
+relpRetVal LIBRELP_ATTR_NONNULL()
+relpTcpTLSSetPrio_gtls(LIBRELP_ATTR_UNUSED relpTcp_t *const pThis)
 {
 	return RELP_RET_ERR_INTERNAL;
 }
 #endif /*  defined(ENABLE_TLS)*/
 #if  defined(ENABLE_TLS_OPENSSL)
 /* set TLS priority string, common code both for client and server */
-static relpRetVal ATTR_NONNULL()
+static relpRetVal LIBRELP_ATTR_NONNULL()
 relpTcpTLSSetPrio_ossl(relpTcp_t *const pThis)
 {
 	int r;
@@ -1210,8 +1210,8 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 #else
-static relpRetVal ATTR_NONNULL()
-relpTcpTLSSetPrio_ossl(ATTR_UNUSED relpTcp_t *const pThis)
+static relpRetVal LIBRELP_ATTR_NONNULL()
+relpTcpTLSSetPrio_ossl(LIBRELP_ATTR_UNUSED relpTcp_t *const pThis)
 {
 	return RELP_RET_ERR_INTERNAL;
 }
@@ -1224,7 +1224,7 @@ relpTcpTLSSetPrio_ossl(ATTR_UNUSED relpTcp_t *const pThis)
 /* per https://lists.gnupg.org/pipermail/gnutls-help/2004-August/000154.html This is expected */
 #pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
 #endif
-static relpRetVal ATTR_NONNULL()
+static relpRetVal LIBRELP_ATTR_NONNULL()
 relpTcpAcceptConnReqInitTLS_gtls(relpTcp_t *const pThis, relpSrv_t *const pSrv)
 {
 	int r;
@@ -1279,8 +1279,8 @@ finalize_it:
 #endif
 
 #else /* #ifdef ENABLE_TLS */
-relpRetVal ATTR_NONNULL()
-relpTcpAcceptConnReqInitTLS_gtls(ATTR_UNUSED relpTcp_t *const pThis, ATTR_UNUSED relpSrv_t *const pSrv)
+relpRetVal LIBRELP_ATTR_NONNULL()
+relpTcpAcceptConnReqInitTLS_gtls(LIBRELP_ATTR_UNUSED relpTcp_t *const pThis, LIBRELP_ATTR_UNUSED relpSrv_t *const pSrv)
 {
 	return RELP_RET_ERR_INTERNAL;
 }
@@ -1440,7 +1440,7 @@ finalize_it:
 
 /* Perform all necessary checks after Handshake
  */
-relpRetVal ATTR_NONNULL(1)
+relpRetVal LIBRELP_ATTR_NONNULL(1)
 relpTcpSslInitCerts(relpTcp_t *const pThis, char *ownCertFile, char *privKeyFile)
 {
 	ENTER_RELPFUNC;
@@ -1549,7 +1549,7 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 
-static relpRetVal ATTR_NONNULL()
+static relpRetVal LIBRELP_ATTR_NONNULL()
 relpTcpAcceptConnReqInitTLS_ossl(relpTcp_t *const pThis, relpSrv_t *const pSrv)
 {
 	BIO *client = NULL;
@@ -1707,7 +1707,7 @@ finalize_it:
 }
 
 /* Wrapper function for openssl lib server init */
-static relpRetVal ATTR_NONNULL()
+static relpRetVal LIBRELP_ATTR_NONNULL()
 relpTcpLstnInitTLS_ossl(relpTcp_t *const pThis)
 {
 	ENTER_RELPFUNC;
@@ -1730,37 +1730,37 @@ finalize_it:
 /* here follow stub functions to use when openssl is not enabled */
 
 static int
-relpTcpChkPeerName_ossl(ATTR_UNUSED relpTcp_t *const pThis, ATTR_UNUSED void *vcert)
+relpTcpChkPeerName_ossl(LIBRELP_ATTR_UNUSED relpTcp_t *const pThis, LIBRELP_ATTR_UNUSED void *vcert)
 {
 	return RELP_RET_ERR_INTERNAL;
 }
 
-relpRetVal ATTR_NONNULL()
-relpTcpGetRtryDirection_ossl(ATTR_UNUSED relpTcp_t *const pThis)
+relpRetVal LIBRELP_ATTR_NONNULL()
+relpTcpGetRtryDirection_ossl(LIBRELP_ATTR_UNUSED relpTcp_t *const pThis)
 {
 	return RELP_RET_ERR_INTERNAL;
 }
 
-relpRetVal ATTR_NONNULL()
-relpTcpRtryHandshake_ossl(ATTR_UNUSED relpTcp_t *const pThis)
+relpRetVal LIBRELP_ATTR_NONNULL()
+relpTcpRtryHandshake_ossl(LIBRELP_ATTR_UNUSED relpTcp_t *const pThis)
 {
 	return RELP_RET_ERR_INTERNAL;
 }
 
-relpRetVal ATTR_NONNULL()
-relpTcpLstnInitTLS_ossl(ATTR_UNUSED relpTcp_t *const pThis)
+relpRetVal LIBRELP_ATTR_NONNULL()
+relpTcpLstnInitTLS_ossl(LIBRELP_ATTR_UNUSED relpTcp_t *const pThis)
 {
 	return RELP_RET_ERR_INTERNAL;
 }
 
-relpRetVal ATTR_NONNULL()
-relpTcpAcceptConnReqInitTLS_ossl(ATTR_UNUSED relpTcp_t *const pThis, ATTR_UNUSED relpSrv_t *const pSrv)
+relpRetVal LIBRELP_ATTR_NONNULL()
+relpTcpAcceptConnReqInitTLS_ossl(LIBRELP_ATTR_UNUSED relpTcp_t *const pThis, LIBRELP_ATTR_UNUSED relpSrv_t *const pSrv)
 {
 	return RELP_RET_ERR_INTERNAL;
 }
 
-relpRetVal ATTR_NONNULL()
-relpTcpConnectTLSInit_ossl(ATTR_UNUSED relpTcp_t *const pThis)
+relpRetVal LIBRELP_ATTR_NONNULL()
+relpTcpConnectTLSInit_ossl(LIBRELP_ATTR_UNUSED relpTcp_t *const pThis)
 {
 	return RELP_RET_ERR_INTERNAL;
 }
@@ -2086,7 +2086,7 @@ relpTcpAddToCertNamesBuffer(relpTcp_t *const pThis,
  * function returns 0 if all went well, something else otherwise.
  * Note that non-0 is also returned if no CN is found.
  */
-static int ATTR_NONNULL()
+static int LIBRELP_ATTR_NONNULL()
 relpTcpGetCN(char *const namebuf, const size_t lenNamebuf, const char *const szDN)
 {
 	int r;
@@ -2462,7 +2462,7 @@ static void logFunction(int level, const char *msg)
 #endif
 
 /* initialize the listener for TLS use */
-static relpRetVal ATTR_NONNULL()
+static relpRetVal LIBRELP_ATTR_NONNULL()
 relpTcpLstnInitTLS_gtls(relpTcp_t *const pThis)
 {
 	int r;
@@ -2525,13 +2525,13 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 #else /* #ifdef ENABLE_TLS */
-relpRetVal ATTR_NONNULL()
-relpTcpLstnInitTLS_gtls(ATTR_UNUSED relpTcp_t *const pThis)
+relpRetVal LIBRELP_ATTR_NONNULL()
+relpTcpLstnInitTLS_gtls(LIBRELP_ATTR_UNUSED relpTcp_t *const pThis)
 {
 	return RELP_RET_ERR_INTERNAL;
 }
 static int
-relpTcpChkPeerName_gtls(ATTR_UNUSED relpTcp_t *const pThis, ATTR_UNUSED void *vcert)
+relpTcpChkPeerName_gtls(LIBRELP_ATTR_UNUSED relpTcp_t *const pThis, LIBRELP_ATTR_UNUSED void *vcert)
 {
 	return RELP_RET_ERR_INTERNAL;
 }
@@ -2816,7 +2816,7 @@ finalize_it:
 
 /* -- first TLS-lib specific versions -- */
 #if  defined(ENABLE_TLS)
-relpRetVal ATTR_NONNULL()
+relpRetVal LIBRELP_ATTR_NONNULL()
 relpTcpRcv_gtls(relpTcp_t *const pThis, relpOctet_t *const pRcvBuf, ssize_t *const pLenBuf)
 {
 	ENTER_RELPFUNC;
@@ -2840,15 +2840,15 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 #else
-relpRetVal ATTR_NONNULL()
-relpTcpRcv_gtls(ATTR_UNUSED relpTcp_t *const pThis, ATTR_UNUSED relpOctet_t *const pRcvBuf,
-	ATTR_UNUSED ssize_t *const pLenBuf)
+relpRetVal LIBRELP_ATTR_NONNULL()
+relpTcpRcv_gtls(LIBRELP_ATTR_UNUSED relpTcp_t *const pThis, LIBRELP_ATTR_UNUSED relpOctet_t *const pRcvBuf,
+	LIBRELP_ATTR_UNUSED ssize_t *const pLenBuf)
 {
 	return RELP_RET_ERR_INTERNAL;
 }
 #endif  /* defined(ENABLE_TLS) */
 #if  defined(ENABLE_TLS_OPENSSL)
-relpRetVal ATTR_NONNULL()
+relpRetVal LIBRELP_ATTR_NONNULL()
 relpTcpRcv_ossl(relpTcp_t *const pThis, relpOctet_t *const pRcvBuf, ssize_t *const pLenBuf)
 {
 	ENTER_RELPFUNC;
@@ -2884,9 +2884,9 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 #else
-relpRetVal ATTR_NONNULL()
-relpTcpRcv_ossl(ATTR_UNUSED relpTcp_t *const pThis, ATTR_UNUSED relpOctet_t *const pRcvBuf,
-	ATTR_UNUSED ssize_t *const pLenBuf)
+relpRetVal LIBRELP_ATTR_NONNULL()
+relpTcpRcv_ossl(LIBRELP_ATTR_UNUSED relpTcp_t *const pThis, LIBRELP_ATTR_UNUSED relpOctet_t *const pRcvBuf,
+	LIBRELP_ATTR_UNUSED ssize_t *const pLenBuf)
 {
 	return RELP_RET_ERR_INTERNAL;
 }
@@ -2901,7 +2901,7 @@ relpTcpRcv_ossl(ATTR_UNUSED relpTcp_t *const pThis, ATTR_UNUSED relpOctet_t *con
  * errno holds the exact error cause.
  * rgerhards, 2008-03-17
  */
-relpRetVal ATTR_NONNULL()
+relpRetVal LIBRELP_ATTR_NONNULL()
 relpTcpRcv(relpTcp_t *const pThis, relpOctet_t *const pRcvBuf, ssize_t *const pLenBuf)
 {
 	ENTER_RELPFUNC;
@@ -2966,7 +2966,7 @@ relpTcpHintBurstEnd(relpTcp_t *const pThis)
 
 /* -- first TLS-lib specific versions -- */
 #if defined(ENABLE_TLS)
-relpRetVal ATTR_NONNULL()
+relpRetVal LIBRELP_ATTR_NONNULL()
 relpTcpSend_gtls(relpTcp_t *const pThis, relpOctet_t *const pBuf, ssize_t *const pLenBuf)
 {
 	ssize_t written;
@@ -2991,15 +2991,15 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 #else
-relpRetVal ATTR_NONNULL()
-relpTcpSend_gtls(ATTR_UNUSED relpTcp_t *const pThis, ATTR_UNUSED relpOctet_t *const pBuf,
-	ATTR_UNUSED ssize_t *const pLenBuf)
+relpRetVal LIBRELP_ATTR_NONNULL()
+relpTcpSend_gtls(LIBRELP_ATTR_UNUSED relpTcp_t *const pThis, LIBRELP_ATTR_UNUSED relpOctet_t *const pBuf,
+	LIBRELP_ATTR_UNUSED ssize_t *const pLenBuf)
 {
 	return RELP_RET_ERR_INTERNAL;
 }
 #endif /* defined(ENABLE_TLS) */
 #if defined(ENABLE_TLS_OPENSSL)
-relpRetVal ATTR_NONNULL()
+relpRetVal LIBRELP_ATTR_NONNULL()
 relpTcpSend_ossl(relpTcp_t *const pThis, relpOctet_t *const pBuf, ssize_t *const pLenBuf)
 {
 	ssize_t written;
@@ -3036,9 +3036,9 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 #else
-relpRetVal ATTR_NONNULL()
-relpTcpSend_ossl(ATTR_UNUSED relpTcp_t *const pThis, ATTR_UNUSED relpOctet_t *const pBuf,
-	ATTR_UNUSED ssize_t *const pLenBuf)
+relpRetVal LIBRELP_ATTR_NONNULL()
+relpTcpSend_ossl(LIBRELP_ATTR_UNUSED relpTcp_t *const pThis, LIBRELP_ATTR_UNUSED relpOctet_t *const pBuf,
+	LIBRELP_ATTR_UNUSED ssize_t *const pLenBuf)
 {
 	return RELP_RET_ERR_INTERNAL;
 }
@@ -3050,7 +3050,7 @@ relpTcpSend_ossl(ATTR_UNUSED relpTcp_t *const pThis, ATTR_UNUSED relpOctet_t *co
  * been written.
  * rgerhards, 2008-03-19
  */
-relpRetVal ATTR_NONNULL()
+relpRetVal LIBRELP_ATTR_NONNULL()
 relpTcpSend(relpTcp_t *const pThis, relpOctet_t *const pBuf, ssize_t *const pLenBuf)
 {
 	ssize_t written;
@@ -3095,7 +3095,7 @@ finalize_it:
 #pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
 #endif
 /* this is only called for client-initiated sessions */
-static relpRetVal ATTR_NONNULL()
+static relpRetVal LIBRELP_ATTR_NONNULL()
 relpTcpConnectTLSInit_gtls(relpTcp_t *const pThis)
 {
 	int r;
@@ -3217,8 +3217,8 @@ finalize_it:
 #endif
 
 #else /* #ifdef ENABLE_TLS */
-relpRetVal ATTR_NONNULL()
-relpTcpConnectTLSInit_gtls(ATTR_UNUSED relpTcp_t *const pThis)
+relpRetVal LIBRELP_ATTR_NONNULL()
+relpTcpConnectTLSInit_gtls(LIBRELP_ATTR_UNUSED relpTcp_t *const pThis)
 {
 	return RELP_RET_ERR_INTERNAL;
 }
@@ -3230,7 +3230,7 @@ relpTcpConnectTLSInit_gtls(ATTR_UNUSED relpTcp_t *const pThis)
  * abstracts TLS calls between various libs (no tls/gtls/ossl).
  */
 
-static relpRetVal ATTR_NONNULL()
+static relpRetVal LIBRELP_ATTR_NONNULL()
 relpTcpConnectTLSInit(NOTLS_UNUSED relpTcp_t *const pThis)
 {
 	ENTER_RELPFUNC;
@@ -3264,7 +3264,7 @@ relpTcpChkPeerName(NOTLS_UNUSED relpTcp_t *const pThis, NOTLS_UNUSED void* cert)
 	LEAVE_RELPFUNC;
 }
 
-static relpRetVal ATTR_NONNULL()
+static relpRetVal LIBRELP_ATTR_NONNULL()
 relpTcpAcceptConnReqInitTLS(NOTLS_UNUSED relpTcp_t *const pThis, NOTLS_UNUSED relpSrv_t *const pSrv)
 {
 	ENTER_RELPFUNC;
@@ -3284,7 +3284,7 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 
-static relpRetVal ATTR_NONNULL()
+static relpRetVal LIBRELP_ATTR_NONNULL()
 relpTcpTLSSetPrio(NOTLS_UNUSED relpTcp_t *const pThis)
 {
 	ENTER_RELPFUNC;
@@ -3298,7 +3298,7 @@ relpTcpTLSSetPrio(NOTLS_UNUSED relpTcp_t *const pThis)
 	LEAVE_RELPFUNC;
 }
 
-static relpRetVal ATTR_NONNULL()
+static relpRetVal LIBRELP_ATTR_NONNULL()
 relpTcpLstnInitTLS(NOTLS_UNUSED relpTcp_t *const pThis)
 {
 	ENTER_RELPFUNC;
@@ -3419,21 +3419,21 @@ finalize_it:
  * gnutls code, which means:
  * "0 if trying to read data, 1 if trying to write data."
  */
-static int ATTR_NONNULL()
+static int LIBRELP_ATTR_NONNULL()
 relpTcpGetRtryDirection_gtls(relpTcp_t *const pThis)
 {
 	return gnutls_record_get_direction(pThis->session);
 }
 #else /* #ifdef ENABLE_TLS */
-relpRetVal ATTR_NONNULL()
-relpTcpGetRtryDirection_gtls(ATTR_UNUSED relpTcp_t *const pThis)
+relpRetVal LIBRELP_ATTR_NONNULL()
+relpTcpGetRtryDirection_gtls(LIBRELP_ATTR_UNUSED relpTcp_t *const pThis)
 {
 	return RELP_RET_ERR_INTERNAL;
 }
 #endif /* #ifdef ENABLE_TLS */
 
 #ifdef ENABLE_TLS
-relpRetVal ATTR_NONNULL()
+relpRetVal LIBRELP_ATTR_NONNULL()
 relpTcpRtryHandshake_gtls(relpTcp_t *const pThis)
 {
 	int r;
@@ -3455,8 +3455,8 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 #else /* #ifdef ENABLE_TLS */
-relpRetVal ATTR_NONNULL()
-relpTcpRtryHandshake_gtls(ATTR_UNUSED relpTcp_t *const pThis)
+relpRetVal LIBRELP_ATTR_NONNULL()
+relpTcpRtryHandshake_gtls(LIBRELP_ATTR_UNUSED relpTcp_t *const pThis)
 {
 	return RELP_RET_ERR_INTERNAL;
 }
@@ -3491,7 +3491,7 @@ relpTcpWaitWriteable(relpTcp_t *const pThis, struct timespec *const tTimeout)
 done:	return r;
 }
 
-relpRetVal ATTR_NONNULL()
+relpRetVal LIBRELP_ATTR_NONNULL()
 relpTcpRtryHandshake(NOTLS_UNUSED relpTcp_t *const pThis)
 {
 	ENTER_RELPFUNC;
@@ -3505,7 +3505,7 @@ relpTcpRtryHandshake(NOTLS_UNUSED relpTcp_t *const pThis)
 	LEAVE_RELPFUNC;
 }
 
-int ATTR_NONNULL()
+int LIBRELP_ATTR_NONNULL()
 relpTcpGetRtryDirection(NOTLS_UNUSED relpTcp_t *const pThis)
 {
 	int r;

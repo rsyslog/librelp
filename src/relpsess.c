@@ -921,7 +921,7 @@ finalize_it:
  * rgerhars, 2008-03-21
  */
 static relpRetVal
-relpSessCBrspClose(relpSess_t *pThis, relpFrame_t __attribute__((unused)) *pFrame)
+relpSessCBrspClose(relpSess_t *pThis, relpFrame_t LIBRELP_ATTR_UNUSED *pFrame)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
