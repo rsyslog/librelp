@@ -1,4 +1,8 @@
 ----------------------------------------------------------------------
+Version 1.4.0 - 2018-??-??
+- support that both GnuTLS and openssl TLS drivers are active together
+  This permits the caller to select which one to use via a NEW API
+----------------------------------------------------------------------
 Version 1.3.0 - 2018-??-??
 - improved error reporting
 - bugfix openssl: anon mode did not work with openssl 1.1.0+
