@@ -141,7 +141,7 @@ AC_ARG_ENABLE(tls-openssl,
           no) enable_tls_openssl="no" ;;
            *) AC_MSG_ERROR(bad value ${enableval} for --enable-tls-openssl) ;;
          esac],
-        [enable_tls_openssl="no"]
+        [enable_tls_openssl="yes"]
 )
 
 if test "$enable_tls_openssl" = "yes"; then
