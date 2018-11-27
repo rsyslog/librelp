@@ -31,8 +31,13 @@ wait_process_startup_via_pidfile() {
 
 # start receiver WITH valgrind, add receiver command line parameters after function name
 startup_receiver_valgrind() {
+	libtool &> /dev/null
+	if [ $? == 127 ]; then
+		printf 'libtool command not available, cannot run under valgrind\n'
+		exit 77
+	fi
 	printf 'Starting Receiver...\n'
-	$valgrind ./receive -p $TESTPORT --outfile $OUTFILE -F receive.pid $OPT_VERBOSE $* &
+	libtool --mode=execute $valgrind ./receive $TLSLIB -p $TESTPORT --outfile $OUTFILE.2 -F receive.pid $OPT_VERBOSE $* &
 	export RECEIVE_PID=$!
 	printf "got receive pid $RECEIVE_PID\n"
 	wait_process_startup_via_pidfile receive.pid
@@ -42,7 +47,7 @@ startup_receiver_valgrind() {
 # start receiver, add receiver command line parameters after function name
 startup_receiver() {
 	printf 'Starting Receiver...\n'
-	./receive -p $TESTPORT -F receive.pid --outfile $OUTFILE $OPT_VERBOSE $* &
+	./receive $TLSLIB -p $TESTPORT -F receive.pid --outfile $OUTFILE $OPT_VERBOSE $* &
 	export RECEIVE_PID=$!
 	printf "got receive pid $RECEIVE_PID\n"
 	wait_process_startup_via_pidfile receive.pid
@@ -168,6 +173,21 @@ check_msg_count() {
 		printf 'Have %s lines, expected %d\n' "$lines" $NUMMESSAGES
 		exit 1
 	fi
+}
+
+# execute tls tests with currently enabled TLS libraries
+# the actual test to be carried out must be defined as "actual_test"
+# the tlslib is passed the to it via env var TEST_TLS_LIB
+do_tls_subtests() {
+	export TEST_TLS_LIB
+	for TEST_TLS_LIB in "gnutls" "openssl"; do
+		if ./have_tlslib $TEST_TLS_LIB; then
+			printf '\nBEGIN SUBTEST using TLS lib: %s\n' $TEST_TLS_LIB
+			actual_test
+		else
+			printf '\nskipping %s lib, not supported in this build\n' $TEST_TLS_LIB
+		fi
+	done
 }
 
 ######################################################################

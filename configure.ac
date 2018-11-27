@@ -152,16 +152,6 @@ if test "$enable_tls_openssl" = "yes"; then
 	CFLAGS="$CFLAGS $OPENSSL_CFLAGS"
 	save_LIBS="$LIBS"
 	LIBS="$LIBS $OPENSSL_LIBS"
-
-	# Make sure GNUTLS is disabled
-	if test "$enable_tls" = "yes"; then
-		AC_MSG_WARN([Cannot compile GNUTLS and OpenSSL at the same time. Disabling gnutls. ])
-
-		# Disable GNUTLS
-		enable_tls="no"
-		have_gnutls_certificate_set_verify_function="no"
-	fi
-
 fi
 AM_CONDITIONAL([ENABLE_TLS_OPENSSL], [test "$enable_tls_openssl" = "yes"])
 
@@ -196,6 +186,31 @@ fi
 AM_CONDITIONAL(ENABLE_TLS, test "$enable_tls" = "yes")
 AM_CONDITIONAL([ENABLE_TLS_GENERIC], [test "$enable_tls_generic" = "yes"])
 
+if test "$enable_tls_generic" = "yes"; then
+        AC_DEFINE(WITH_TLS, 1, [Defined if TLS support is enabled])
+fi
+
+# enable Openssl TLS  
+AC_ARG_ENABLE(tls-openssl,
+        [AS_HELP_STRING([--enable-tls-openssl],[Enable OpenSSL TLS support @<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) enable_tls_openssl="yes" ;;
+          no) enable_tls_openssl="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-tls-openssl) ;;
+         esac],
+        [enable_tls_openssl="no"]
+)
+
+if test "$enable_tls_openssl" = "yes"; then
+	PKG_CHECK_MODULES(OPENSSL, openssl)
+	AC_DEFINE([ENABLE_TLS_OPENSSL], [1], [Indicator that openssl is present])
+	save_CFLAGS="$CFLAGS"
+	CFLAGS="$CFLAGS $OPENSSL_CFLAGS"
+	save_LIBS="$LIBS"
+	LIBS="$LIBS $OPENSSL_LIBS"
+fi
+AM_CONDITIONAL(ENABLE_TLS_OPENSSL, test x$enable_tls_openssl = xyes)
+
 # debug mode settings
 AC_ARG_ENABLE(debug,
         [AS_HELP_STRING([--enable-debug],[Enable debug mode @<:@default=no@:>@])],
@@ -207,7 +222,7 @@ AC_ARG_ENABLE(debug,
         [enable_debug="no"]
 )
 if test "$enable_debug" = "yes"; then
-        AC_DEFINE(DEBUG, 1, [Defined if debug mode is enabled (it's easier to check in the code).])
+        AC_DEFINE(DEBUG, 1, [Defined if debug mode is enabled (it is easier to check in the code).])
 fi
 if test "$enable_debug" = "no"; then
         AC_DEFINE(NDEBUG, 1, [Defined if debug mode is disabled.])

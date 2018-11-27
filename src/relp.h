@@ -43,6 +43,12 @@
 	#define ATTR_NONNULL(...)
 #endif
 
+#if  defined(WITH_TLS)
+	#define	NOTLS_UNUSED
+#else
+	#define	NOTLS_UNUSED ATTR_UNUSED
+#endif
+
 #include <pthread.h>
 #if HAVE_SYS_EPOLL_H
 #	include <sys/epoll.h>
@@ -166,6 +172,7 @@ struct relpEngine_s {
 		 * whom's output interface is not capable of calling into
 		 * librelp at time of stop request.
 		 */
+	int tls_lib; /* 0 - gnutls, 1 - openssl */
 };
 
 

@@ -158,11 +158,16 @@ typedef enum relpCmdEnaState_e relpCmdEnaState_t;
 #define RELP_RET_ERR_NO_TLS_AUTH RELPERR_BASE + 46	/**< platform does not provide TLS auth support */
 #define RELP_RET_SESSION_OPEN	RELPERR_BASE + 47	/**< RELP session is (already) open */
 #define RELP_RET_EAGAIN		RELPERR_BASE + 48	/**< I/O operation would block; try again later */
+#define RELP_RET_NOT_SUPPORTED	RELPERR_BASE + 49	/**< requested feature/param not supported */
 
 /* relp frame oversize modes */
 #define RELP_OVERSIZE_ABORT 0				/**< abort connection on oversize frame */
 #define RELP_OVERSIZE_TRUNCATE 1			/**< truncate oversize frame, keep connection active */
 #define RELP_OVERSIZE_ACCEPT 2				/**< accept oversize frame irrespective of risk */
+
+/* TLS library selection */
+#define	RELP_USE_GNUTLS		0
+#define	RELP_USE_OPENSSL	1
 
 /* some macros to work with librelp error codes */
 #define CHKRet(code) if((iRet = code) != RELP_RET_OK) goto finalize_it
@@ -174,6 +179,8 @@ char *relpEngineGetVersion(void); /* use this entry point for configure check */
 void relpEngineSetShutdownImmdtPtr(relpEngine_t *pThis, int *ptr);
 relpRetVal relpEngineConstruct(relpEngine_t **ppThis);
 relpRetVal relpEngineDestruct(relpEngine_t **ppThis);
+relpRetVal relpEngineSetTLSLib(relpEngine_t *pThis, int tls_lib);
+relpRetVal relpEngineSetTLSLibByName(relpEngine_t *pThis, const char *name);
 relpRetVal relpEngineSetDbgprint(relpEngine_t *pThis,
 	void (*dbgprint)(char *fmt, ...) __attribute__((format(printf, 1, 2))));
 relpRetVal relpEngineAddListner(relpEngine_t *pThis, unsigned char *pLstnPort) __attribute__ ((deprecated));
