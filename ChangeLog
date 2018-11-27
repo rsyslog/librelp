@@ -1,10 +1,24 @@
 ----------------------------------------------------------------------
 Version 1.4.0 - 2018-??-??
+NOTE TO PACKAGERS:
+  Both openssl and GnuTLS are now enabled by default. This is to
+  enable apps to choice which of the two drivers they want to use.
+  If you want to disable one or both of the drivers, use
+  --disable-tls          to disable GnuTLS (option name is historic)
+  --disable-tls-openssl  to disable openssl
+
+- build system: enable openssl by default, this means both TLS drivers
+  are now build by default
 - support that both GnuTLS and openssl TLS drivers are active together
   This permits the caller to select which one to use via a NEW API
 - portability: use GCC __attribute__ only where supported
+- bugfix: openssl driver did not properly handle retries when sending
+  Every TLS library can request i/o call retry if in non-blocking mode.
+  When sending, the openssl driver did not properly handle this.
+  Note: the GnuTLS driver was not affected by this bug.
 - bugfix: in openssl mode, cert name validation did not work properly
   closes https://github.com/rsyslog/librelp/issues/149
+- a couple of minor and cosmetic nitfixes, improvements and cleanup
 ----------------------------------------------------------------------
 Version 1.3.0 - 2018-??-??
 - improved error reporting
