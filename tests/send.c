@@ -139,10 +139,9 @@ retry_connect(void)
 }
 
 
-static int
+static void
 send_msgs_counter(void)
 {
-	int ret;
 	char buf[10];
 	relpRetVal r;
 	for(int i = 1 ; i <= num_messages ; ++i) {
@@ -171,7 +170,6 @@ send_msgs_counter(void)
 		}
 	}
 	printf("\r%8.8d msgs sent\n", num_messages);
-done:	return ret;
 }
 
 static int

@@ -674,13 +674,12 @@ relpTcpDestructTLS_gtls(LIBRELP_ATTR_UNUSED relpTcp_t *pThis)
 relpRetVal LIBRELP_ATTR_NONNULL()
 relpTcpDestructTLS_ossl(relpTcp_t *pThis)
 {
-	int sslRet;
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
 
 	if(pThis->ssl != NULL) {
 		pThis->pEngine->dbgprint("relpTcpDestruct_ossl: try shutdown #1 for [%p]\n", (void *) pThis->ssl);
-		sslRet = SSL_shutdown(pThis->ssl);
+		const int sslRet = SSL_shutdown(pThis->ssl);
 		if (sslRet <= 0) {
 			const int sslErr = SSL_get_error(pThis->ssl, sslRet);
 			pThis->pEngine->dbgprint("relpTcpDestruct_ossl: shutdown failed with err = %d, "
@@ -740,7 +739,6 @@ relpRetVal
 relpTcpDestruct(relpTcp_t **ppThis)
 {
 	relpTcp_t *pThis;
-	int i;
 
 	ENTER_RELPFUNC;
 	assert(ppThis != NULL);
@@ -755,7 +753,7 @@ relpTcpDestruct(relpTcp_t **ppThis)
 
 	if(pThis->socks != NULL) {
 		/* if we have some sockets at this stage, we need to close them */
-		for(i = 1 ; i <= pThis->socks[0] ; ++i) {
+		for(int i = 1 ; i <= pThis->socks[0] ; ++i) {
 			shutdown(pThis->socks[i], SHUT_RDWR);
 			close(pThis->socks[i]);
 		}
@@ -816,12 +814,12 @@ callOnErr(const relpTcp_t *__restrict__ const pThis,
 static int
 chkGnutlsCode(relpTcp_t *const pThis, char *emsg, relpRetVal ecode, const int gnuRet)
 {
-	char msgbuf[4096];
 	int r;
 
 	if(gnuRet == GNUTLS_E_SUCCESS) {
 		r = 0;
 	} else {
+		char msgbuf[4096];
 		r = 1;
 		snprintf(msgbuf, sizeof(msgbuf), "%s [gnutls error %d: %s]",
 			 emsg, gnuRet, gnutls_strerror(gnuRet));
@@ -3508,7 +3506,7 @@ relpTcpRtryHandshake(NOTLS_UNUSED relpTcp_t *const pThis)
 int LIBRELP_ATTR_NONNULL()
 relpTcpGetRtryDirection(NOTLS_UNUSED relpTcp_t *const pThis)
 {
-	int r;
+	int r = 0;
 	#if  defined(WITH_TLS)
 	if(pThis->pEngine->tls_lib == 0) {
 		r = relpTcpGetRtryDirection_gtls(pThis);

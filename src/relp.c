@@ -735,10 +735,9 @@ static inline relpRetVal
 engineEventLoopExit(relpEngine_t LIBRELP_ATTR_UNUSED *pThis)
 {
 	relpEngSrvLst_t *pSrvEtry;
-	int nLstn;
 	ENTER_RELPFUNC;
 	for(pSrvEtry = pThis->pSrvLstRoot ; pSrvEtry != NULL ; pSrvEtry = pSrvEtry->pNext) {
-		nLstn = relpSrvGetNumLstnSocks(pSrvEtry->pSrv);
+		const int nLstn = relpSrvGetNumLstnSocks(pSrvEtry->pSrv);
 		for(int i = 0 ; i < nLstn ; ++i) {
 			delFromEpollSet(pThis, pSrvEtry->epevts[i]);
 		}
@@ -795,7 +794,6 @@ engineEventLoopRun(relpEngine_t *pThis)
 	int sock;
 	struct epoll_event events[128];
 	epolld_t *epd;
-	int nEvents;
 
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Engine);
@@ -831,7 +829,7 @@ engineEventLoopRun(relpEngine_t *pThis)
 		/* wait for io to become ready */
 		if(relpEngineShouldStop(pThis)) break;
 		pThis->dbgprint("librelp: doing epoll_wait\n");
-		nEvents = epoll_wait(pThis->efd, events, sizeof(events)/sizeof(struct epoll_event), -1);
+		const int nEvents = epoll_wait(pThis->efd, events, sizeof(events)/sizeof(struct epoll_event), -1);
 		pThis->dbgprint("librelp: done epoll_wait, nEvents:%d\n", nEvents);
 		if(relpEngineShouldStop(pThis)) break;
 
