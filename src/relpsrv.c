@@ -95,11 +95,8 @@ relpSrvDestruct(relpSrv_t **ppThis)
 	if(pThis->pTcp != NULL)
 		relpTcpDestruct(&pThis->pTcp);
 
-	if(pThis->pLstnPort != NULL)
-		free(pThis->pLstnPort);
-	if(pThis->pLstnAddr != NULL)
-		free(pThis->pLstnAddr);
-
+	free(pThis->pLstnPort);
+	free(pThis->pLstnAddr);
 	free(pThis->pristring);
 	free(pThis->caCertFile);
 	free(pThis->ownCertFile);
@@ -194,8 +191,7 @@ relpSrvSetLstnPort(relpSrv_t *pThis, unsigned char *pLstnPort)
 	RELPOBJ_assert(pThis, Srv);
 
 	/* first free old value */
-	if(pThis->pLstnPort != NULL)
-		free(pThis->pLstnPort);
+	free(pThis->pLstnPort);
 	pThis->pLstnPort = NULL;
 
 	if(pLstnPort != NULL) {
@@ -219,8 +215,7 @@ relpSrvSetLstnAddr(relpSrv_t *pThis, unsigned char *pLstnAddr)
 	RELPOBJ_assert(pThis, Srv);
 
 	/* first free old value */
-	if(pThis->pLstnAddr != NULL)
-		free(pThis->pLstnAddr);
+	free(pThis->pLstnAddr);
 	pThis->pLstnAddr = NULL;
 
 	if(pLstnAddr != NULL) {
