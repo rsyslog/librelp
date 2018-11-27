@@ -67,11 +67,11 @@ callOnErr(const relpSess_t *__restrict__ const pThis,
 	char *__restrict__ const emsg,
 	const relpRetVal ecode)
 {
-	char objinfo[1024];
 	relpTcp_t *const pTcp = pThis->pTcp;
 	//pThis->pEngine->dbgprint("librelp: generic error: ecode %d, "
 		//"emsg '%s'\n", ecode, emsg);
 	if(pThis->pEngine->onErr != NULL) {
+		char objinfo[1024];
 		if(pTcp->pSrv == NULL) { /* client */
 			snprintf(objinfo, sizeof(objinfo), "conn to srvr %s:%s",
 				 pTcp->pClt->pSess->srvAddr,
