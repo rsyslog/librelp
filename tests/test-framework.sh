@@ -5,14 +5,22 @@
 
 # "config settings" for the testbench
 TB_TIMEOUT_STARTUP=400  # 40 seconds - Solaris sometimes needs this...
-export TESTPORT=31514
-export OUTFILE=librelp.out.log
 export valgrind="valgrind --malloc-fill=ff --free-fill=fe --log-fd=1"
 #export OPT_VERBOSE=-v # uncomment for debugging 
 
 ######################################################################
 # functions
 ######################################################################
+
+# finds a free port that we can bind a listener to
+# Obviously, any solution is race as another process could start
+# just after us and grab the same port. However, in practice it seems
+# to work pretty well. In any case, we should probably call this as
+# late as possible before the usage of the port.
+get_free_port() {
+python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()'
+}
+
 
 # $1 is name of pidfile to wait for
 wait_process_startup_via_pidfile() {
@@ -22,7 +30,7 @@ wait_process_startup_via_pidfile() {
 		(( i++ ))
 		if test $i -gt $TB_TIMEOUT_STARTUP
 		then
-		   printf "ABORT! Timeout waiting on startup\n"
+		   printf "ABORT! Timeout waiting on startup, pid file $1\n"
 		   exit 1
 		fi
 	done
@@ -37,20 +45,20 @@ startup_receiver_valgrind() {
 		exit 77
 	fi
 	printf 'Starting Receiver...\n'
-	libtool --mode=execute $valgrind ./receive $TLSLIB -p $TESTPORT --outfile $OUTFILE.2 -F receive.pid $OPT_VERBOSE $* &
+	libtool --mode=execute $valgrind ./receive $TLSLIB -p $TESTPORT --outfile $OUTFILE.2 -F $RECEIVE_PIDFILE $OPT_VERBOSE $* &
 	export RECEIVE_PID=$!
-	printf "got receive pid $RECEIVE_PID\n"
-	wait_process_startup_via_pidfile receive.pid
+	printf "got $RECEIVE_PID $RECEIVE_PIDFILE\n"
+	wait_process_startup_via_pidfile $RECEIVE_PIDFILE
 	printf 'Receiver running\n'
 }
 
 # start receiver, add receiver command line parameters after function name
 startup_receiver() {
 	printf 'Starting Receiver...\n'
-	./receive $TLSLIB -p $TESTPORT -F receive.pid --outfile $OUTFILE $OPT_VERBOSE $* &
+	./receive $TLSLIB -p $TESTPORT -F $RECEIVE_PIDFILE --outfile $OUTFILE $OPT_VERBOSE $* &
 	export RECEIVE_PID=$!
-	printf "got receive pid $RECEIVE_PID\n"
-	wait_process_startup_via_pidfile receive.pid
+	printf "got $RECEIVE_PID $RECEIVE_PIDFILE\n"
+	wait_process_startup_via_pidfile $RECEIVE_PIDFILE
 	printf 'Receiver running\n'
 }
 
@@ -145,11 +153,12 @@ cleanup() {
 		echo pkill result $?
 	fi
 
-	if [ -f receive.pid ]; then
-		kill -9 $(cat receive.pid) &> /dev/null
+	if [ -f $RECEIVE_PID ]; then
+		kill -9 $RECEIVE_PID &> /dev/null
 	fi
 
-	rm -f -- receive.pid $OUTFILE *.err.log error.out.log
+	rm -rf $TESTDIR
+	rm -f -- $DYNNAME* *.err.log error.out.log
 }
 
 # cleanup at end of regular test run
@@ -197,18 +206,9 @@ printf "============================================================\n"
 printf "%s: Test: $0\n" "$(date +%H:%M:%S)"
 printf "============================================================\n"
 
-# on Solaris we still have some issues sometimes. Please keep this
-# informational info inside the framework until this can be totally
-# considered revolved - rgerhards, 2018-04-17
-ps -ef|grep receive
-if [ "$(uname)" == "XXSunOS" ] ; then
-	/usr/ucb/ps awwx
-	echo pgrep
-	pgrep receive
-	echo next
-	ps -efl
-	netstat -an | grep $TESTPORT
-	CI/solaris-findport.sh $TESTPORT
-fi
-
-cleanup # we do cleanup in case it was not done previously
+export TESTPORT=$(get_free_port)
+export DYNNAME=lrtb_${TESTPORT}.
+export TESTDIR=lrtb_${TESTPORT}
+mkdir $TESTDIR
+export OUTFILE=${TESTDIR}/librelp.out.log
+export RECEIVE_PIDFILE=${DYNNAME}receive.pid

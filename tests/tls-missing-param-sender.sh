@@ -3,7 +3,7 @@
 . ${srcdir:=$(pwd)}/test-framework.sh
 
 echo 'Send Message...'
-./send -t 127.0.0.1 -p $TESTPORT -m "testmessage" -T -a "name" -y ${srcdir}/tls-certs/cert.pem -z ${srcdir}/tls-certs/key.pem -P "rsyslog" > librelp.out.log
+./send -t 127.0.0.1 -p $TESTPORT -m "testmessage" -T -a "name" -y ${srcdir}/tls-certs/cert.pem -z ${srcdir}/tls-certs/key.pem -P "rsyslog" > ${OUTFILE}
 
 check_output "send:.*parameter missing; certificates and permittedPeer required"
 terminate

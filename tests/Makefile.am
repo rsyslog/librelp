@@ -1,3 +1,4 @@
+TEST_EXTENSIONS=.sh
 check_PROGRAMS=receive send chkseq have_tlslib
 
 receive_SOURCES=receive.c

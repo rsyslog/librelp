@@ -36,7 +36,7 @@ script:
   - autoreconf -fvi
   - ./configure --enable-tls
   - make -j2
-  - make check
+  - make -j2 check
   - cat tests/test-suite.log
 #  - make distcheck V=0
   # and now with openssl
