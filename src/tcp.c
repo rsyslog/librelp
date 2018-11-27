@@ -97,8 +97,10 @@ static relpRetVal relpTcpPermittedPeerWildcardCompile(tcpPermittedPeerEntry_t *p
 static relpRetVal ATTR_NONNULL() relpTcpLstnInitTLS(relpTcp_t *const pThis);
 static relpRetVal ATTR_NONNULL() relpTcpTLSSetPrio(relpTcp_t *const pThis);
 
+
 #if  defined(WITH_TLS)
 /* forward definitions */
+static int ATTR_NONNULL() relpTcpGetCN(char *const namebuf, const size_t lenNamebuf, const char *const szDN);
 #ifdef HAVE_GNUTLS_CERTIFICATE_SET_VERIFY_FUNCTION
 static int relpTcpVerifyCertificateCallback(gnutls_session_t session);
 #endif /* #ifdef HAVE_GNUTLS_CERTIFICATE_SET_VERIFY_FUNCTION */
@@ -107,7 +109,6 @@ static void relpTcpChkOnePeerName(relpTcp_t *const pThis, char *peername, int *p
 static int relpTcpAddToCertNamesBuffer(relpTcp_t *const pThis, char *const buf,
 	const size_t buflen, int *p_currIdx, const char *const certName);
 static int relpTcpChkPeerName(relpTcp_t *const pThis, void* cert);
-
 #endif /* defined(HAVE_GNUTLS_CERTIFICATE_SET_VERIFY_FUNCTION) || defined(ENABLE_TLS_OPENSSL) */
 
 
@@ -459,10 +460,10 @@ finalize_it:
 static int
 relpTcpChkPeerName_ossl(relpTcp_t *const pThis, void *vcert)
 {
-	unsigned char lnBuf[256];
+	int r;
 	int bFoundPositiveMatch = 0;
 	char *x509name = NULL;
-	char allNames[32*1024]; /* for error-reporting */
+	char allNames[32*1024]; /* work buffer */
 	int iAllNames = 0;
 	X509 *cert = (X509*)vcert;
 
@@ -483,9 +484,11 @@ relpTcpChkPeerName_ossl(relpTcp_t *const pThis, void *vcert)
 	x509name = X509_NAME_oneline(RSYSLOG_X509_NAME_oneline(cert), NULL, 0);
 
 	pThis->pEngine->dbgprint("relpTcpChkPeerName_ossl: checking - peername '%s'\n", x509name);
-	snprintf((char*)lnBuf, sizeof(lnBuf), "name: %s; ", x509name);
-//	CHKRet(osslChkOnePeerName(pThis, cert, (unsigned char*)x509name, &bFoundPositiveMatch));
-	relpTcpChkOnePeerName(pThis, x509name, &bFoundPositiveMatch);
+	if((r = relpTcpGetCN(allNames, sizeof(allNames), x509name)) == 0) {
+		relpTcpChkOnePeerName(pThis, allNames, &bFoundPositiveMatch);
+	} else {
+		pThis->pEngine->dbgprint("relpTcpChkPeerName_ossl: error %d extracting CN\n", r);
+	}
 
 	if(!bFoundPositiveMatch) {
 		/* Try to extract altname within the SAN extension from the certificate */
@@ -2071,9 +2074,72 @@ relpTcpAddToCertNamesBuffer(relpTcp_t *const pThis,
 #endif /* defined(HAVE_GNUTLS_CERTIFICATE_SET_VERIFY_FUNCTION) || defined(ENABLE_TLS_OPENSSL) */
 
 
+#if defined(WITH_TLS)
+/* Obtain the CN from the DN field and hand it back to the caller
+ * (which is responsible for destructing it). We try to follow
+ * RFC2253 as far as it makes sense for our use-case. This function
+ * is considered a compromise providing good-enough correctness while
+ * limiting code size and complexity. If a problem occurs, we may enhance
+ * this function. A (pointer to a) certificate must be caller-provided.
+ * The buffer for the name (namebuf) must also be caller-provided. A
+ * size of 1024 is most probably sufficien. The
+ * function returns 0 if all went well, something else otherwise.
+ * Note that non-0 is also returned if no CN is found.
+ */
+static int ATTR_NONNULL()
+relpTcpGetCN(char *const namebuf, const size_t lenNamebuf, const char *const szDN)
+{
+	int r;
+	int gnuRet;
+	size_t i,j;
+	int bFound;
+	size_t size;
+
+	/* now search for the CN part */
+	i = 0;
+	bFound = 0;
+	while(!bFound && szDN[i] != '\0') {
+		/* note that we do not overrun our string due to boolean shortcut
+		 * operations. If we have '\0', the if does not match and evaluation
+		 * stops. Order of checks is obviously important!
+		 */
+		if(szDN[i] == 'C' && szDN[i+1] == 'N' && szDN[i+2] == '=') {
+			bFound = 1;
+			i += 2;
+		}
+		i++;
+
+	}
+
+	if(!bFound) {
+		r = 1; goto done;
+	}
+
+	/* we found a common name, now extract it */
+	j = 0;
+	while(szDN[i] != '\0' && szDN[i] != ',' && szDN[i] != '/' && j < lenNamebuf-1) {
+		if(szDN[i] == '\\') {
+			/* hex escapes are not implemented */
+			r = 2; goto done;
+		} else {
+			namebuf[j++] = szDN[i];
+		}
+		++i; /* char processed */
+	}
+	namebuf[j] = '\0';
+
+	/* we got it - we ignore the rest of the DN string (if any). So we may
+	 * not detect if it contains more than one CN
+	 */
+	r = 0;
+
+done:
+	return r;
+}
+#endif /* WITH_TLS */
+
 #if defined(ENABLE_TLS)
 #ifdef HAVE_GNUTLS_CERTIFICATE_SET_VERIFY_FUNCTION
-
 /* Glue to use the right type of function depending of the version */
 #if GNUTLS_VERSION_NUMBER < 0x030202
 	//gnutls_mac_algorithm_t and gnutls_digest_algorithm_t are aligned
@@ -2236,26 +2302,15 @@ done:
 }
 #endif /* #ifdef HAVE_GNUTLS_CERTIFICATE_SET_VERIFY_FUNCTION */
 
-#if defined(HAVE_GNUTLS_CERTIFICATE_SET_VERIFY_FUNCTION)
 
-/* Obtain the CN from the DN field and hand it back to the caller
- * (which is responsible for destructing it). We try to follow
- * RFC2253 as far as it makes sense for our use-case. This function
- * is considered a compromise providing good-enough correctness while
- * limiting code size and complexity. If a problem occurs, we may enhance
- * this function. A (pointer to a) certificate must be caller-provided.
- * The buffer for the name (namebuf) must also be caller-provided. A
- * size of 1024 is most probably sufficien. The
- * function returns 0 if all went well, something else otherwise.
- * Note that non-0 is also returned if no CN is found.
+#if defined(HAVE_GNUTLS_CERTIFICATE_SET_VERIFY_FUNCTION)
+/* Obtain the CN from the DN of the GnuTLS certificate.
  */
 static int
-relpTcpGetCN(relpTcp_t *const pThis, gnutls_x509_crt_t cert, char *namebuf, const int lenNamebuf)
+relpTcpGetCNFromCert(relpTcp_t *const pThis, gnutls_x509_crt_t cert, char *namebuf, const size_t lenNamebuf)
 {
 	int r;
 	int gnuRet;
-	int i,j;
-	int bFound;
 	size_t size;
 	char szDN[1024]; /* this should really be large enough for any non-malicious case... */
 
@@ -2265,44 +2320,7 @@ relpTcpGetCN(relpTcp_t *const pThis, gnutls_x509_crt_t cert, char *namebuf, cons
 		r = 1; goto done;
 	}
 
-	/* now search for the CN part */
-	i = 0;
-	bFound = 0;
-	while(!bFound && szDN[i] != '\0') {
-		/* note that we do not overrun our string due to boolean shortcut
-		 * operations. If we have '\0', the if does not match and evaluation
-		 * stops. Order of checks is obviously important!
-		 */
-		if(szDN[i] == 'C' && szDN[i+1] == 'N' && szDN[i+2] == '=') {
-			bFound = 1;
-			i += 2;
-		}
-		i++;
-
-	}
-
-	if(!bFound) {
-		r = 1; goto done;
-	}
-
-	/* we found a common name, now extract it */
-	j = 0;
-	while(szDN[i] != '\0' && szDN[i] != ',' && j < lenNamebuf-1) {
-		if(szDN[i] == '\\') {
-			/* hex escapes are not implemented */
-			r = 2; goto done;
-		} else {
-			namebuf[j++] = szDN[i];
-		}
-		++i; /* char processed */
-	}
-	namebuf[j] = '\0';
-
-	/* we got it - we ignore the rest of the DN string (if any). So we may
-	 * not detect if it contains more than one CN
-	 */
-	r = 0;
-
+	r = relpTcpGetCN(namebuf, lenNamebuf, szDN);
 done:
 	return r;
 }
@@ -2362,7 +2380,7 @@ relpTcpChkPeerName_gtls(relpTcp_t *const pThis, void *vcert)
 
 	if(!bFoundPositiveMatch) {
 		/* if we did not succeed so far, we try the CN part of the DN... */
-		if(relpTcpGetCN(pThis, cert, cnBuf, sizeof(cnBuf)) == 0) {
+		if(relpTcpGetCNFromCert(pThis, cert, cnBuf, sizeof(cnBuf)) == 0) {
 			pThis->pEngine->dbgprint("relpTcpChkPeerName_gtls: relpTcp now "
 				"checking auth for CN '%s'\n", cnBuf);
 			if (relpTcpAddToCertNamesBuffer(pThis, allNames, sizeof(allNames), &iAllNames, cnBuf)) {

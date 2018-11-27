@@ -14,11 +14,6 @@ if [ $(uname) = "FreeBSD" ] ; then
 fi
 
 function actual_test() {
-	if [ $TEST_TLS_LIB == "openssl" ]; then
-		echo "This test reveals a bug in openssl driver, check this later on"
-		echo "COMMON NAME (CN) seems not to be properly checked"
-		return
-	fi
 	startup_receiver_valgrind --tls-lib $TEST_TLS_LIB -T -a "name" -e error.out.log --outfile $OUTFILE \
 		-x ${srcdir}/tls-certs/ca.pem -y ${srcdir}/tls-certs/cert.pem \
 		-z ${srcdir}/tls-certs/key.pem -P "rsyslog-client"
