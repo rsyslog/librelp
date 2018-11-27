@@ -345,11 +345,13 @@ void relpTcpLastSSLErrorMsg(int ret, relpTcp_t *pThis, const char* pszCallSource
 {
 	unsigned long un_error = 0;
 	char psz[256];
+	char errstr[512];
 	long iMyRet = SSL_get_error(pThis->ssl, ret);
 
+	ERR_error_string_n(iMyRet, errstr, sizeof(errstr));
 	/* Check which kind of error we have */
-	pThis->pEngine->dbgprint("relpTcpLastSSLErrorMsg: openssl error '%s' with error code=%ld\n",
-		pszCallSource, iMyRet);
+	pThis->pEngine->dbgprint("relpTcpLastSSLErrorMsg: openssl error '%s' with error code=%ld: %s\n",
+		pszCallSource, iMyRet, errstr);
 	if(iMyRet == SSL_ERROR_SSL) {
 		/* Loop through errors */
 		while ((un_error = ERR_get_error()) != 0){
@@ -3016,18 +3018,21 @@ relpTcpSend_ossl(relpTcp_t *const pThis, relpOctet_t *const pBuf, ssize_t *const
 				"retry next time\n");
 			pThis->rtryOp = relpTCP_RETRY_send;
 			written = 0;
-		}
-		else if(err != SSL_ERROR_WANT_READ &&
-			err != SSL_ERROR_WANT_WRITE) {
-			/* Output error and abort */
-			relpTcpLastSSLErrorMsg( (int)written, pThis, "relpTcpSend_ossl");
-			ABORT_FINALIZE(RELP_RET_IO_ERR);
-		} else {
-			/* Check for SSL Shutdown */
-			if (SSL_get_shutdown(pThis->ssl) == SSL_RECEIVED_SHUTDOWN) {
+		} else if(err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE) {
+			/* Check for SSL Shutdown: simply abort then (is this right???) */
+			if(SSL_get_shutdown(pThis->ssl) == SSL_RECEIVED_SHUTDOWN) {
 				pThis->pEngine->dbgprint("relpTcpSend_ossl: received SSL_RECEIVED_SHUTDOWN!\n");
 				ABORT_FINALIZE(RELP_RET_IO_ERR);
 			}
+			pThis->pEngine->dbgprint("relpTcpSend_ossl: openssl needs to %s - retry requested\n",
+				err == SSL_ERROR_WANT_READ ? "read" : "write");
+			relpTcpLastSSLErrorMsg( (int)written, pThis, "relpTcpSend_ossl UNEXPECTED");
+			pThis->rtryOp = relpTCP_RETRY_send;
+			written = 0;
+		} else {
+			/* Output error and abort */
+			relpTcpLastSSLErrorMsg( (int)written, pThis, "relpTcpSend_ossl");
+			ABORT_FINALIZE(RELP_RET_IO_ERR);
 		}
 	}
 
