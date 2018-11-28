@@ -155,7 +155,7 @@ cleanup() {
 # cleanup at end of regular test run
 terminate() {
 	cleanup
-	printf "$0 SUCCESS\n"
+	printf "%s %s SUCCESS\n" "$(date +%H:%M:%S)" "$0"
 }
 
 # check that the output file contains correct number of messages
@@ -194,7 +194,7 @@ do_tls_subtests() {
 # testbench initialization code - do this LAST here in the file
 ######################################################################
 printf "============================================================\n"
-printf "Test: $0\n"
+printf "%s: Test: $0\n" "$(date +%H:%M:%S)"
 printf "============================================================\n"
 
 # on Solaris we still have some issues sometimes. Please keep this

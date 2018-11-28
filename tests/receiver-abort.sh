@@ -17,6 +17,7 @@ sleep 2 # make sure client goes into retry
 
 startup_receiver --append-outfile
 wait $SENDER_PID
+printf 'wait on sender retured %d\n' $?
 stop_receiver
 
 check_msg_count

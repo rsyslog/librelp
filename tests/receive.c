@@ -29,7 +29,6 @@
 #include <limits.h>
 #include <errno.h>
 #include <signal.h>
-#include "relp.h"
 #include "librelp.h"
 
 #define TRY(f) { const int TRY_r = f; if(TRY_r != RELP_RET_OK) { \
@@ -89,6 +88,16 @@ watchdog_expired(LIBRELP_ATTR_UNUSED const int sig)
 {
 	fprintf(stderr, "receive: watchdog timer expired, assuming we hang - "
 		"force terminating run\n");
+	fflush(stderr);
+	exit(100);
+}
+
+/* handler for unexpected signals.  */
+void LIBRELP_ATTR_NORETURN
+do_signal(const int sig)
+{
+	fprintf(stderr, "send: UNEXPECTED SIGNAL %d%s- terminating\n", sig,
+		sig == SIGPIPE ? " [SIGPIPE]" : "");
 	fflush(stderr);
 	exit(100);
 }
@@ -355,6 +364,7 @@ int main(int argc, char *argv[]) {
 	hdlr_enable(SIGTERM, terminate);
 	hdlr_enable(SIGUSR1, do_exit);
 	hdlr_enable(SIGALRM, watchdog_expired);
+	hdlr_enable(SIGPIPE, do_signal);
 
 	if(outfile_name != NULL) {
 		if((outFile = fopen(outfile_name, append_outfile ? "a" : "w")) == NULL) {
