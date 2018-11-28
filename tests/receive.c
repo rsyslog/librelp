@@ -50,6 +50,20 @@ struct usrdata { /* used for testing user pointer pass-back */
 	char *progname;
 };
 struct usrdata *userdata = NULL;
+
+/* a portable way to put the current thread asleep. Note that
+ * we cannot use sleep() as we need alarm() and both together
+ * are NOT guaranteed to work.
+ */
+static void
+doSleep(int iSeconds, const int iuSeconds)
+{
+	struct timeval tvSelectTimeout;
+	tvSelectTimeout.tv_sec = iSeconds;
+	tvSelectTimeout.tv_usec = iuSeconds; /* micro seconds */
+	select(0, NULL, NULL, NULL, &tvSelectTimeout);
+}
+
 static void
 hdlr_enable(int sig, void (*hdlr)())
 {
@@ -64,6 +78,19 @@ void
 terminate(LIBRELP_ATTR_UNUSED const int sig)
 {
 	relpEngineSetStop(pRelpEngine);
+}
+
+/* This guards us against leaving hanging instances in testbench runs.
+ * This method is to be "called" via ALARM after more time has expired
+ * then "ever possible" - so we are sure we just need to cleanup.
+ */
+void LIBRELP_ATTR_NORETURN
+watchdog_expired(LIBRELP_ATTR_UNUSED const int sig)
+{
+	fprintf(stderr, "receive: watchdog timer expired, assuming we hang - "
+		"force terminating run\n");
+	fflush(stderr);
+	exit(100);
 }
 
 /* handler to unconditionally exit the code - required for test where
@@ -191,6 +218,7 @@ int main(int argc, char *argv[]) {
 	int oversizeMode = 0;
 	int ret = 0;
 	int append_outfile = 0;
+	int watchdog_timeout = 60; /* one seconds looks like a good default */
 	const char *tlslib = NULL;
 	const char* outfile_name = NULL;
 
@@ -206,11 +234,13 @@ int main(int argc, char *argv[]) {
 		{"outfile", required_argument, 0, 'O'},
 		{"append-outfile", no_argument, 0, 'A'},
 		{"tls-lib", required_argument, 0, 'l'},
+		{"watchdog-timeout", required_argument, 0, 'W'},
 		{0, 0, 0, 0}
 	};
 
 
-	while((c = getopt_long(argc, argv, "a:Ae:F:l:m:o:O:P:p:Tvx:y:z:", long_options, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "a:Ae:F:l:m:o:O:P:p:TvW:x:y:z:",
+		long_options, &option_index)) != -1) {
 		switch(c) {
 		case 'a':
 			authMode = optarg;
@@ -268,6 +298,10 @@ int main(int argc, char *argv[]) {
 		case 'p':
 			port = (unsigned char*)optarg;
 			break;
+		case 'W':
+			watchdog_timeout = atoi(optarg);
+			printf("receive: watchdog timeout is %d seconds\n", watchdog_timeout);
+			break;
 		case 'T':
 			bEnableTLS = 1;
 			break;
@@ -320,6 +354,7 @@ int main(int argc, char *argv[]) {
 
 	hdlr_enable(SIGTERM, terminate);
 	hdlr_enable(SIGUSR1, do_exit);
+	hdlr_enable(SIGALRM, watchdog_expired);
 
 	if(outfile_name != NULL) {
 		if((outFile = fopen(outfile_name, append_outfile ? "a" : "w")) == NULL) {
@@ -328,6 +363,8 @@ int main(int argc, char *argv[]) {
 			exit(1);
 		}
 	}
+
+	alarm(watchdog_timeout);
 
 	TRY(relpEngineConstruct(&pRelpEngine));
 	TRY(relpEngineSetDbgprint(pRelpEngine, verbose ? dbgprintf : NULL));
@@ -401,7 +438,7 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "receive: giving up starting relp engine\n");
 			break;
 		}
-		sleep(1);
+		doSleep(1, 0);
 	}
 
 	TRY(relpEngineDestruct(&pRelpEngine));

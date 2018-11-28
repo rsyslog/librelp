@@ -35,7 +35,9 @@ OSSL_TESTS= \
 # reenable tests when stable
 #	tls-basic-brokencert.sh
 
-TESTS=  basic.sh \
+TESTS=  selftest_receive_watchdog.sh \
+	selftest_receive_usage.sh \
+	basic.sh \
 	basic-realistic.sh \
 	receiver-abort.sh \
 	long-msg.sh \
@@ -43,8 +45,7 @@ TESTS=  basic.sh \
 	oversize-msg-accept-errmsg.sh \
 	truncate-oversize-msg.sh \
 	send-noconnect.sh \
-	receive-emptyconnect.sh \
-	selftest_receive_usage.sh
+	receive-emptyconnect.sh
 if ENABLE_TLS_GENERIC
 TESTS+=$(TLS_TESTS)
 endif
