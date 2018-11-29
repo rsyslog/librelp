@@ -18,6 +18,13 @@ NOTE TO PACKAGERS:
   Note: the GnuTLS driver was not affected by this bug.
 - bugfix: in openssl mode, cert name validation did not work properly
   closes https://github.com/rsyslog/librelp/issues/149
+- bugfix: invalid handling of connection fail could lead to abort
+  ... or more precisely to SIGPIPE on the sender app. What exactly happens
+  in that case depends on SIGPIPE handling in the sender. This is of course
+  not acceptable or desired behaviour. This patch fixes it.
+  This commit also includes testbench improvements, especially in regard
+  to support easier diagnostic of such cases.
+  closes https://github.com/rsyslog/librelp/issues/161
 - a couple of minor and cosmetic nitfixes, improvements and cleanup
 ----------------------------------------------------------------------
 Version 1.3.0 - 2018-??-??
