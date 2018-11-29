@@ -28,7 +28,6 @@
 #include <string.h>
 #include <sys/types.h>
 #include <signal.h>
-#include "relp.h"
 #include "librelp.h"
 
 #define TRY(f) if(f != RELP_RET_OK) { fprintf(stderr, "send: FAILURE in '%s'\n", #f); ret = 1; goto done; }
@@ -44,6 +43,7 @@ static relpClt_t *pRelpClt = NULL;
 static int kill_on_msg = 0;	/* 0 - do not kill, else exact message */
 static int kill_signal = SIGUSR1;	/* signal to use when we kill */
 static pid_t kill_pid = 0;
+static int connect_retries = 15;	/* how many retries on connect failure? */
 
 #define USR_MAGIC 0x1234FFee
 struct usrdata { /* used for testing user pointer pass-back */
@@ -52,6 +52,24 @@ struct usrdata { /* used for testing user pointer pass-back */
 };
 struct usrdata *userdata = NULL;
 
+static void
+hdlr_enable(int sig, void (*hdlr)())
+{
+	struct sigaction sigAct;
+	memset(&sigAct, 0, sizeof (sigAct));
+	sigemptyset(&sigAct.sa_mask);
+	sigAct.sa_handler = hdlr;
+	sigaction(sig, &sigAct, NULL);
+}
+/* handler for unexpected signals.  */
+void LIBRELP_ATTR_NORETURN
+do_signal(const int sig)
+{
+	fprintf(stderr, "send: UNEXPECTED SIGNAL %d%s- terminating\n", sig,
+		sig == SIGPIPE ? " [SIGPIPE]" : "");
+	fflush(stderr);
+	exit(100);
+}
 
 static void LIBRELP_ATTR_FORMAT(printf, 1, 2)
 dbgprintf(char *fmt, ...)
@@ -128,13 +146,20 @@ retry_connect(void)
 {
 	relpRetVal ret;
 	int try = 0;
-	while(try++ < 15) {
+	while(try++ < connect_retries) {
+		relpEngineSetDbgprint(pRelpEngine, dbgprintf);
+		fprintf(stderr, "send: doing retry %d\n", try);
 		ret = relpCltReconnect(pRelpClt);
-		if(ret == RELP_RET_OK)
+		fprintf(stderr, "send: after retry ret %d\n", ret);
+		if(ret == RELP_RET_OK) {
+			relpEngineSetDbgprint(pRelpEngine, NULL);
+			fprintf(stderr, "send: receiver up again in retry %d\n", try);
 			return;
+		}
 		sleep(1);
 	}
 	fprintf(stderr, "send: send giving up after max retries\n");
+	fflush(stderr);
 	exit(1);
 }
 
@@ -228,6 +253,7 @@ int main(int argc, char *argv[]) {
 	#define KILL_SIGNAL	257
 	#define KILL_PID	258
 	#define DBGFILE		259
+	#define CONNECT_RETRIES	260
 	static struct option long_options[] =
 	{
 		{"ca", required_argument, 0, 'x'},
@@ -242,6 +268,7 @@ int main(int argc, char *argv[]) {
 		{"kill-on-msg", required_argument, 0, KILL_ON_MSG},
 		{"kill-signal", required_argument, 0, KILL_SIGNAL},
 		{"kill-pid", required_argument, 0, KILL_PID},
+		{"connect-retries", required_argument, 0, CONNECT_RETRIES},
 		{0, 0, 0, 0}
 	};
 
@@ -317,6 +344,9 @@ int main(int argc, char *argv[]) {
 		case KILL_PID:
 			kill_pid = atoi(optarg);
 			break;
+		case CONNECT_RETRIES:
+			connect_retries = atoi(optarg);
+			break;
 		default:
 			print_usage();
 			exit(1);
@@ -324,6 +354,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	atexit(exit_hdlr);
+	hdlr_enable(SIGPIPE, do_signal);
 
 	if(msgDataLen != 0 && msgDataLen < lenMsg) {
 		fprintf(stderr, "send: message is larger than configured message size!\n");
@@ -399,5 +430,6 @@ int main(int argc, char *argv[]) {
 	TRY(relpEngineDestruct(&pRelpEngine));
 
 done:
+	fprintf(stderr, "send: terminating with state %d\n", ret);
 	return ret;
 }

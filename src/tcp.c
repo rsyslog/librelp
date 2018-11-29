@@ -2918,6 +2918,10 @@ relpTcpRcv(relpTcp_t *const pThis, relpOctet_t *const pRcvBuf, ssize_t *const pL
 		*pLenBuf = lenRcvd = recv(pThis->sock, pRcvBuf, *pLenBuf, MSG_DONTWAIT);
 		pThis->pEngine->dbgprint("relpTcpRcv: read %zd bytes from sock %d\n",
 			*pLenBuf, pThis->sock);
+		if(lenRcvd == 0) {
+			pThis->pEngine->dbgprint("relpTcpRcv: invalidating closed socket\n");
+			pThis->sock = -1; /* socket is closed, no longer valid! */
+		}
 	}
 
 finalize_it:
@@ -3067,9 +3071,9 @@ relpTcpSend(relpTcp_t *const pThis, relpOctet_t *const pBuf, ssize_t *const pLen
 			CHKRet(relpTcpSend_ossl(pThis, pBuf, pLenBuf));
 		}
 	} else {
+		pThis->pEngine->dbgprint("relpTcpSend: send data: %.*s\n", (int) *pLenBuf, pBuf);
 		written = send(pThis->sock, pBuf, *pLenBuf, 0);
 		const int errno_save = errno;
-		pThis->pEngine->dbgprint("relpTcpSend: send data: %.*s\n", (int) *pLenBuf, pBuf);
 		pThis->pEngine->dbgprint("relpTcpSend: sock %d, lenbuf %zd, send returned %d [errno %d]\n",
 			(int)pThis->sock, *pLenBuf, (int) written, errno_save);
 		if(written == -1) {
