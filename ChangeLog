@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------
-Version 1.3.0 - 2018-??-??
+Version 1.3.0 - 2018-12-11
 - improved error reporting
 - bugfix openssl: anon mode did not work with openssl 1.1.0+
   This was caused by "hardening" inside openssl, so not a real bug.
