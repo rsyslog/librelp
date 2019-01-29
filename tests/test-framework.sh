@@ -21,6 +21,25 @@ get_free_port() {
 python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()'
 }
 
+# check if command $1 is available - will exit 77 when not OK
+check_command_available() {
+	have_cmd=0
+	if [ "$1" == "timeout" ]; then
+		if timeout --version &>/dev/null ; then
+			have_cmd=1
+		fi
+	else
+		if command -v $1 ; then
+			have_cmd=1
+		fi
+	fi
+	if [ $have_cmd -eq 0 ] ; then
+		printf 'Testbench requires unavailable command: %s\n' "$1"
+		exit 77 # do NOT error_exit here!
+	fi
+}
+
+
 
 # $1 is name of pidfile to wait for
 wait_process_startup_via_pidfile() {
