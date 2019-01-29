@@ -3,6 +3,7 @@
 # check that receiver abort is handled gracefully
 # of messages
 . ${srcdir:=$(pwd)}/test-framework.sh
+check_command_available timeout
 NUMMESSAGES=100000
 startup_receiver
 ./send -t 127.0.0.1 -p $TESTPORT -n$NUMMESSAGES  --kill-on-msg 20000 --kill-pid $RECEIVE_PID $OPT_VERBOSE &

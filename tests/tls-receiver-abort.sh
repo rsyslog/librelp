@@ -3,7 +3,8 @@
 # check that receiver abort is handled gracefully
 # of messages
 . ${srcdir:=$(pwd)}/test-framework.sh
-NUMMESSAGES=100000
+check_command_available timeout
+export NUMMESSAGES=100000
 
 actual_test() {
 	startup_receiver
