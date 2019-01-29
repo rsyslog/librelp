@@ -25,9 +25,12 @@ NOTE TO PACKAGERS:
   This commit also includes testbench improvements, especially in regard
   to support easier diagnostic of such cases.
   closes https://github.com/rsyslog/librelp/issues/161
+- tests: make dummyclient.py compatible with Python2 and Python3
+  closes: https://github.com/rsyslog/librelp/issues/163
+  Thanks to whissi for the patch.
 - a couple of minor and cosmetic nitfixes, improvements and cleanup
 ----------------------------------------------------------------------
-Version 1.3.0 - 2018-??-??
+Version 1.3.0 - 2018-12-11
 - improved error reporting
 - bugfix openssl: anon mode did not work with openssl 1.1.0+
   This was caused by "hardening" inside openssl, so not a real bug.
