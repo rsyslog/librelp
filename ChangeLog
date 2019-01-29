@@ -11,6 +11,7 @@ NOTE TO PACKAGERS:
   are now build by default
 - support that both GnuTLS and openssl TLS drivers are active together
   This permits the caller to select which one to use via a NEW API
+  relpEngineSetTLSLibByName() and relpEngineSetTLSLib().
 - portability: use GCC __attribute__ only where supported
 - bugfix: openssl driver did not properly handle retries when sending
   Every TLS library can request i/o call retry if in non-blocking mode.
