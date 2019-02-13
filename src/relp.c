@@ -74,7 +74,7 @@ _relpEngine_strerror_r(const int errnum, char *buf, const size_t buflen) {
 #ifndef HAVE_STRERROR_R
 	char *p;
 	p = strerror(errnum);
-	strncpy(buf, emsg, buflen);
+	strncpy(buf, p, buflen);
 	buf[buflen-1] = '\0';
 #else
 #	ifdef STRERROR_R_CHAR_P
