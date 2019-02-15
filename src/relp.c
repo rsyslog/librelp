@@ -1,6 +1,6 @@
 /* The RELP (reliable event logging protocol) core protocol library.
  *
- * Copyright 2008-2018 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2019 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
@@ -386,6 +386,9 @@ relpEngineSetTLSLibByName(relpEngine_t *const pThis, const char *const name)
 	}else if(!strcasecmp(name, "openssl")) {
 		relpEngineSetTLSLib(pThis, RELP_USE_OPENSSL);
 	} else {
+		relpEngineCallOnGenericErr(pThis, "librelp", RELP_RET_PARAM_ERROR,
+				"invalid tls lib '%s' requested; this version of "
+				"librelp only supports 'gnutls', 'openssl'", name);
 		ABORT_FINALIZE(RELP_RET_NOT_SUPPORTED);
 	}
 
