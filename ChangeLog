@@ -13,6 +13,8 @@ NOTE TO PACKAGERS:
   This permits the caller to select which one to use via a NEW API
   relpEngineSetTLSLibByName() and relpEngineSetTLSLib().
 - portability: use GCC __attribute__ only where supported
+- bugfix: build problem when HAVE_STRERROR_R is undefined
+  Thanks to Paul Cameron for the fix.
 - bugfix: openssl driver did not properly handle retries when sending
   Every TLS library can request i/o call retry if in non-blocking mode.
   When sending, the openssl driver did not properly handle this.
