@@ -3,6 +3,7 @@
 # check that receiver abort is handled gracefully
 # of messages
 . ${srcdir:=$(pwd)}/test-framework.sh
+check_command_available timeout
 NUMMESSAGES=100000
 startup_receiver
 ./send -t 127.0.0.1 -p $TESTPORT -n$NUMMESSAGES  --kill-on-msg 20000 --kill-pid $RECEIVE_PID $OPT_VERBOSE &
@@ -17,6 +18,7 @@ sleep 2 # make sure client goes into retry
 
 startup_receiver --append-outfile
 wait $SENDER_PID
+printf 'wait on sender retured %d\n' $?
 stop_receiver
 
 check_msg_count

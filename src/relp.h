@@ -33,14 +33,10 @@
 #ifndef RELP_H_INCLUDED
 #define	RELP_H_INCLUDED
 
-#if defined(__GNUC__)
-	#define ATTR_NORETURN __attribute__ ((noreturn))
-	#define ATTR_UNUSED __attribute__((unused))
-	#define ATTR_NONNULL(...) __attribute__((nonnull(__VA_ARGS__)))
+#if  defined(WITH_TLS)
+	#define	NOTLS_UNUSED
 #else
-	#define ATTR_NORETURN
-	#define ATTR_UNUSED
-	#define ATTR_NONNULL(...)
+	#define	NOTLS_UNUSED LIBRELP_ATTR_UNUSED
 #endif
 
 #include <pthread.h>
@@ -127,7 +123,7 @@ typedef struct relpEngSessLst_s {
  */
 struct relpEngine_s {
 	BEGIN_RELP_OBJ;
-	void (*dbgprint)(char *fmt, ...) __attribute__((format(printf, 1, 2)));
+	void (*dbgprint)(char *fmt, ...) LIBRELP_ATTR_FORMAT(printf, 1, 2);
 	relpRetVal (*onSyslogRcv)(unsigned char*pHostname, unsigned char *pIP,
 		                  unsigned char *pMsg, size_t lenMsg); /**< callback for "syslog" cmd */
 	relpRetVal (*onSyslogRcv2)(void*, unsigned char*pHostname, unsigned char *pIP,
@@ -166,6 +162,7 @@ struct relpEngine_s {
 		 * whom's output interface is not capable of calling into
 		 * librelp at time of stop request.
 		 */
+	int tls_lib; /* 0 - gnutls, 1 - openssl */
 };
 
 
@@ -232,7 +229,7 @@ static inline int relpEngineShouldStop(relpEngine_t *pThis) {
 
 /* prototypes needed by library itself (rest is in librelp.h) */
 relpRetVal relpEngineDispatchFrame(relpEngine_t *pThis, relpSess_t *pSess, relpFrame_t *pFrame);
-void __attribute__((format(printf, 4, 5))) relpEngineCallOnGenericErr(relpEngine_t *pThis,
+void LIBRELP_ATTR_FORMAT(printf, 4, 5) relpEngineCallOnGenericErr(relpEngine_t *pThis,
 	char *eobj, relpRetVal ecode, char *fmt, ...);
 const char * _relpEngine_strerror_r(const int errnum, char *buf, const size_t buflen);
 

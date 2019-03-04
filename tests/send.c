@@ -43,6 +43,7 @@ static relpClt_t *pRelpClt = NULL;
 static int kill_on_msg = 0;	/* 0 - do not kill, else exact message */
 static int kill_signal = SIGUSR1;	/* signal to use when we kill */
 static pid_t kill_pid = 0;
+static int connect_retries = 15;	/* how many retries on connect failure? */
 
 #define USR_MAGIC 0x1234FFee
 struct usrdata { /* used for testing user pointer pass-back */
@@ -51,8 +52,26 @@ struct usrdata { /* used for testing user pointer pass-back */
 };
 struct usrdata *userdata = NULL;
 
+static void
+hdlr_enable(int sig, void (*hdlr)())
+{
+	struct sigaction sigAct;
+	memset(&sigAct, 0, sizeof (sigAct));
+	sigemptyset(&sigAct.sa_mask);
+	sigAct.sa_handler = hdlr;
+	sigaction(sig, &sigAct, NULL);
+}
+/* handler for unexpected signals.  */
+void LIBRELP_ATTR_NORETURN
+do_signal(const int sig)
+{
+	fprintf(stderr, "send: UNEXPECTED SIGNAL %d%s- terminating\n", sig,
+		sig == SIGPIPE ? " [SIGPIPE]" : "");
+	fflush(stderr);
+	exit(100);
+}
 
-static void __attribute__((format(printf, 1, 2)))
+static void LIBRELP_ATTR_FORMAT(printf, 1, 2)
 dbgprintf(char *fmt, ...)
 {
 	va_list ap;
@@ -70,7 +89,7 @@ void print_usage(void)
 }
 
 static void
-onErr(void *pUsr, char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
+onErr(void *pUsr, char *objinfo, char* errmesg, LIBRELP_ATTR_UNUSED relpRetVal errcode)
 {
 	struct usrdata *pThis = (struct usrdata*) pUsr;
 	if(pUsr != userdata) {
@@ -87,7 +106,7 @@ onErr(void *pUsr, char *objinfo, char* errmesg, __attribute__((unused)) relpRetV
 }
 
 static void
-onGenericErr(char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
+onGenericErr(char *objinfo, char* errmesg, LIBRELP_ATTR_UNUSED relpRetVal errcode)
 {
 	printf("send: librelp error '%s', object '%s'\n", errmesg, objinfo);
 	if(errFile != NULL) {
@@ -97,8 +116,8 @@ onGenericErr(char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal er
 }
 
 static void
-onAuthErr( __attribute__((unused)) void *pUsr, char *authinfo,
-	char* errmesg, __attribute__((unused)) relpRetVal errcode)
+onAuthErr( LIBRELP_ATTR_UNUSED void *pUsr, char *authinfo,
+	char* errmesg, LIBRELP_ATTR_UNUSED relpRetVal errcode)
 {
 	printf("send: authentication error '%s', object '%s'\n", errmesg, authinfo);
 	if(errFile != NULL) {
@@ -127,21 +146,27 @@ retry_connect(void)
 {
 	relpRetVal ret;
 	int try = 0;
-	while(try++ < 15) {
+	while(try++ < connect_retries) {
+		relpEngineSetDbgprint(pRelpEngine, dbgprintf);
+		fprintf(stderr, "send: doing retry %d\n", try);
 		ret = relpCltReconnect(pRelpClt);
-		if(ret == RELP_RET_OK)
+		fprintf(stderr, "send: after retry ret %d\n", ret);
+		if(ret == RELP_RET_OK) {
+			relpEngineSetDbgprint(pRelpEngine, NULL);
+			fprintf(stderr, "send: receiver up again in retry %d\n", try);
 			return;
+		}
 		sleep(1);
 	}
 	fprintf(stderr, "send: send giving up after max retries\n");
+	fflush(stderr);
 	exit(1);
 }
 
 
-static int
+static void
 send_msgs_counter(void)
 {
-	int ret;
 	char buf[10];
 	relpRetVal r;
 	for(int i = 1 ; i <= num_messages ; ++i) {
@@ -170,7 +195,6 @@ send_msgs_counter(void)
 		}
 	}
 	printf("\r%8.8d msgs sent\n", num_messages);
-done:	return ret;
 }
 
 static int
@@ -218,6 +242,7 @@ int main(int argc, char *argv[]) {
 	char *myPrivKeyFile = NULL;
 	char *permittedPeer = NULL;
 	char *authMode = NULL;
+	const char *tlslib = NULL;
 	int len = 0;
 	int ret = 0;
 
@@ -228,6 +253,7 @@ int main(int argc, char *argv[]) {
 	#define KILL_SIGNAL	257
 	#define KILL_PID	258
 	#define DBGFILE		259
+	#define CONNECT_RETRIES	260
 	static struct option long_options[] =
 	{
 		{"ca", required_argument, 0, 'x'},
@@ -236,15 +262,17 @@ int main(int argc, char *argv[]) {
 		{"peer", required_argument, 0, 'P'},
 		{"authmode", required_argument, 0, 'a'},
 		{"errorfile", required_argument, 0, 'e'},
+		{"tls-lib", required_argument, 0, 'l'},
 		{"debugfile", required_argument, 0, DBGFILE},
 		{"num-messages", required_argument, 0, 'n'},
 		{"kill-on-msg", required_argument, 0, KILL_ON_MSG},
 		{"kill-signal", required_argument, 0, KILL_SIGNAL},
 		{"kill-pid", required_argument, 0, KILL_PID},
+		{"connect-retries", required_argument, 0, CONNECT_RETRIES},
 		{0, 0, 0, 0}
 	};
 
-	while((c = getopt_long(argc, argv, "a:e:d:m:n:P:p:Tt:vx:y:z:", long_options, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "a:e:d:l:m:n:P:p:Tt:vx:y:z:", long_options, &option_index)) != -1) {
 		switch(c) {
 		case 'a':
 			authMode = optarg;
@@ -275,6 +303,9 @@ int main(int argc, char *argv[]) {
 			break;
 		case 'v':
 			verbose = 1;
+			break;
+		case 'l': /* tls lib */
+			tlslib = optarg;
 			break;
 		case 'm': /* message text to send */
 			pMsg = (const char*)optarg;
@@ -313,6 +344,9 @@ int main(int argc, char *argv[]) {
 		case KILL_PID:
 			kill_pid = atoi(optarg);
 			break;
+		case CONNECT_RETRIES:
+			connect_retries = atoi(optarg);
+			break;
 		default:
 			print_usage();
 			exit(1);
@@ -320,6 +354,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	atexit(exit_hdlr);
+	hdlr_enable(SIGPIPE, do_signal);
 
 	if(msgDataLen != 0 && msgDataLen < lenMsg) {
 		fprintf(stderr, "send: message is larger than configured message size!\n");
@@ -353,10 +388,14 @@ int main(int argc, char *argv[]) {
 
 	TRY(relpEngineConstruct(&pRelpEngine));
 	TRY(relpEngineSetDbgprint(pRelpEngine, verbose ? dbgprintf : NULL));
+	if(tlslib != NULL) {
+		TRY(relpEngineSetTLSLibByName(pRelpEngine, tlslib));
+	}
 
 	TRY(relpEngineSetOnErr(pRelpEngine, onErr));
 	TRY(relpEngineSetOnGenericErr(pRelpEngine, onGenericErr));
 	TRY(relpEngineSetOnAuthErr(pRelpEngine, onAuthErr));
+
 
 	TRY(relpEngineSetEnableCmd(pRelpEngine, (unsigned char*)"syslog", eRelpCmdState_Required));
 	TRY(relpEngineCltConstruct(pRelpEngine, &pRelpClt));
@@ -391,5 +430,6 @@ int main(int argc, char *argv[]) {
 	TRY(relpEngineDestruct(&pRelpEngine));
 
 done:
+	fprintf(stderr, "send: terminating with state %d\n", ret);
 	return ret;
 }

@@ -31,7 +31,9 @@
 #include <signal.h>
 #include "librelp.h"
 
-#define TRY(f) if(f != RELP_RET_OK) { fprintf(stderr, "receive: FAILURE in '%s'\n", #f); ret = 1; goto done; }
+#define TRY(f) { const int TRY_r = f; if(TRY_r != RELP_RET_OK) { \
+	fprintf(stderr, "receive: FAILURE %d in '%s'\n", TRY_r, #f); ret = 1; goto done; }\
+	}
 
 static FILE *errFile = NULL;
 static FILE *outFile = NULL;
@@ -47,6 +49,20 @@ struct usrdata { /* used for testing user pointer pass-back */
 	char *progname;
 };
 struct usrdata *userdata = NULL;
+
+/* a portable way to put the current thread asleep. Note that
+ * we cannot use sleep() as we need alarm() and both together
+ * are NOT guaranteed to work.
+ */
+static void
+doSleep(int iSeconds, const int iuSeconds)
+{
+	struct timeval tvSelectTimeout;
+	tvSelectTimeout.tv_sec = iSeconds;
+	tvSelectTimeout.tv_usec = iuSeconds; /* micro seconds */
+	select(0, NULL, NULL, NULL, &tvSelectTimeout);
+}
+
 static void
 hdlr_enable(int sig, void (*hdlr)())
 {
@@ -58,22 +74,45 @@ hdlr_enable(int sig, void (*hdlr)())
 }
 
 void
-terminate(__attribute__((unused)) const int sig)
+terminate(LIBRELP_ATTR_UNUSED const int sig)
 {
 	relpEngineSetStop(pRelpEngine);
+}
+
+/* This guards us against leaving hanging instances in testbench runs.
+ * This method is to be "called" via ALARM after more time has expired
+ * then "ever possible" - so we are sure we just need to cleanup.
+ */
+void LIBRELP_ATTR_NORETURN
+watchdog_expired(LIBRELP_ATTR_UNUSED const int sig)
+{
+	fprintf(stderr, "receive: watchdog timer expired, assuming we hang - "
+		"force terminating run\n");
+	fflush(stderr);
+	exit(100);
+}
+
+/* handler for unexpected signals.  */
+void LIBRELP_ATTR_NORETURN
+do_signal(const int sig)
+{
+	fprintf(stderr, "send: UNEXPECTED SIGNAL %d%s- terminating\n", sig,
+		sig == SIGPIPE ? " [SIGPIPE]" : "");
+	fflush(stderr);
+	exit(100);
 }
 
 /* handler to unconditionally exit the code - required for test where
  * server must "suddenly" abort.
  */
 void
-do_exit(__attribute__((unused)) const int sig)
+do_exit(LIBRELP_ATTR_UNUSED const int sig)
 {
 	immediate_exit = 1;
 }
 
 
-static void __attribute__((format(printf, 1, 2)))
+static void LIBRELP_ATTR_FORMAT(printf, 1, 2)
 dbgprintf(char *fmt, ...)
 {
 	va_list ap;
@@ -86,8 +125,8 @@ dbgprintf(char *fmt, ...)
 	fflush(stderr);
 }
 
-static relpRetVal onSyslogRcv(unsigned char *pHostname __attribute__((unused)),
-	unsigned char *pIP __attribute__((unused)), unsigned char *msg,
+static relpRetVal onSyslogRcv(unsigned char *pHostname LIBRELP_ATTR_UNUSED,
+	unsigned char *pIP LIBRELP_ATTR_UNUSED, unsigned char *msg,
 	size_t lenMsg)
 {
 
@@ -116,7 +155,7 @@ void print_usage(void)
 }
 
 static void
-onErr(void *pUsr, char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
+onErr(void *pUsr, char *objinfo, char* errmesg, LIBRELP_ATTR_UNUSED relpRetVal errcode)
 {
 	struct usrdata *pThis = (struct usrdata*) pUsr;
 	if(pUsr != userdata) {
@@ -133,7 +172,7 @@ onErr(void *pUsr, char *objinfo, char* errmesg, __attribute__((unused)) relpRetV
 }
 
 static void
-onGenericErr(char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
+onGenericErr(char *objinfo, char* errmesg, LIBRELP_ATTR_UNUSED relpRetVal errcode)
 {
 	fprintf(stderr, "receive: librelp error '%s', object '%s'\n", errmesg, objinfo);
 	if(errFile != NULL) {
@@ -142,8 +181,8 @@ onGenericErr(char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal er
 }
 
 static void
-onAuthErr( __attribute__((unused)) void *pUsr, char *authinfo,
-	char* errmesg, __attribute__((unused)) relpRetVal errcode)
+onAuthErr(LIBRELP_ATTR_UNUSED void *pUsr, char *authinfo,
+	char* errmesg, LIBRELP_ATTR_UNUSED relpRetVal errcode)
 {
 	fprintf(stderr, "receive: authentication error '%s', object '%s'\n", errmesg, authinfo);
 	if(errFile != NULL) {
@@ -188,6 +227,8 @@ int main(int argc, char *argv[]) {
 	int oversizeMode = 0;
 	int ret = 0;
 	int append_outfile = 0;
+	int watchdog_timeout = 60; /* one seconds looks like a good default */
+	const char *tlslib = NULL;
 	const char* outfile_name = NULL;
 
 	static struct option long_options[] =
@@ -201,11 +242,14 @@ int main(int argc, char *argv[]) {
 		{"errorfile", required_argument, 0, 'e'},
 		{"outfile", required_argument, 0, 'O'},
 		{"append-outfile", no_argument, 0, 'A'},
+		{"tls-lib", required_argument, 0, 'l'},
+		{"watchdog-timeout", required_argument, 0, 'W'},
 		{0, 0, 0, 0}
 	};
 
 
-	while((c = getopt_long(argc, argv, "a:Ae:F:m:o:O:P:p:Tvx:y:z:", long_options, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "a:Ae:F:l:m:o:O:P:p:TvW:x:y:z:",
+		long_options, &option_index)) != -1) {
 		switch(c) {
 		case 'a':
 			authMode = optarg;
@@ -225,6 +269,9 @@ int main(int argc, char *argv[]) {
 			break;
 		case 'F': /* pid file name */
 			pidFileName = optarg;
+			break;
+		case 'l': /* tls lib */
+			tlslib = optarg;
 			break;
 		case 'm': /* message size */
 			maxDataSize = atoi(optarg);
@@ -260,6 +307,10 @@ int main(int argc, char *argv[]) {
 		case 'p':
 			port = (unsigned char*)optarg;
 			break;
+		case 'W':
+			watchdog_timeout = atoi(optarg);
+			printf("receive: watchdog timeout is %d seconds\n", watchdog_timeout);
+			break;
 		case 'T':
 			bEnableTLS = 1;
 			break;
@@ -293,8 +344,8 @@ int main(int argc, char *argv[]) {
 	if(authMode != NULL) {
 		if(	(strcasecmp(authMode, "certvalid") != 0 && permittedPeer == NULL) ||
 			caCertFile == NULL || myCertFile == NULL || myPrivKeyFile == NULL) {
-			printf("receive: mode '%s' parameter missing; certificates and permittedPeer required\n",
-				authMode);
+			fprintf(stderr, "receive: mode '%s' parameter missing; certificates and "
+				"permittedPeer required\n", authMode);
 			goto done;
 		}
 	}
@@ -303,7 +354,7 @@ int main(int argc, char *argv[]) {
 
 	if(caCertFile != NULL || myCertFile != NULL || myPrivKeyFile != NULL) {
 		if(bEnableTLS == 0) {
-			printf("receive: Certificates were specified, but TLS was "
+			fprintf(stderr, "receive: Certificates were specified, but TLS was "
 			       "not enabled! Will continue without TLS. To enable "
 			       "it use parameter \"-T\"\n");
 			goto done;
@@ -312,6 +363,8 @@ int main(int argc, char *argv[]) {
 
 	hdlr_enable(SIGTERM, terminate);
 	hdlr_enable(SIGUSR1, do_exit);
+	hdlr_enable(SIGALRM, watchdog_expired);
+	hdlr_enable(SIGPIPE, do_signal);
 
 	if(outfile_name != NULL) {
 		if((outFile = fopen(outfile_name, append_outfile ? "a" : "w")) == NULL) {
@@ -321,16 +374,21 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
+	alarm(watchdog_timeout);
+
 	TRY(relpEngineConstruct(&pRelpEngine));
 	TRY(relpEngineSetDbgprint(pRelpEngine, verbose ? dbgprintf : NULL));
-	TRY(relpEngineSetEnableCmd(pRelpEngine, (unsigned char*) "syslog", eRelpCmdState_Required));
-	TRY(relpEngineSetFamily(pRelpEngine, protFamily));
-	TRY(relpEngineSetSyslogRcv(pRelpEngine, onSyslogRcv));
-
 	TRY(relpEngineSetOnErr(pRelpEngine, onErr));
 	TRY(relpEngineSetOnGenericErr(pRelpEngine, onGenericErr));
 	TRY(relpEngineSetOnAuthErr(pRelpEngine, onAuthErr));
 
+	if(tlslib != NULL) {
+		TRY(relpEngineSetTLSLibByName(pRelpEngine, tlslib));
+	}
+
+	TRY(relpEngineSetEnableCmd(pRelpEngine, (unsigned char*) "syslog", eRelpCmdState_Required));
+	TRY(relpEngineSetFamily(pRelpEngine, protFamily));
+	TRY(relpEngineSetSyslogRcv(pRelpEngine, onSyslogRcv));
 	TRY(relpEngineSetDnsLookupMode(pRelpEngine, 0)); /* 0=disable */
 
 	TRY(relpEngineListnerConstruct(pRelpEngine, &pRelpSrv));
@@ -390,7 +448,7 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "receive: giving up starting relp engine\n");
 			break;
 		}
-		sleep(1);
+		doSleep(1, 0);
 	}
 
 	TRY(relpEngineDestruct(&pRelpEngine));

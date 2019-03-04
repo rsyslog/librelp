@@ -3,9 +3,11 @@
 coverage:
   # to get things started, let's aim at a lower goal. This actually helps
   # to find those areas that we need to concentrate on.
-  range: 60..85
+  range: 60..80
   status:
     project:
       default:
         target: auto
         threshold: .2
+    patch:
+      threshold: null

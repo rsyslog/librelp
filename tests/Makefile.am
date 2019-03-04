@@ -1,4 +1,5 @@
-check_PROGRAMS=receive send chkseq
+TEST_EXTENSIONS=.sh
+check_PROGRAMS=receive send chkseq have_tlslib
 
 receive_SOURCES=receive.c
 receive_LDADD=../src/.libs/librelp.la
@@ -9,6 +10,7 @@ send_LDADD=../src/.libs/librelp.la
 send_CFLAGS=$(AM_CFLAGS) -I${top_srcdir}/src $(WARN_CFLAGS)
 
 chkseq_SOURCES=chkseq.c
+have_tlslib_SOURCES=have_tlslib.c
 
 VALGRIND_TESTS= \
 	duplicate-receiver-vg.sh
@@ -16,10 +18,12 @@ VALGRIND_TESTS= \
 # TLS tests that work both with gnutls and openssl
 TLS_TESTS=  \
 	tls-basic.sh \
+	tls-basic-realistic.sh \
 	tls-basic-anon.sh \
 	tls-basic-certvalid.sh \
 	tls-basic-fingerprint.sh \
 	tls-basic-wildcard.sh \
+	tls-receiver-abort.sh \
 	tls-missing-param-sender.sh \
 	tls-missing-param-receiver.sh
 TLS_VALGRIND_TESTS= \
@@ -33,7 +37,9 @@ OSSL_TESTS= \
 # reenable tests when stable
 #	tls-basic-brokencert.sh
 
-TESTS=  basic.sh \
+TESTS=  selftest_receive_watchdog.sh \
+	selftest_receive_usage.sh \
+	basic.sh \
 	basic-realistic.sh \
 	receiver-abort.sh \
 	long-msg.sh \
@@ -41,8 +47,7 @@ TESTS=  basic.sh \
 	oversize-msg-accept-errmsg.sh \
 	truncate-oversize-msg.sh \
 	send-noconnect.sh \
-	receive-emptyconnect.sh \
-	selftest_receive_usage.sh
+	receive-emptyconnect.sh
 if ENABLE_TLS_GENERIC
 TESTS+=$(TLS_TESTS)
 endif

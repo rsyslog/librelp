@@ -1,6 +1,6 @@
 /* The mapping for relp over TCP.
  *
- * Copyright 2008-2016 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2018 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
@@ -121,26 +121,24 @@ typedef struct relpTcp_s {
 	char *pristring; /**< priority string for GnuTLS */
 	relpAuthMode_t authmode;
 	int connTimeout;
-#ifdef ENABLE_TLS
+	tcpPermittedPeers_t permittedPeers;
+	#ifdef ENABLE_TLS
 	gnutls_anon_client_credentials_t anoncred;	/**< client anon credentials */
 	gnutls_anon_server_credentials_t anoncredSrv;	/**< server anon credentials */
-#endif
-	tcpPermittedPeers_t permittedPeers;
 	/* GnuTLS certificat support */
-#ifdef ENABLE_TLS
 	gnutls_certificate_credentials_t xcred;		/**< certificate credentials */
-#endif
+	#endif
 	char *caCertFile;
 	char *ownCertFile;
 	char *privKeyFile;
-#ifdef ENABLE_TLS
+	#ifdef ENABLE_TLS
 	gnutls_session_t session;
 	gnutls_dh_params_t dh_params; /**< server DH parameters for anon mode */
-#endif
-#ifdef ENABLE_TLS_OPENSSL
+	#endif
+	#ifdef ENABLE_TLS_OPENSSL
 	SSL *ssl;		/* OpenSSL main SSL obj */
 	osslSslState_t sslState;/**< what must we retry? */
-#endif
+	#endif
 	relpTcpRtryState_t rtryOp;
 } relpTcp_t;
 
@@ -174,13 +172,13 @@ relpRetVal relpTcpSetCACert(relpTcp_t *pThis, char *cert);
 relpRetVal relpTcpSetOwnCert(relpTcp_t *pThis, char *cert);
 relpRetVal relpTcpSetPrivKey(relpTcp_t *pThis, char *cert);
 relpRetVal relpTcpSetPermittedPeers(relpTcp_t *pThis, relpPermittedPeers_t *pPeers);
-relpRetVal relpTcpRtryHandshake(relpTcp_t *pThis);
+relpRetVal LIBRELP_ATTR_NONNULL() relpTcpRtryHandshake(relpTcp_t *pThis);
 relpRetVal relpTcpSetUsrPtr(relpTcp_t *pThis, void *pUsr);
 relpRetVal relpTcpSetConnTimeout(relpTcp_t *pThis, int connTimeout);
 relpRetVal relpTcpSetAuthMode(relpTcp_t *pThis, relpAuthMode_t authmode);
 void relpTcpHintBurstBegin(relpTcp_t *pThis);
 void relpTcpHintBurstEnd(relpTcp_t *pThis);
-int relpTcpGetRtryDirection(relpTcp_t *pThis);
+int LIBRELP_ATTR_NONNULL() relpTcpGetRtryDirection(relpTcp_t *pThis);
 int relpTcpWaitWriteable(relpTcp_t *pThis, struct timespec *timeout);
 
 #ifdef ENABLE_TLS_OPENSSL

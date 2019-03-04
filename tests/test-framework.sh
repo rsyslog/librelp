@@ -5,14 +5,41 @@
 
 # "config settings" for the testbench
 TB_TIMEOUT_STARTUP=400  # 40 seconds - Solaris sometimes needs this...
-export TESTPORT=31514
-export OUTFILE=librelp.out.log
 export valgrind="valgrind --malloc-fill=ff --free-fill=fe --log-fd=1"
 #export OPT_VERBOSE=-v # uncomment for debugging 
 
 ######################################################################
 # functions
 ######################################################################
+
+# finds a free port that we can bind a listener to
+# Obviously, any solution is race as another process could start
+# just after us and grab the same port. However, in practice it seems
+# to work pretty well. In any case, we should probably call this as
+# late as possible before the usage of the port.
+get_free_port() {
+python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()'
+}
+
+# check if command $1 is available - will exit 77 when not OK
+check_command_available() {
+	have_cmd=0
+	if [ "$1" == "timeout" ]; then
+		if timeout --version &>/dev/null ; then
+			have_cmd=1
+		fi
+	else
+		if command -v $1 ; then
+			have_cmd=1
+		fi
+	fi
+	if [ $have_cmd -eq 0 ] ; then
+		printf 'Testbench requires unavailable command: %s\n' "$1"
+		exit 77 # do NOT error_exit here!
+	fi
+}
+
+
 
 # $1 is name of pidfile to wait for
 wait_process_startup_via_pidfile() {
@@ -22,7 +49,7 @@ wait_process_startup_via_pidfile() {
 		(( i++ ))
 		if test $i -gt $TB_TIMEOUT_STARTUP
 		then
-		   printf "ABORT! Timeout waiting on startup\n"
+		   printf "ABORT! Timeout waiting on startup, pid file $1\n"
 		   exit 1
 		fi
 	done
@@ -31,21 +58,26 @@ wait_process_startup_via_pidfile() {
 
 # start receiver WITH valgrind, add receiver command line parameters after function name
 startup_receiver_valgrind() {
+	libtool &> /dev/null
+	if [ $? == 127 ]; then
+		printf 'libtool command not available, cannot run under valgrind\n'
+		exit 77
+	fi
 	printf 'Starting Receiver...\n'
-	$valgrind ./receive -p $TESTPORT --outfile $OUTFILE -F receive.pid $OPT_VERBOSE $* &
+	libtool --mode=execute $valgrind ./receive $TLSLIB -p $TESTPORT --outfile $OUTFILE.2 -F $RECEIVE_PIDFILE $OPT_VERBOSE $* &
 	export RECEIVE_PID=$!
-	printf "got receive pid $RECEIVE_PID\n"
-	wait_process_startup_via_pidfile receive.pid
+	printf "got $RECEIVE_PID $RECEIVE_PIDFILE\n"
+	wait_process_startup_via_pidfile $RECEIVE_PIDFILE
 	printf 'Receiver running\n'
 }
 
 # start receiver, add receiver command line parameters after function name
 startup_receiver() {
 	printf 'Starting Receiver...\n'
-	./receive -p $TESTPORT -F receive.pid --outfile $OUTFILE $OPT_VERBOSE $* &
+	./receive $TLSLIB -p $TESTPORT -F $RECEIVE_PIDFILE --outfile $OUTFILE $OPT_VERBOSE $* &
 	export RECEIVE_PID=$!
-	printf "got receive pid $RECEIVE_PID\n"
-	wait_process_startup_via_pidfile receive.pid
+	printf "got $RECEIVE_PID $RECEIVE_PIDFILE\n"
+	wait_process_startup_via_pidfile $RECEIVE_PIDFILE
 	printf 'Receiver running\n'
 }
 
@@ -140,17 +172,18 @@ cleanup() {
 		echo pkill result $?
 	fi
 
-	if [ -f receive.pid ]; then
-		kill -9 $(cat receive.pid) &> /dev/null
+	if [ -f $RECEIVE_PID ]; then
+		kill -9 $RECEIVE_PID &> /dev/null
 	fi
 
-	rm -f -- receive.pid $OUTFILE *.err.log error.out.log
+	rm -rf $TESTDIR
+	rm -f -- $DYNNAME* *.err.log error.out.log
 }
 
 # cleanup at end of regular test run
 terminate() {
 	cleanup
-	printf "$0 SUCCESS\n"
+	printf "%s %s SUCCESS\n" "$(date +%H:%M:%S)" "$0"
 }
 
 # check that the output file contains correct number of messages
@@ -170,25 +203,31 @@ check_msg_count() {
 	fi
 }
 
+# execute tls tests with currently enabled TLS libraries
+# the actual test to be carried out must be defined as "actual_test"
+# the tlslib is passed the to it via env var TEST_TLS_LIB
+do_tls_subtests() {
+	export TEST_TLS_LIB
+	for TEST_TLS_LIB in "gnutls" "openssl"; do
+		if ./have_tlslib $TEST_TLS_LIB; then
+			printf '\nBEGIN SUBTEST using TLS lib: %s\n' $TEST_TLS_LIB
+			actual_test
+		else
+			printf '\nskipping %s lib, not supported in this build\n' $TEST_TLS_LIB
+		fi
+	done
+}
+
 ######################################################################
 # testbench initialization code - do this LAST here in the file
 ######################################################################
 printf "============================================================\n"
-printf "Test: $0\n"
+printf "%s: Test: $0\n" "$(date +%H:%M:%S)"
 printf "============================================================\n"
 
-# on Solaris we still have some issues sometimes. Please keep this
-# informational info inside the framework until this can be totally
-# considered revolved - rgerhards, 2018-04-17
-ps -ef|grep receive
-if [ "$(uname)" == "XXSunOS" ] ; then
-	/usr/ucb/ps awwx
-	echo pgrep
-	pgrep receive
-	echo next
-	ps -efl
-	netstat -an | grep $TESTPORT
-	CI/solaris-findport.sh $TESTPORT
-fi
-
-cleanup # we do cleanup in case it was not done previously
+export TESTPORT=$(get_free_port)
+export DYNNAME=lrtb_${TESTPORT}.
+export TESTDIR=lrtb_${TESTPORT}
+mkdir $TESTDIR
+export OUTFILE=${TESTDIR}/librelp.out.log
+export RECEIVE_PIDFILE=${DYNNAME}receive.pid

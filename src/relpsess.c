@@ -67,11 +67,11 @@ callOnErr(const relpSess_t *__restrict__ const pThis,
 	char *__restrict__ const emsg,
 	const relpRetVal ecode)
 {
-	char objinfo[1024];
 	relpTcp_t *const pTcp = pThis->pTcp;
 	//pThis->pEngine->dbgprint("librelp: generic error: ecode %d, "
 		//"emsg '%s'\n", ecode, emsg);
 	if(pThis->pEngine->onErr != NULL) {
+		char objinfo[1024];
 		if(pTcp->pSrv == NULL) { /* client */
 			snprintf(objinfo, sizeof(objinfo), "conn to srvr %s:%s",
 				 pTcp->pClt->pSess->srvAddr,
@@ -541,15 +541,17 @@ relpSessWaitState(relpSess_t *const pThis, const relpSessState_t stateExpected, 
 	 * call DOES NOT block.
 	 */
 	localRet = relpSessRcvData(pThis);
-	if(localRet != RELP_RET_OK && localRet != RELP_RET_SESSION_BROKEN)
+	if(localRet != RELP_RET_OK) {
+		pThis->pEngine->dbgprint("relpSessWaitRsp error initial rcv: %d\n", localRet);
 		ABORT_FINALIZE(localRet);
+	}
 
 	/* check if we are already in the desired state. If so, we can immediately
 	 * return. That saves us doing a costly clock call to set the timeout. As a
 	 * side-effect, the timeout is actually applied without the time needed for
 	 * above reception. I think is is OK, even a bit logical ;)
 	 */
-	if(pThis->sessState == stateExpected || pThis->sessState == eRelpSessState_BROKEN) {
+	if(pThis->sessState == stateExpected) {
 		FINALIZE;
 	}
 
@@ -704,8 +706,10 @@ relpSessTryReestablish(relpSess_t *pThis)
 	 */
 	pUnackedEtry = pThis->pUnackedLstRoot;
 	if(pUnackedEtry != NULL)
-		pThis->pEngine->dbgprint("relp session %p reestablished, now resending %d unacked frames\n",
-					  (void*)pThis, pThis->lenUnackedLst);
+		pThis->pEngine->dbgprint("relp session %p reestablished, state %d, "
+			"now resending %d unacked frames\n",
+			(void*)pThis, pThis->sessState, pThis->lenUnackedLst);
+	assert(pThis->sessState != eRelpSessState_BROKEN);
 	while(pUnackedEtry != NULL) {
 		pThis->pEngine->dbgprint("resending frame '%s'\n", pUnackedEtry->pSendbuf->pData + 9
 								   - pUnackedEtry->pSendbuf->lenTxnr);
@@ -921,13 +925,12 @@ finalize_it:
  * rgerhars, 2008-03-21
  */
 static relpRetVal
-relpSessCBrspClose(relpSess_t *pThis, relpFrame_t __attribute__((unused)) *pFrame)
+relpSessCBrspClose(relpSess_t *pThis, relpFrame_t LIBRELP_ATTR_UNUSED *pFrame)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
 
 	relpSessSetSessState(pThis, eRelpSessState_CLOSE_RSP_RCVD);
-pThis->pEngine->dbgprint("CBrspClose, setting state CLOSE_RSP_RCVD\n");
 
 	LEAVE_RELPFUNC;
 }
@@ -1169,7 +1172,6 @@ relpSessSetEnableCmd(relpSess_t *pThis, unsigned char *pszCmd, relpCmdEnaState_t
 	RELPOBJ_assert(pThis, Sess);
 	assert(pszCmd != NULL);
 
-pThis->pEngine->dbgprint("SetEnableCmd in syslog cmd state: %d\n", pThis->stateCmdSyslog);
 	if(!strcmp((char*)pszCmd, "syslog")) {
 		if(pThis->stateCmdSyslog != eRelpCmdState_Forbidden)
 			pThis->stateCmdSyslog = stateCmd;
@@ -1179,7 +1181,6 @@ pThis->pEngine->dbgprint("SetEnableCmd in syslog cmd state: %d\n", pThis->stateC
 	}
 
 finalize_it:
-pThis->pEngine->dbgprint("SetEnableCmd out syslog cmd state: %d, iRet %d\n", pThis->stateCmdSyslog, iRet);
 	LEAVE_RELPFUNC;
 }
 

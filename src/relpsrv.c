@@ -95,11 +95,8 @@ relpSrvDestruct(relpSrv_t **ppThis)
 	if(pThis->pTcp != NULL)
 		relpTcpDestruct(&pThis->pTcp);
 
-	if(pThis->pLstnPort != NULL)
-		free(pThis->pLstnPort);
-	if(pThis->pLstnAddr != NULL)
-		free(pThis->pLstnAddr);
-
+	free(pThis->pLstnPort);
+	free(pThis->pLstnAddr);
 	free(pThis->pristring);
 	free(pThis->caCertFile);
 	free(pThis->ownCertFile);
@@ -167,7 +164,7 @@ relpRetVal relpSrvSetMaxDataSize(relpSrv_t *pThis, size_t maxSize) {
 	LEAVE_RELPFUNC;
 }
 
-relpRetVal ATTR_NONNULL()
+relpRetVal LIBRELP_ATTR_NONNULL()
 relpSrvSetOversizeMode(relpSrv_t *const pThis, const int oversizeMode)
 {
 	ENTER_RELPFUNC;
@@ -194,8 +191,7 @@ relpSrvSetLstnPort(relpSrv_t *pThis, unsigned char *pLstnPort)
 	RELPOBJ_assert(pThis, Srv);
 
 	/* first free old value */
-	if(pThis->pLstnPort != NULL)
-		free(pThis->pLstnPort);
+	free(pThis->pLstnPort);
 	pThis->pLstnPort = NULL;
 
 	if(pLstnPort != NULL) {
@@ -219,8 +215,7 @@ relpSrvSetLstnAddr(relpSrv_t *pThis, unsigned char *pLstnAddr)
 	RELPOBJ_assert(pThis, Srv);
 
 	/* first free old value */
-	if(pThis->pLstnAddr != NULL)
-		free(pThis->pLstnAddr);
+	free(pThis->pLstnAddr);
 	pThis->pLstnAddr = NULL;
 
 	if(pLstnAddr != NULL) {
@@ -337,7 +332,7 @@ relpSrvSetDHBits(relpSrv_t *pThis, int bits)
 	pThis->dhBits = bits;
 }
 relpRetVal
-relpSrvEnableTLS2(relpSrv_t __attribute__((unused)) *pThis)
+relpSrvEnableTLS2(relpSrv_t LIBRELP_ATTR_UNUSED *pThis)
 {
 	ENTER_RELPFUNC;
 #if defined(ENABLE_TLS) || defined(ENABLE_TLS_OPENSSL)
@@ -348,7 +343,7 @@ relpSrvEnableTLS2(relpSrv_t __attribute__((unused)) *pThis)
 	LEAVE_RELPFUNC;
 }
 relpRetVal
-relpSrvEnableTLSZip2(relpSrv_t __attribute__((unused)) *pThis)
+relpSrvEnableTLSZip2(relpSrv_t LIBRELP_ATTR_UNUSED *pThis)
 {
 	ENTER_RELPFUNC;
 #if defined(ENABLE_TLS) || defined(ENABLE_TLS_OPENSSL)

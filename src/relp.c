@@ -1,6 +1,6 @@
 /* The RELP (reliable event logging protocol) core protocol library.
  *
- * Copyright 2008-2016 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2018 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
@@ -51,7 +51,7 @@
 
 /* ------------------------------ some internal functions ------------------------------ */
 
-void __attribute__((format(printf, 4, 5)))
+void LIBRELP_ATTR_FORMAT(printf, 4, 5)
 relpEngineCallOnGenericErr(relpEngine_t *pThis, char *eobj, relpRetVal ecode, char *fmt, ...)
 {
 	va_list ap;
@@ -74,7 +74,7 @@ _relpEngine_strerror_r(const int errnum, char *buf, const size_t buflen) {
 #ifndef HAVE_STRERROR_R
 	char *p;
 	p = strerror(errnum);
-	strncpy(buf, emsg, buflen);
+	strncpy(buf, p, buflen);
 	buf[buflen-1] = '\0';
 #else
 #	ifdef STRERROR_R_CHAR_P
@@ -259,6 +259,12 @@ relpEngineConstruct(relpEngine_t **ppThis)
 	}
 
 	RELP_CORE_CONSTRUCTOR(pThis, Engine);
+	#if !defined(ENABLE_TLS) && defined(ENABLE_TLS_OPENSSL)
+		/* if we only have openssl, it's only sensible to use it by default ;-) */
+		pThis->tls_lib = RELP_USE_OPENSSL;
+	#else	/* otherwise, use GnuTLS for max compatibility */
+		pThis->tls_lib = RELP_USE_GNUTLS;
+	#endif
 	pThis->protocolVersion = RELP_CURR_PROTOCOL_VERSION;
 	pthread_mutex_init(&pThis->mutSrvLst, NULL);
 	pthread_mutex_init(&pThis->mutSessLst, NULL);
@@ -311,13 +317,13 @@ relpEngineDestruct(relpEngine_t **ppThis)
 }
 
 
-static void dbgprintDummy(char __attribute__((unused)) *fmt, ...) {}
+static void dbgprintDummy(char LIBRELP_ATTR_UNUSED *fmt, ...) {}
 /* set a pointer to the debug function inside the engine. To reset a debug
  * function that already has been set, provide a NULL function pointer.
  * rgerhards, 2008-03-17
  */
 relpRetVal
-relpEngineSetDbgprint(relpEngine_t *pThis, void (*dbgprint)(char *fmt, ...) __attribute__((format(printf, 1, 2))))
+relpEngineSetDbgprint(relpEngine_t *pThis, void (*dbgprint)(char *fmt, ...) LIBRELP_ATTR_FORMAT(printf, 1, 2))
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Engine);
@@ -327,6 +333,65 @@ relpEngineSetDbgprint(relpEngine_t *pThis, void (*dbgprint)(char *fmt, ...) __at
 }
 
 
+relpRetVal
+relpEngineSetTLSLib(relpEngine_t *const pThis, NOTLS_UNUSED const int tls_lib)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Engine);
+
+	if(pThis == NULL) {
+		ABORT_FINALIZE(RELP_RET_PARAM_ERROR);
+	}
+
+	pThis->dbgprint("relpEngineSetTLSLib, req lib is %d\n", tls_lib);
+	#if defined(WITH_TLS)
+		if(tls_lib == RELP_USE_GNUTLS) {
+			#if defined(ENABLE_TLS)
+				pThis->tls_lib = RELP_USE_GNUTLS;
+			#else
+				ABORT_FINALIZE(RELP_RET_NOT_SUPPORTED);
+			#endif
+		} else if(tls_lib == RELP_USE_OPENSSL) {
+			#if defined(ENABLE_TLS_OPENSSL)
+				pThis->tls_lib = RELP_USE_OPENSSL;
+			#else
+				ABORT_FINALIZE(RELP_RET_NOT_SUPPORTED);
+			#endif
+		} else {
+			ABORT_FINALIZE(RELP_RET_PARAM_ERROR);
+		}
+	#else /* defined(WITH_TLS) */
+		pThis->dbgprint("relpEngineSetTLSLib, error, librelp not with TLS support\n");
+		ABORT_FINALIZE(RELP_RET_NOT_SUPPORTED);
+	#endif
+
+finalize_it:
+	pThis->dbgprint("relpEngineSetTLSLib, lib now %d, ret %d\n", pThis->tls_lib, iRet);
+	LEAVE_RELPFUNC;
+}
+
+
+relpRetVal
+relpEngineSetTLSLibByName(relpEngine_t *const pThis, const char *const name)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Engine);
+
+	if(pThis == NULL || name == NULL) {
+		ABORT_FINALIZE(RELP_RET_PARAM_ERROR);
+	}
+
+	if(!strcasecmp(name, "gnutls")) {
+		relpEngineSetTLSLib(pThis, RELP_USE_GNUTLS);
+	}else if(!strcasecmp(name, "openssl")) {
+		relpEngineSetTLSLib(pThis, RELP_USE_OPENSSL);
+	} else {
+		ABORT_FINALIZE(RELP_RET_NOT_SUPPORTED);
+	}
+
+finalize_it:
+	LEAVE_RELPFUNC;
+}
 
 /* create a new listener to be added to the engine. This is the new-style
  * calling convention, which permits us to set various properties before
@@ -369,10 +434,10 @@ finalize_it:
  */
 
 /* a dummy for callbacks not set by the caller */
-static relpRetVal relpSrvSyslogRcvDummy2(void __attribute__((unused)) *pUsr,
-	unsigned char __attribute__((unused)) *pHostName,
-	unsigned char __attribute__((unused)) *pIP, unsigned char __attribute__((unused)) *pMsg,
-	size_t __attribute__((unused)) lenMsg)
+static relpRetVal relpSrvSyslogRcvDummy2(void LIBRELP_ATTR_UNUSED *pUsr,
+	unsigned char LIBRELP_ATTR_UNUSED *pHostName,
+	unsigned char LIBRELP_ATTR_UNUSED *pIP, unsigned char LIBRELP_ATTR_UNUSED *pMsg,
+	size_t LIBRELP_ATTR_UNUSED lenMsg)
 { return RELP_RET_NOT_IMPLEMENTED;
 }
 /* set the syslog receive callback. If NULL is provided, it is set to the
@@ -486,9 +551,9 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 /* a dummy for callbacks not set by the caller */
-static relpRetVal relpSrvSyslogRcvDummy(unsigned char __attribute__((unused)) *pHostName,
-	unsigned char __attribute__((unused)) *pIP, unsigned char __attribute__((unused)) *pMsg,
-	size_t __attribute__((unused)) lenMsg)
+static relpRetVal relpSrvSyslogRcvDummy(unsigned char LIBRELP_ATTR_UNUSED *pHostName,
+	unsigned char LIBRELP_ATTR_UNUSED *pIP, unsigned char LIBRELP_ATTR_UNUSED *pMsg,
+	size_t LIBRELP_ATTR_UNUSED lenMsg)
 { return RELP_RET_NOT_IMPLEMENTED;
 }
 
@@ -630,7 +695,7 @@ finalize_it:
 }
 
 static inline relpRetVal
-engineEventLoopInit(relpEngine_t __attribute__((unused)) *pThis)
+engineEventLoopInit(relpEngine_t LIBRELP_ATTR_UNUSED *pThis)
 {
 #	define NUM_EPOLL_EVENTS 10
 	relpEngSrvLst_t *pSrvEtry;
@@ -667,15 +732,13 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 static inline relpRetVal
-engineEventLoopExit(relpEngine_t __attribute__((unused)) *pThis)
+engineEventLoopExit(relpEngine_t LIBRELP_ATTR_UNUSED *pThis)
 {
 	relpEngSrvLst_t *pSrvEtry;
-	int i;
-	int nLstn;
 	ENTER_RELPFUNC;
 	for(pSrvEtry = pThis->pSrvLstRoot ; pSrvEtry != NULL ; pSrvEtry = pSrvEtry->pNext) {
-		nLstn = relpSrvGetNumLstnSocks(pSrvEtry->pSrv);
-		for(i = 0 ; i < nLstn ; ++i) {
+		const int nLstn = relpSrvGetNumLstnSocks(pSrvEtry->pSrv);
+		for(int i = 0 ; i < nLstn ; ++i) {
 			delFromEpollSet(pThis, pSrvEtry->epevts[i]);
 		}
 		free(pSrvEtry->epevts);
@@ -691,21 +754,17 @@ static relpRetVal
 handleSessIO(relpEngine_t *pThis, epolld_t *epd)
 {
 	relpEngSessLst_t *pSessEtry;
-	relpTcp_t *pTcp;
-#	if defined(ENABLE_TLS) || defined(ENABLE_TLS_OPENSSL)
-	relpRetVal localRet;
-#	endif
 
 	pSessEtry = (relpEngSessLst_t*) epd->ptr;
 	if(relpSessTcpRequiresRtry(pSessEtry->pSess)) {
-		pTcp = pSessEtry->pSess->pTcp;
+		relpTcp_t *const pTcp = pSessEtry->pSess->pTcp;
 		if(relpTcpRtryOp(pTcp) == relpTCP_RETRY_send) {
 			doSend(pThis, pSessEtry, epd->sock);
 		} else if(relpTcpRtryOp(pTcp) == relpTCP_RETRY_recv) {
 			doRecv(pThis, pSessEtry, epd->sock);
 		} else {
 #			if defined(ENABLE_TLS) || defined(ENABLE_TLS_OPENSSL)
-				localRet = relpTcpRtryHandshake(pTcp);
+				const relpRetVal localRet = relpTcpRtryHandshake(pTcp);
 				if(localRet != RELP_RET_OK) {
 					pThis->dbgprint("relp session %d handshake iRet %d, tearing it down\n",
 							epd->sock, localRet);
@@ -735,7 +794,6 @@ engineEventLoopRun(relpEngine_t *pThis)
 	int sock;
 	struct epoll_event events[128];
 	epolld_t *epd;
-	int nEvents;
 
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Engine);
@@ -771,7 +829,7 @@ engineEventLoopRun(relpEngine_t *pThis)
 		/* wait for io to become ready */
 		if(relpEngineShouldStop(pThis)) break;
 		pThis->dbgprint("librelp: doing epoll_wait\n");
-		nEvents = epoll_wait(pThis->efd, events, sizeof(events)/sizeof(struct epoll_event), -1);
+		const int nEvents = epoll_wait(pThis->efd, events, sizeof(events)/sizeof(struct epoll_event), -1);
 		pThis->dbgprint("librelp: done epoll_wait, nEvents:%d\n", nEvents);
 		if(relpEngineShouldStop(pThis)) break;
 
@@ -796,8 +854,8 @@ engineEventLoopRun(relpEngine_t *pThis)
 	LEAVE_RELPFUNC;
 }
 #else /* no epoll support available */
-static inline relpRetVal engineEventLoopInit(relpEngine_t __attribute__((unused)) *pThis) { return RELP_RET_OK; }
-static inline relpRetVal engineEventLoopExit(relpEngine_t __attribute__((unused)) *pThis) { return RELP_RET_OK; }
+static inline relpRetVal engineEventLoopInit(relpEngine_t LIBRELP_ATTR_UNUSED *pThis) { return RELP_RET_OK; }
+static inline relpRetVal engineEventLoopExit(relpEngine_t LIBRELP_ATTR_UNUSED *pThis) { return RELP_RET_OK; }
 static relpRetVal
 engineEventLoopRun(relpEngine_t *pThis)
 {
@@ -808,7 +866,6 @@ engineEventLoopRun(relpEngine_t *pThis)
 	relpRetVal localRet;
 	int iSocks;
 	int sock;
-	int maxfds;
 	int nfds;
 	fd_set readfds;
 	fd_set writefds;
@@ -818,7 +875,7 @@ engineEventLoopRun(relpEngine_t *pThis)
 
 	pThis->bStop = 0;
 	while(!relpEngineShouldStop(pThis)) {
-	        maxfds = 0;
+	        int maxfds = 0;
 	        FD_ZERO(&readfds);
 	        FD_ZERO(&writefds);
 
