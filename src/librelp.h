@@ -233,7 +233,8 @@ void relpSrvSetKeepAlive(relpSrv_t *pThis, const int bEnabled, const int iKeepAl
 relpRetVal relpSrvSetGnuTLSPriString(relpSrv_t *pThis, char *pristr);
 relpRetVal relpSrvSetCACert(relpSrv_t *pThis, char *cert);
 relpRetVal relpSrvSetOwnCert(relpSrv_t *pThis, char *cert);
-relpRetVal relpSrvSetPrivKey(relpSrv_t *pThis, char *cert);
+relpRetVal relpSrvSetTlsConfigCmd(relpSrv_t *pThis, char *cfgcmd);
+relpRetVal relpSrvSetCACert(relpSrv_t *pThis, char *cert);
 relpRetVal relpSrvSetAuthMode(relpSrv_t *pThis, char *mode);
 relpRetVal relpSrvAddPermittedPeer(relpSrv_t *pThis, char *peer);
 relpRetVal relpSrvSetMaxDataSize(relpSrv_t *pThis, size_t maxSize);
@@ -252,6 +253,7 @@ relpRetVal relpCltSetGnuTLSPriString(relpClt_t *pThis, char *pristr);
 relpRetVal relpCltSetCACert(relpClt_t *pThis, char *file);
 relpRetVal relpCltSetOwnCert(relpClt_t *pThis, char *file);
 relpRetVal relpCltSetPrivKey(relpClt_t *pThis, char *file);
+relpRetVal relpCltSetTlsConfigCmd(relpClt_t *pThis, char *cfgcmd);
 relpRetVal relpCltSetAuthMode(relpClt_t *pThis, char *mode);
 relpRetVal relpCltAddPermittedPeer(relpClt_t *pThis, char *peer);
 relpRetVal relpCltSetUsrPtr(relpClt_t *pThis, void *pUsr);

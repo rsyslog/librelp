@@ -91,6 +91,7 @@ struct relpSess_s {
 	char *caCertFile;
 	char *ownCertFile;
 	char *privKeyFile;
+	char *tlsConfigCmd;	/**< optional configuration command property for TLS libs **/
 	relpAuthMode_t authmode;
 	relpPermittedPeers_t permittedPeers;
 
@@ -157,6 +158,7 @@ relpRetVal relpSessSetGnuTLSPriString(relpSess_t *pThis, char *pristr);
 relpRetVal relpSessSetCACert(relpSess_t *pThis, char *cert);
 relpRetVal relpSessSetOwnCert(relpSess_t *pThis, char *cert);
 relpRetVal relpSessSetPrivKey(relpSess_t *pThis, char *cert);
+relpRetVal relpSessSetTlsConfigCmd(relpSess_t *pThis, char *cfgcmd);
 relpRetVal relpSessConstructOffers(relpSess_t *pThis, relpOffers_t **ppOffers);
 relpRetVal relpSessSetPermittedPeers(relpSess_t *pThis, relpPermittedPeers_t *pPeers);
 relpRetVal relpSessSetUsrPtr(relpSess_t *pThis, void *pUsr);

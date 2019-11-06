@@ -131,6 +131,7 @@ typedef struct relpTcp_s {
 	char *caCertFile;
 	char *ownCertFile;
 	char *privKeyFile;
+	char *tlsConfigCmd;	/**< optional configuration command property for TLS libs **/
 	#ifdef ENABLE_TLS
 	gnutls_session_t session;
 	gnutls_dh_params_t dh_params; /**< server DH parameters for anon mode */
@@ -171,6 +172,7 @@ relpRetVal relpTcpSetGnuTLSPriString(relpTcp_t *pThis, char *pristr);
 relpRetVal relpTcpSetCACert(relpTcp_t *pThis, char *cert);
 relpRetVal relpTcpSetOwnCert(relpTcp_t *pThis, char *cert);
 relpRetVal relpTcpSetPrivKey(relpTcp_t *pThis, char *cert);
+relpRetVal relpTcpSetTlsConfigCmd(relpTcp_t *pThis, char *cfgcmd);
 relpRetVal relpTcpSetPermittedPeers(relpTcp_t *pThis, relpPermittedPeers_t *pPeers);
 relpRetVal LIBRELP_ATTR_NONNULL() relpTcpRtryHandshake(relpTcp_t *pThis);
 relpRetVal relpTcpSetUsrPtr(relpTcp_t *pThis, void *pUsr);

@@ -68,6 +68,7 @@ relpSrvConstruct(relpSrv_t **ppThis, relpEngine_t *pEngine)
 	pThis->caCertFile = NULL;
 	pThis->ownCertFile = NULL;
 	pThis->privKey = NULL;
+	pThis->tlsConfigCmd = NULL;
 	pThis->permittedPeers.nmemb = 0;
 	pThis->maxDataSize = RELP_DFLT_MAX_DATA_SIZE;
 	pThis->oversizeMode = RELP_DFLT_OVERSIZE_MODE;
@@ -101,6 +102,7 @@ relpSrvDestruct(relpSrv_t **ppThis)
 	free(pThis->caCertFile);
 	free(pThis->ownCertFile);
 	free(pThis->privKey);
+	free(pThis->tlsConfigCmd);
 	for(i = 0 ; i < pThis->permittedPeers.nmemb ; ++i)
 		free(pThis->permittedPeers.name[i]);
 	/* done with de-init work, now free srv object itself */
@@ -326,6 +328,21 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 
+relpRetVal
+relpSrvSetTlsConfigCmd(relpSrv_t *pThis, char *cfgcmd)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Srv);
+	free(pThis->tlsConfigCmd);
+	if(cfgcmd == NULL) {
+		pThis->tlsConfigCmd = NULL;
+	} else {
+		if((pThis->tlsConfigCmd = strdup(cfgcmd)) == NULL)
+			ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+	}
+finalize_it:
+	LEAVE_RELPFUNC;
+}
 void
 relpSrvSetDHBits(relpSrv_t *pThis, int bits)
 {
@@ -401,6 +418,7 @@ relpSrvRun(relpSrv_t *pThis)
 		CHKRet(relpTcpSetCACert(pTcp, pThis->caCertFile));
 		CHKRet(relpTcpSetOwnCert(pTcp, pThis->ownCertFile));
 		CHKRet(relpTcpSetPrivKey(pTcp, pThis->privKey));
+		CHKRet(relpTcpSetTlsConfigCmd(pTcp, pThis->tlsConfigCmd));
 		CHKRet(relpTcpSetPermittedPeers(pTcp, &(pThis->permittedPeers)));
 	}
 	CHKRet(relpTcpLstnInit(pTcp, (pThis->pLstnPort == NULL) ?

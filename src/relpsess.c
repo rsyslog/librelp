@@ -136,6 +136,7 @@ relpSessConstruct(relpSess_t **ppThis, relpEngine_t *pEngine, int connType, void
 	pThis->caCertFile = NULL;
 	pThis->ownCertFile = NULL;
 	pThis->privKeyFile = NULL;
+	pThis->tlsConfigCmd = NULL;
 	pThis->permittedPeers.nmemb = 0;
 
 	CHKRet(relpSendqConstruct(&pThis->pSendq, pThis->pEngine));
@@ -206,6 +207,7 @@ relpSessDestruct(relpSess_t **ppThis)
 	free(pThis->caCertFile);
 	free(pThis->ownCertFile);
 	free(pThis->privKeyFile);
+	free(pThis->tlsConfigCmd);
 	relpSessFreePermittedPeers(pThis);
 
 	pthread_mutex_destroy(&pThis->mutSend);
@@ -877,6 +879,7 @@ relpSessConnect(relpSess_t *pThis, int protFamily, unsigned char *port, unsigned
 		CHKRet(relpTcpSetCACert(pThis->pTcp, pThis->caCertFile));
 		CHKRet(relpTcpSetOwnCert(pThis->pTcp, pThis->ownCertFile));
 		CHKRet(relpTcpSetPrivKey(pThis->pTcp, pThis->privKeyFile));
+		CHKRet(relpTcpSetTlsConfigCmd(pThis->pTcp, pThis->tlsConfigCmd));
 		CHKRet(relpTcpSetAuthMode(pThis->pTcp, pThis->authmode));
 		CHKRet(relpTcpSetPermittedPeers(pThis->pTcp, &pThis->permittedPeers));
 	}
@@ -1146,6 +1149,24 @@ relpSessSetPrivKey(relpSess_t *pThis, char *cert)
 finalize_it:
 	LEAVE_RELPFUNC;
 }
+
+relpRetVal
+relpSessSetTlsConfigCmd(relpSess_t *pThis, char *cfgcmd)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Sess);
+
+	free(pThis->tlsConfigCmd);
+	if(cfgcmd == NULL) {
+		pThis->tlsConfigCmd = NULL;
+	} else {
+		if((pThis->tlsConfigCmd = strdup(cfgcmd)) == NULL)
+			ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+	}
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
 
 /* set the protocol version to be used by this session
  * rgerhards, 2008-03-25

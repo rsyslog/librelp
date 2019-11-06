@@ -60,6 +60,7 @@ struct relpSrv_s {
 	char *caCertFile;
 	char *ownCertFile;
 	char *privKey;
+	char *tlsConfigCmd;	/**< optional configuration command property for TLS libs **/
 	relpAuthMode_t authmode;
 	relpPermittedPeers_t permittedPeers;
 

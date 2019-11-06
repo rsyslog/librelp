@@ -49,6 +49,7 @@ struct relpClt_s {
 	char *caCertFile;
 	char *ownCertFile;
 	char *privKey;
+	char *tlsConfigCmd;	/**< optional configuration command property for TLS libs **/
 	relpPermittedPeers_t permittedPeers;
 	int protFamily;		/**< protocol family to connect over (IPv4, v6, ...) */
 	unsigned char *port;	/**< server port to connect to */
