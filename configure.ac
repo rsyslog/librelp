@@ -125,7 +125,7 @@ AC_CHECK_FUNCS([strerror_r strdup epoll_create epoll_create1])
 
 # enable TLS (may not be possible on platforms with too-old GnuTLS)
 AC_ARG_ENABLE(tls,
-        [AS_HELP_STRING([--enable-tls],[Enable TLS support @<:@default=no@:>@])],
+        [AS_HELP_STRING([--enable-tls],[Enable TLS support @<:@default=yes@:>@])],
         [case "${enableval}" in
          yes) enable_tls="yes" ;;
           no) enable_tls="no" ;;
