@@ -1,5 +1,11 @@
 ----------------------------------------------------------------------
 Version 1.5.0 - 2019-??-??
+- build system fix: invalid default in configure help text
+  closes https://github.com/rsyslog/librelp/issues/169
+- error message on invalid TLS library request added
+  This way an invalid TLS library (name) can be detected and the
+  error presented to the user. So far, invalid library names were
+  hard to find.
 ----------------------------------------------------------------------
 Version 1.4.0 - 2019-03-05
 NOTE TO PACKAGERS:
