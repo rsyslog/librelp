@@ -414,11 +414,11 @@ relpSrvRun(relpSrv_t *pThis)
 		}
 		relpTcpSetDHBits(pTcp, pThis->dhBits);
 		CHKRet(relpTcpSetGnuTLSPriString(pTcp, pThis->pristring));
+		CHKRet(relpTcpSetTlsConfigCmd(pTcp, pThis->tlsConfigCmd));
 		CHKRet(relpTcpSetAuthMode(pTcp, pThis->authmode));
 		CHKRet(relpTcpSetCACert(pTcp, pThis->caCertFile));
 		CHKRet(relpTcpSetOwnCert(pTcp, pThis->ownCertFile));
 		CHKRet(relpTcpSetPrivKey(pTcp, pThis->privKey));
-		CHKRet(relpTcpSetTlsConfigCmd(pTcp, pThis->tlsConfigCmd));
 		CHKRet(relpTcpSetPermittedPeers(pTcp, &(pThis->permittedPeers)));
 	}
 	CHKRet(relpTcpLstnInit(pTcp, (pThis->pLstnPort == NULL) ?

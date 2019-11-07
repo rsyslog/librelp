@@ -23,6 +23,7 @@ TLS_TESTS=  \
 	tls-basic-certvalid.sh \
 	tls-basic-fingerprint.sh \
 	tls-basic-wildcard.sh \
+	tls-basic-tlscommand.sh \
 	tls-receiver-abort.sh \
 	tls-missing-param-sender.sh \
 	tls-missing-param-receiver.sh

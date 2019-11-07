@@ -240,6 +240,7 @@ int main(int argc, char *argv[]) {
 	char *caCertFile = NULL;
 	char *myCertFile = NULL;
 	char *myPrivKeyFile = NULL;
+	char *tlsConfigCmd = NULL;
 	char *permittedPeer = NULL;
 	char *authMode = NULL;
 	const char *tlslib = NULL;
@@ -263,6 +264,7 @@ int main(int argc, char *argv[]) {
 		{"authmode", required_argument, 0, 'a'},
 		{"errorfile", required_argument, 0, 'e'},
 		{"tls-lib", required_argument, 0, 'l'},
+		{"tlsconfcmd", required_argument, 0, 'c'},
 		{"debugfile", required_argument, 0, DBGFILE},
 		{"num-messages", required_argument, 0, 'n'},
 		{"kill-on-msg", required_argument, 0, KILL_ON_MSG},
@@ -272,10 +274,13 @@ int main(int argc, char *argv[]) {
 		{0, 0, 0, 0}
 	};
 
-	while((c = getopt_long(argc, argv, "a:e:d:l:m:n:P:p:Tt:vx:y:z:", long_options, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "a:c:e:d:l:m:n:P:p:Tt:vx:y:z:", long_options, &option_index)) != -1) {
 		switch(c) {
 		case 'a':
 			authMode = optarg;
+			break;
+		case 'c':
+			tlsConfigCmd = optarg;
 			break;
 		case 'e':
 			if((errFile = fopen(optarg, "w")) == NULL) {
@@ -384,7 +389,13 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-
+	if(tlsConfigCmd != NULL) {
+		if(bEnableTLS == 0) {
+			fprintf(stderr, "send: tls config command were specified, but TLS was "
+			       "not enabled! To enable it use parameter \"-T\"\n");
+			goto done;
+		}
+	}
 
 	TRY(relpEngineConstruct(&pRelpEngine));
 	TRY(relpEngineSetDbgprint(pRelpEngine, verbose ? dbgprintf : NULL));
@@ -407,6 +418,7 @@ int main(int argc, char *argv[]) {
 
 	if(bEnableTLS) {
 		TRY(relpCltEnableTLS(pRelpClt));
+		TRY(relpCltSetTlsConfigCmd(pRelpClt, tlsConfigCmd));
 		if(authMode != NULL) {
 			TRY(relpCltSetAuthMode(pRelpClt, authMode));
 			TRY(relpCltSetCACert(pRelpClt, caCertFile));

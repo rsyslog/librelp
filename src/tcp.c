@@ -1096,7 +1096,6 @@ relpTcpSetTlsConfigCmd(relpTcp_t *const pThis, char *cfgcmd)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
-
 	free(pThis->tlsConfigCmd);
 	if(cfgcmd == NULL) {
 		pThis->tlsConfigCmd = NULL;
@@ -1567,22 +1566,23 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 
-static relpRetVal LIBRELP_ATTR_NONNULL()
+static relpRetVal
 relpTcpSetSslConfCmd_ossl(relpTcp_t *const pThis, char *tlsConfigCmd)
 {
 	ENTER_RELPFUNC;
 
 	/* Skip function if function is NULL tlsConfigCmd */
 	if (tlsConfigCmd == NULL) {
+		pThis->pEngine->dbgprint("relpTcpSetSslConfCmd_ossl: tlsConfigCmd is NULL\n");
 		LEAVE_RELPFUNC;
 	} else {
 		pThis->pEngine->dbgprint("relpTcpSetSslConfCmd_ossl: set to '%s'\n", tlsConfigCmd);
+		char errmsg[1424];
 #if OPENSSL_VERSION_NUMBER >= 0x10020000L
 		char *pCurrentPos;
 		char *pNextPos;
 		char *pszCmd;
 		char *pszValue;
-		char errmsg[1424];
 		int iConfErr;
 
 		/* Set working pointer */
@@ -1697,9 +1697,6 @@ relpTcpAcceptConnReqInitTLS_ossl(relpTcp_t *const pThis, relpSrv_t *const pSrv)
 
 	/*set Server state */
 	pThis->sslState = osslServer;
-
-	/* Set TLS Options if configured */
-	CHKRet(relpTcpSetSslConfCmd_ossl(pThis, pThis->tlsConfigCmd));
 
 	/* Create BIO from ptcp socket! */
 	client = BIO_new_socket(pThis->sock, BIO_CLOSE /*BIO_NOCLOSE*/);
@@ -1839,6 +1836,10 @@ relpTcpLstnInitTLS_ossl(relpTcp_t *const pThis)
 	if(!called_openssl_global_init) {
 		CHKRet(relpTcpInitTLS(pThis));
 	}
+
+	/* Set TLS Options if configured */
+	CHKRet(relpTcpSetSslConfCmd_ossl(pThis, pThis->tlsConfigCmd));
+
 	pThis->pEngine->dbgprint("relpTcpLstnInitTLS openssl init done \n");
 
 finalize_it:

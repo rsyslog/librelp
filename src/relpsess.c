@@ -876,10 +876,10 @@ relpSessConnect(relpSess_t *pThis, int protFamily, unsigned char *port, unsigned
 			CHKRet(relpTcpEnableTLSZip(pThis->pTcp));
 		}
 		CHKRet(relpTcpSetGnuTLSPriString(pThis->pTcp, pThis->pristring));
+		CHKRet(relpTcpSetTlsConfigCmd(pThis->pTcp, pThis->tlsConfigCmd));
 		CHKRet(relpTcpSetCACert(pThis->pTcp, pThis->caCertFile));
 		CHKRet(relpTcpSetOwnCert(pThis->pTcp, pThis->ownCertFile));
 		CHKRet(relpTcpSetPrivKey(pThis->pTcp, pThis->privKeyFile));
-		CHKRet(relpTcpSetTlsConfigCmd(pThis->pTcp, pThis->tlsConfigCmd));
 		CHKRet(relpTcpSetAuthMode(pThis->pTcp, pThis->authmode));
 		CHKRet(relpTcpSetPermittedPeers(pThis->pTcp, &pThis->permittedPeers));
 	}

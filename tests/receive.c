@@ -221,6 +221,7 @@ int main(int argc, char *argv[]) {
 	char *caCertFile = NULL;
 	char *myCertFile = NULL;
 	char *myPrivKeyFile = NULL;
+	char *tlsConfigCmd = NULL;
 	char *permittedPeer = NULL;
 	char *authMode = NULL;
 	int maxDataSize = 0;
@@ -243,12 +244,13 @@ int main(int argc, char *argv[]) {
 		{"outfile", required_argument, 0, 'O'},
 		{"append-outfile", no_argument, 0, 'A'},
 		{"tls-lib", required_argument, 0, 'l'},
+		{"tlsconfcmd", required_argument, 0, 'c'},
 		{"watchdog-timeout", required_argument, 0, 'W'},
 		{0, 0, 0, 0}
 	};
 
 
-	while((c = getopt_long(argc, argv, "a:Ae:F:l:m:o:O:P:p:TvW:x:y:z:",
+	while((c = getopt_long(argc, argv, "a:c:Ae:F:l:m:o:O:P:p:TvW:x:y:z:",
 		long_options, &option_index)) != -1) {
 		switch(c) {
 		case 'a':
@@ -256,6 +258,9 @@ int main(int argc, char *argv[]) {
 			break;
 		case 'A':
 			append_outfile = 1;
+			break;
+		case 'c':
+			tlsConfigCmd = optarg;
 			break;
 		case 'e':
 			if((errFile = fopen((char*) optarg, "w")) == NULL) {
@@ -361,6 +366,15 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
+	if(tlsConfigCmd != NULL) {
+		if(bEnableTLS == 0) {
+			fprintf(stderr, "receive: tls config command were specified, but TLS was "
+			       "not enabled! Will continue without TLS. To enable "
+			       "it use parameter \"-T\"\n");
+			goto done;
+		}
+	}
+
 	hdlr_enable(SIGTERM, terminate);
 	hdlr_enable(SIGUSR1, do_exit);
 	hdlr_enable(SIGALRM, watchdog_expired);
@@ -406,6 +420,7 @@ int main(int argc, char *argv[]) {
 
 	if(bEnableTLS) {
 		TRY(relpSrvEnableTLS2(pRelpSrv));
+		TRY(relpSrvSetTlsConfigCmd(pRelpSrv, tlsConfigCmd));
 		if(authMode != NULL) {
 			TRY(relpSrvSetAuthMode(pRelpSrv, authMode));
 			TRY(relpSrvSetCACert(pRelpSrv, caCertFile));
