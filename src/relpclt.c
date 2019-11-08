@@ -66,6 +66,7 @@ relpCltConstruct(relpClt_t **ppThis, relpEngine_t *pEngine)
 	pThis->caCertFile = NULL;
 	pThis->ownCertFile = NULL;
 	pThis->privKey = NULL;
+	pThis->tlsConfigCmd = NULL;
 	pThis->permittedPeers.nmemb = 0;
 
 	*ppThis = pThis;
@@ -95,6 +96,7 @@ relpCltDestruct(relpClt_t **ppThis)
 	free(pThis->caCertFile);
 	free(pThis->ownCertFile);
 	free(pThis->privKey);
+	free(pThis->tlsConfigCmd);
 	for(i = 0 ; i < pThis->permittedPeers.nmemb ; ++i)
 		free(pThis->permittedPeers.name[i]);
 
@@ -127,6 +129,7 @@ relpCltConnect(relpClt_t *pThis, int protFamily, unsigned char *port, unsigned c
 			CHKRet(relpSessEnableTLSZip(pThis->pSess));
 		}
 		CHKRet(relpSessSetGnuTLSPriString(pThis->pSess, pThis->pristring));
+		CHKRet(relpSessSetTlsConfigCmd(pThis->pSess, pThis->tlsConfigCmd));
 		CHKRet(relpSessSetCACert(pThis->pSess, pThis->caCertFile));
 		CHKRet(relpSessSetOwnCert(pThis->pSess, pThis->ownCertFile));
 		CHKRet(relpSessSetPrivKey(pThis->pSess, pThis->privKey));
@@ -335,6 +338,22 @@ relpCltSetPrivKey(relpClt_t *pThis, char *file)
 	}
 finalize_it:
 	LEAVE_RELPFUNC;
+}
+relpRetVal
+relpCltSetTlsConfigCmd(relpClt_t *pThis, char *cfgcmd)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Clt);
+	free(pThis->tlsConfigCmd);
+	if(cfgcmd == NULL) {
+		pThis->tlsConfigCmd = NULL;
+	} else {
+		if((pThis->tlsConfigCmd = strdup(cfgcmd)) == NULL)
+			ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+	}
+finalize_it:
+	LEAVE_RELPFUNC;
+
 }
 /* Enable TLS mode. */
 relpRetVal

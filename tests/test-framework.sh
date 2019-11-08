@@ -107,19 +107,34 @@ set +x; set +v
 # $1 is the value to check for
 # $2 (optinal) is the file to check
 check_output() {
+	if [ "$1" == "--check-only" ]; then
+		check_only="yes"
+		shift
+	else
+		check_only="no"
+	fi
+
 	EXPECTED="$1"
 	if [ "$2" == "" ] ; then
 		FILE_TO_CHECK="$OUTFILE"
 	else
 		FILE_TO_CHECK="$2"
 	fi
+
 	grep $3 "$EXPECTED" $FILE_TO_CHECK > /dev/null
 	if [ $? -ne 0 ]; then
+		if [ "$check_only" == "yes" ]; then
+			printf 'check_output did not yet succeed (check_only set)\n'
+			return 1
+		fi
 		printf "\nFAIL: expected message not found. Expected:\n"
 		printf "%s\n" "$EXPECTED"
 		printf "\n$FILE_TO_CHECK actually is:\n"
 		cat $FILE_TO_CHECK
 		exit 1
+	fi
+	if [ "$check_only" == "yes" ]; then
+		return 0
 	fi
 }
 

@@ -639,6 +639,7 @@ relpTcpConstruct(relpTcp_t **ppThis, relpEngine_t *const pEngine,
 	pThis->caCertFile = NULL;
 	pThis->ownCertFile = NULL;
 	pThis->privKeyFile = NULL;
+	pThis->tlsConfigCmd = NULL;
 	pThis->pUsr = NULL;
 	pThis->permittedPeers.nmemb = 0;
 	pThis->permittedPeers.peer = NULL;
@@ -769,6 +770,7 @@ relpTcpDestruct(relpTcp_t **ppThis)
 	free(pThis->caCertFile);
 	free(pThis->ownCertFile);
 	free(pThis->privKeyFile);
+	free(pThis->tlsConfigCmd);
 
 	/* done with de-init work, now free tcp object itself */
 	free(pThis);
@@ -1089,6 +1091,21 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 
+relpRetVal
+relpTcpSetTlsConfigCmd(relpTcp_t *const pThis, char *cfgcmd)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Tcp);
+	free(pThis->tlsConfigCmd);
+	if(cfgcmd == NULL) {
+		pThis->tlsConfigCmd = NULL;
+	} else {
+		if((pThis->tlsConfigCmd = strdup(cfgcmd)) == NULL)
+			ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+	}
+finalize_it:
+	LEAVE_RELPFUNC;
+}
 
 /* Enable TLS mode. */
 relpRetVal
@@ -1549,6 +1566,103 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 
+static relpRetVal
+relpTcpSetSslConfCmd_ossl(relpTcp_t *const pThis, char *tlsConfigCmd)
+{
+	ENTER_RELPFUNC;
+
+	/* Skip function if function is NULL tlsConfigCmd */
+	if (tlsConfigCmd == NULL) {
+		pThis->pEngine->dbgprint("relpTcpSetSslConfCmd_ossl: tlsConfigCmd is NULL\n");
+		LEAVE_RELPFUNC;
+	} else {
+		pThis->pEngine->dbgprint("relpTcpSetSslConfCmd_ossl: set to '%s'\n", tlsConfigCmd);
+		char errmsg[1424];
+#if OPENSSL_VERSION_NUMBER >= 0x10020000L
+		char *pCurrentPos;
+		char *pNextPos;
+		char *pszCmd;
+		char *pszValue;
+		int iConfErr;
+
+		/* Set working pointer */
+		pCurrentPos = tlsConfigCmd;
+		if (pCurrentPos != NULL && strlen(pCurrentPos) > 0) {
+			// Create CTX Config Helper
+			SSL_CONF_CTX *cctx;
+			cctx = SSL_CONF_CTX_new();
+			if (pThis->sslState == osslServer) {
+				SSL_CONF_CTX_set_flags(cctx, SSL_CONF_FLAG_SERVER);
+			} else {
+				SSL_CONF_CTX_set_flags(cctx, SSL_CONF_FLAG_CLIENT);
+			}
+			SSL_CONF_CTX_set_flags(cctx, SSL_CONF_FLAG_FILE);
+			SSL_CONF_CTX_set_flags(cctx, SSL_CONF_FLAG_SHOW_ERRORS);
+			SSL_CONF_CTX_set_ssl_ctx(cctx, ctx);
+
+			do
+			{
+				pNextPos = index(pCurrentPos, '=');
+				if (pNextPos != NULL) {
+					while (	*pCurrentPos != '\0' &&
+						(*pCurrentPos == ' ' || *pCurrentPos == '\t') )
+						pCurrentPos++;
+					pszCmd = strndup(pCurrentPos, pNextPos-pCurrentPos);
+					pCurrentPos = pNextPos+1;
+					pNextPos = index(pCurrentPos, '\n');
+					pszValue = (pNextPos == NULL ?
+							strdup(pCurrentPos) :
+							strndup(pCurrentPos, pNextPos - pCurrentPos));
+					pCurrentPos = (pNextPos == NULL ? NULL : pNextPos+1);
+
+					/* Add SSL Conf Command */
+					iConfErr = SSL_CONF_cmd(cctx, pszCmd, pszValue);
+					if (iConfErr > 0) {
+						pThis->pEngine->dbgprint("relpTcpSetSslConfCmd_ossl: "
+							"Successfully added Command '%s':'%s'\n",
+							pszCmd, pszValue);
+					}
+					else {
+						snprintf(errmsg, sizeof(errmsg),
+							"Failed to added Command: %s:'%s' "
+							"in relpTcpSetSslConfCmd_ossl with error '%d'",
+							pszCmd, pszValue, iConfErr);
+						callOnErr(pThis, errmsg, RELP_RET_ERR_TLS);
+					}
+
+					free(pszCmd);
+					free(pszValue);
+				} else {
+					/* Abort further parsing */
+					pCurrentPos = NULL;
+				}
+			}
+			while (pCurrentPos != NULL);
+
+			/* Finalize SSL Conf */
+			iConfErr = SSL_CONF_CTX_finish(cctx);
+			if (!iConfErr) {
+				snprintf(errmsg, sizeof(errmsg),
+					"Failed setting openssl command parameters: %s"
+					"Open ssl error info may follow in next messages",
+					tlsConfigCmd);
+				callOnErr(pThis, errmsg, RELP_RET_ERR_TLS);
+				relpTcpLastSSLErrorMsg(0, pThis, "relpTcpSetSslConfCmd_ossl");
+			}
+		}
+#else
+		snprintf(errmsg, sizeof(errmsg),
+			"Warning: OpenSSL Version too old to set tlsConfigCmd ('%s')"
+			"by SSL_CONF_cmd API.",
+			tlsConfigCmd);
+		callOnErr(pThis, errmsg, RELP_RET_ERR_TLS);
+#endif
+	}
+
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
 static relpRetVal LIBRELP_ATTR_NONNULL()
 relpTcpAcceptConnReqInitTLS_ossl(relpTcp_t *const pThis, relpSrv_t *const pSrv)
 {
@@ -1581,6 +1695,9 @@ relpTcpAcceptConnReqInitTLS_ossl(relpTcp_t *const pThis, relpSrv_t *const pSrv)
 		SSL_set_verify(pThis->ssl, SSL_VERIFY_NONE, verify_callback);
 	}
 
+	/*set Server state */
+	pThis->sslState = osslServer;
+
 	/* Create BIO from ptcp socket! */
 	client = BIO_new_socket(pThis->sock, BIO_CLOSE /*BIO_NOCLOSE*/);
 	pThis->pEngine->dbgprint("relpTcpAcceptConnReqInitTLS_ossl: Init client BIO[%p] done\n", (void *)client);
@@ -1596,7 +1713,6 @@ BIO_set_nbio( client, 1 );
 	SSL_set_accept_state(pThis->ssl); /* sets ssl to work in server mode. */
 
 	pThis->bTLSActive = 1;
-	pThis->sslState = osslServer; /*set Server state */
 
 	/* We now do the handshake */
 	CHKRet(relpTcpRtryHandshake(pThis));
@@ -1645,6 +1761,12 @@ relpTcpConnectTLSInit_ossl(relpTcp_t *const pThis)
 		CHKRet(relpTcpInitTLS(pThis));
 	}
 
+	/*set client state */
+	pThis->sslState = osslClient;
+
+	/* Set TLS Options if configured */
+	CHKRet(relpTcpSetSslConfCmd_ossl(pThis, pThis->tlsConfigCmd));
+
 	/* Create BIO from ptcp socket! */
 	conn = BIO_new_socket(pThis->sock, BIO_CLOSE /*BIO_NOCLOSE*/);
 	pThis->pEngine->dbgprint("relpTcpConnectTLSInit: Init conn BIO[%p] done\n", (void *)conn);
@@ -1660,7 +1782,6 @@ BIO_set_nbio( conn, 1 );
 	pThis->pEngine->dbgprint("relpTcpConnectTLSInit: TLS Mode\n");
 	if(!(pThis->ssl = SSL_new(ctx))) {
 		relpTcpLastSSLErrorMsg(0, pThis, "relpTcpConnectTLSInit");
-/*		errmsg.LogError(0, RS_RET_NO_ERRCODE, "Error creating an SSL context"); */
 		ABORT_FINALIZE(RELP_RET_IO_ERR);
 	}
 
@@ -1676,7 +1797,6 @@ BIO_set_nbio( conn, 1 );
 
 	SSL_set_bio(pThis->ssl, conn, conn);
 	SSL_set_connect_state(pThis->ssl); /*sets ssl to work in client mode.*/
-	pThis->sslState = osslClient; /*set client state */
 
 	/* Perform the TLS handshake */
 	pThis->pEngine->dbgprint("relpTcpConnectTLSInit: try handshake for [%p]\n", (void *)pThis);
@@ -1716,6 +1836,10 @@ relpTcpLstnInitTLS_ossl(relpTcp_t *const pThis)
 	if(!called_openssl_global_init) {
 		CHKRet(relpTcpInitTLS(pThis));
 	}
+
+	/* Set TLS Options if configured */
+	CHKRet(relpTcpSetSslConfCmd_ossl(pThis, pThis->tlsConfigCmd));
+
 	pThis->pEngine->dbgprint("relpTcpLstnInitTLS openssl init done \n");
 
 finalize_it:
