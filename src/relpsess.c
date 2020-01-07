@@ -293,6 +293,11 @@ relpSessRcvData(relpSess_t *pThis)
 
 		/* we have regular data, which we now can process */
 		for(i = 0 ; i < lenBuf ; ++i) {
+			if(relpEngineShouldStop(pThis->pEngine)) {
+				pThis->pEngine->dbgprint("imrelp is instructed to shut down, thus "
+					"breaking session %p\n", (void*) pThis);
+				ABORT_FINALIZE(RELP_RET_SESSION_BROKEN);
+			}
 			CHKRet(relpFrameProcessOctetRcvd(&pThis->pCurrRcvFrame, rcvBuf[i], pThis));
 		}
 	}
