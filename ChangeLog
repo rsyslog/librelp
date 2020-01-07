@@ -1,5 +1,27 @@
 ----------------------------------------------------------------------
 Version 1.5.0 - 2019-??-??
+- bugfix: too late termination of relp Engine on shutdown
+  When librelp is instructed to shutdown, it processes messages
+  still present inside its receive buffers. It only terminates
+  when it needs to wait for new data to arrive.
+  Depending on RELP and TCP window size and message length,
+  this may cause many messages to be processed while in shutdown.
+  Even with default settings, up to 128 messages may be taken off
+  the wire and be processed.
+  This is a problem regarding the shutdown timing of a librelp
+  user (e.g. rsyslog). It may take unexpectedly long to shutdown
+  the RELP component and as such timeout may occur in the caller
+  code. This is especially the case if the caller does lengthy
+  processing when a RELP message is received. Note: It is
+  perfectly fine for a caller to do this. The problem is that
+  librelp continues to provide new data for a relatively long
+  and unexpected period.
+  This fix ensure that the relp engine shuts down much quicker
+  when shutdown is requested. It now also checks the shutdown
+  request while processing already received buffer data.
+  This problem was detected when working on
+  see also https://github.com/rsyslog/rsyslog/issues/3941
+  closes https://github.com/rsyslog/librelp/issues/175
 - build system fix: invalid default in configure help text
   closes https://github.com/rsyslog/librelp/issues/169
 - error message on invalid TLS library request added
