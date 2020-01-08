@@ -3207,8 +3207,15 @@ relpTcpSend(relpTcp_t *const pThis, relpOctet_t *const pBuf, ssize_t *const pLen
 					/* this is fine, just retry... */
 					written = 0;
 					break;
-				default:
+				default: {
+					char msgbuf[900];
+					char errStr[800];
+					_relpEngine_strerror_r(errno, errStr, sizeof(errStr));
+					snprintf(msgbuf, sizeof(msgbuf), "error sending relp: %s", errStr);
+					msgbuf[sizeof(msgbuf)-1] = '\0';
+					callOnErr(pThis, msgbuf, RELP_RET_IO_ERR);
 					ABORT_FINALIZE(RELP_RET_IO_ERR);
+					}
 					break;
 			}
 		}
