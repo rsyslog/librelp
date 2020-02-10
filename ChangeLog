@@ -1,3 +1,5 @@
+----------------------------------------------------------------------
+Version 1.6.0 - 2020-??-??
 - tcp: Missing pUsr Copy to relpTcp Pointer fixed in relpTcpAcceptConnReq
   The userpointer was not copied into the relpTcp object.
   Also fixed core dump crash in receive / send helpers when userpointer
