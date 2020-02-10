@@ -158,14 +158,18 @@ static void
 onErr(void *pUsr, char *objinfo, char* errmesg, LIBRELP_ATTR_UNUSED relpRetVal errcode)
 {
 	struct usrdata *pThis = (struct usrdata*) pUsr;
-	if(pUsr != userdata) {
-		fprintf(stderr, "receive: pUsr NOT pointing to usrdata!\n");
+	if(pUsr != NULL) {
+		if(pUsr != userdata) {
+			fprintf(stderr, "receive: pUsr %p NOT pointing to userdata %p!\n", pUsr, (void*)userdata);
+		}
+		if(pThis->magic != USR_MAGIC) {
+			fprintf(stderr, "receive: pUsr magic incorrect in onErr, magic %8.8x "
+				"pUsr %p\n", pThis->magic, (void*) pThis);
+		}
+		fprintf(stderr, "%s: error '%s', object '%s'\n", pThis->progname, errmesg, objinfo);
+	} else {
+		fprintf(stderr, "receive: [pUsr==NULL] error '%s', object '%s'\n", errmesg, objinfo);
 	}
-	if(pThis->magic != USR_MAGIC) {
-		fprintf(stderr, "receive: pUsr magic incorrect in onErr, magic %8.8x "
-			"pUsr %p\n", pThis->magic, (void*) pThis);
-	}
-	fprintf(stderr, "%s: error '%s', object '%s'\n", pThis->progname, errmesg, objinfo);
 	if(errFile != NULL) {
 		fprintf(errFile, "receive: error '%s', object '%s'\n", errmesg, objinfo);
 	}
@@ -406,11 +410,13 @@ int main(int argc, char *argv[]) {
 	TRY(relpEngineSetDnsLookupMode(pRelpEngine, 0)); /* 0=disable */
 
 	TRY(relpEngineListnerConstruct(pRelpEngine, &pRelpSrv));
-	TRY(relpSrvSetLstnPort(pRelpSrv, port));
+	// Create userdata pointer as soon as possible for error callbacks
 	userdata = calloc(1, sizeof(struct usrdata));
 	userdata->magic = USR_MAGIC;
 	userdata->progname = strdup("receive");
 	relpSrvSetUsrPtr(pRelpSrv, userdata);
+
+	TRY(relpSrvSetLstnPort(pRelpSrv, port));
 	if(maxDataSize != 0) {
 		TRY(relpSrvSetMaxDataSize(pRelpSrv, maxDataSize));
 	}

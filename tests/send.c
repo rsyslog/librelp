@@ -92,14 +92,19 @@ static void
 onErr(void *pUsr, char *objinfo, char* errmesg, LIBRELP_ATTR_UNUSED relpRetVal errcode)
 {
 	struct usrdata *pThis = (struct usrdata*) pUsr;
-	if(pUsr != userdata) {
-		fprintf(stderr, "send: pUsr NOT pointing to usrdata!\n");
+	if(pUsr != NULL) {
+		if(pUsr != userdata) {
+			fprintf(stderr, "send: pUsr %p NOT pointing to userdata %p!\n", pUsr, (void*)userdata);
+		}
+		if(pThis->magic != USR_MAGIC) {
+			fprintf(stderr, "send: pUsr magic incorrect in onErr, magic %8.8x "
+				"pUsr %p\n", pThis->magic, (void*) pThis);
+		}
+		printf("%s: error '%s', object '%s'\n", pThis->progname, errmesg, objinfo);
+	} else {
+		fprintf(stderr, "send: [pUsr==NULL] error '%s', object '%s'\n", errmesg, objinfo);
 	}
-	if(pThis->magic != USR_MAGIC) {
-		fprintf(stderr, "send: pUsr magic incorrect in onErr, magic %8.8x "
-			"pUsr %p\n", pThis->magic, (void*) pThis);
-	}
-	printf("%s: error '%s', object '%s'\n", pThis->progname, errmesg, objinfo);
+
 	if(errFile != NULL) {
 		fprintf(errFile, "send: error '%s', object '%s'\n", errmesg, objinfo);
 	}
@@ -410,12 +415,13 @@ int main(int argc, char *argv[]) {
 
 	TRY(relpEngineSetEnableCmd(pRelpEngine, (unsigned char*)"syslog", eRelpCmdState_Required));
 	TRY(relpEngineCltConstruct(pRelpEngine, &pRelpClt));
-	TRY(relpCltSetTimeout(pRelpClt, timeout));
+	// Create userdata pointer as soon as possible for error callbacks
 	userdata = calloc(1, sizeof(struct usrdata));
 	userdata->magic = USR_MAGIC;
 	userdata->progname = strdup("send");
 	TRY(relpCltSetUsrPtr(pRelpClt, userdata));
 
+	TRY(relpCltSetTimeout(pRelpClt, timeout));
 	if(bEnableTLS) {
 		TRY(relpCltEnableTLS(pRelpClt));
 		TRY(relpCltSetTlsConfigCmd(pRelpClt, tlsConfigCmd));
