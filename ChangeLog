@@ -6,7 +6,7 @@
   this already happens with TLS, but not with plain tcp. Error messages
   are a useful troubleshooting tool.
 ----------------------------------------------------------------------
-Version 1.5.0 - 2019-??-??
+Version 1.5.0 - 2020-01-14
 - bugfix: too late termination of relp Engine on shutdown
   When librelp is instructed to shutdown, it processes messages
   still present inside its receive buffers. It only terminates
