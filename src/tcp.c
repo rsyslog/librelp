@@ -2005,6 +2005,7 @@ relpTcpAcceptConnReq(relpTcp_t **ppThis, const int sock, relpSrv_t *const pSrv)
 
 	/* construct our object so that we can use it... */
 	CHKRet(relpTcpConstruct(&pThis, pEngine, RELP_SRV_CONN, pSrv));
+	pThis->pUsr = pSrv->pUsr;
 
 	if(pSrv->bKeepAlive)
 		EnableKeepAlive(pThis, pSrv, iNewSock);
