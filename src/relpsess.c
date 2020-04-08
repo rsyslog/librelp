@@ -329,10 +329,15 @@ finalize_it:
 			callOnErr(pThis, "io error, session broken", RELP_RET_SESSION_BROKEN);
 			pThis->pEngine->dbgprint("relp session %p is broken, io error\n", (void*)pThis);
 			pThis->sessState = eRelpSessState_BROKEN;
-			}
+		} else {
+			/*	alorbach, 2020-04-08:
+			*		Only free sendbuf if error is not RELP_RET_IO_ERR!
+			*		otherwise the buffer is double freed in relpSendbufDestruct() (sendbuf.c)
+			*/
+			if(pSendbuf != NULL)
+				relpSendbufDestruct(&pSendbuf);
+		}
 
-		if(pSendbuf != NULL)
-			relpSendbufDestruct(&pSendbuf);
 	}
 
 	LEAVE_RELPFUNC;
