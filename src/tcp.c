@@ -1153,20 +1153,29 @@ relpTcpTLSSetPrio_gtls(relpTcp_t *const pThis)
 	char pristringBuf[4096];
 	char *pristring;
 	ENTER_RELPFUNC;
-	/* Compute priority string (in simple cases where the user does not care...) */
+	/* Set default priority string (in simple cases where the user does not care...) */
 	if(pThis->pristring == NULL) {
-		if(pThis->bEnableTLSZip) {
-			strncpy(pristringBuf, "NORMAL:+ANON-DH:+COMP-ALL", sizeof(pristringBuf));
-		} else {
-			strncpy(pristringBuf, "NORMAL:+ANON-DH:+COMP-NULL", sizeof(pristringBuf));
+		if (pThis->authmode == eRelpAuthMode_None) {
+			if(pThis->bEnableTLSZip) {
+				strncpy(pristringBuf, "NORMAL:+ANON-DH:+COMP-ALL", sizeof(pristringBuf));
+			} else {
+				strncpy(pristringBuf, "NORMAL:+ANON-DH:+COMP-NULL", sizeof(pristringBuf));
 			}
-		pristringBuf[sizeof(pristringBuf)-1] = '\0';
-		pristring = pristringBuf;
+			pristringBuf[sizeof(pristringBuf)-1] = '\0';
+			pristring = pristringBuf;
+			r = gnutls_priority_set_direct(pThis->session, pristring, NULL);
+		} else {
+			r = gnutls_set_default_priority(pThis->session);
+			strncpy(pristringBuf, "to recommended system default", sizeof(pristringBuf));
+			pristringBuf[sizeof(pristringBuf)-1] = '\0';
+			pristring = pristringBuf;
+		}
+
 	} else {
 		pristring = pThis->pristring;
+		r = gnutls_priority_set_direct(pThis->session, pristring, NULL);
 	}
 
-	r = gnutls_priority_set_direct(pThis->session, pristring, NULL);
 	if(r == GNUTLS_E_INVALID_REQUEST) {
 		ABORT_FINALIZE(RELP_RET_INVLD_TLS_PRIO);
 	} else if(r != GNUTLS_E_SUCCESS) {
