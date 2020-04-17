@@ -1,5 +1,25 @@
 ----------------------------------------------------------------------
-Version 1.6.0 - 2020-??-??
+Version 1.6.0 - 2020-04-17
+- replsess: fix double free of sendbuf in some cases.
+  In iRet handler of relpSessSendResponse, the sendbuf
+  was freed if iRet returned a failure.
+  However if error RELP_RET_IO_ERR happened in relpSendqAddBuf,
+  sendbuf was already assigned to relpSendqe_t. As a result
+  sendbuf was double freed in relpSendqDestruct.
+  see also
+  https://github.com/rsyslog/rsyslog/issues/4184
+  https://github.com/rsyslog/rsyslog/issues/4005
+  closes https://github.com/rsyslog/librelp/issues/183
+- improve support for libressl
+  LibreSSL has no support for @SECLEVEL and SSL_CONF_CTX_set_flags().
+  LibreSSL is now detected and some functionality disabled if it is
+  used.
+  Thanks to Remi Locherer for the patch.
+- Modified GnuTLS priority according to standard crypto-policy guideline
+  Edited TLS priority string default to conform to system-wide default
+  and align librelp behavior with other crypto-utilizing packages.
+  Note: this may be different from what the openSSL driver does.
+  Thanks to Jiri Vymazal for the patch.
 - tcp: Missing pUsr Copy to relpTcp Pointer fixed in relpTcpAcceptConnReq
   The userpointer was not copied into the relpTcp object.
   Also fixed core dump crash in receive / send helpers when userpointer
