@@ -1,5 +1,9 @@
 ----------------------------------------------------------------------
-Version 1.6.0 - 2020-04-17
+Version 1.6.0 - 2020-04-21
+- fix namespace pollution - some non-API functions were exported
+  While fixing this, also some internal inconsistencies in function
+  visibility were fixed as well.
+  closes https://github.com/rsyslog/librelp/issues/179
 - replsess: fix double free of sendbuf in some cases.
   In iRet handler of relpSessSendResponse, the sendbuf
   was freed if iRet returned a failure.
