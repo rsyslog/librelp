@@ -38,7 +38,6 @@
 #include "sendq.h"
 #include "dbllinklist.h"
 
-
 /* handling for the sendq entries  */
 
 /** Construct a RELP sendq instance
@@ -141,6 +140,31 @@ relpSendqDestruct(relpSendq_t **ppThis)
 }
 
 
+/* remove the sendbuffer at the top of the queue. The removed buffer is destructed.
+ * This must only be called if there is at least one send buffer inside the queue.
+ * rgerhards, 2008-03-17
+ */
+static relpRetVal
+relpSendqDelFirstBuf(relpSendq_t *pThis)
+{
+	relpSendqe_t *pEntry;
+
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Sendq);
+	RELPOBJ_assert(pThis->pRoot, Sendqe);
+
+	pthread_mutex_lock(&pThis->mut);
+	pEntry = pThis->pRoot;
+	DLL_Del(pEntry, pThis->pRoot, pThis->pLast);
+	pthread_mutex_unlock(&pThis->mut);
+
+	CHKRet(relpSendqeDestruct(&pEntry));
+
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+
 /* add a sendbuffer to the queue
  * the send buffer object is handed over, caller must no longer access it after
  * it has been passed into here.
@@ -149,7 +173,7 @@ relpSendqDestruct(relpSendq_t **ppThis)
 relpRetVal
 relpSendqAddBuf(relpSendq_t *pThis, relpSendbuf_t *pBuf, relpTcp_t *pTcp)
 {
-	relpSendqe_t *pEntry;
+	relpSendqe_t *pEntry = NULL;
 
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sendq);
@@ -172,31 +196,15 @@ relpSendqAddBuf(relpSendq_t *pThis, relpSendbuf_t *pBuf, relpTcp_t *pTcp)
 		iRet = RELP_RET_OK; /* this code is well ok! */
 
 finalize_it:
-	LEAVE_RELPFUNC;
-}
+	if(iRet != RELP_RET_OK) {
+		/* Free memory if pEntry was initialized in relpSendqeConstruct using
+		*	relpSendqDelFirstBuf()
+		*/
+		if (pEntry != NULL) {
+			relpSendqDelFirstBuf(pThis);
+		}
+	}
 
-
-/* remove the sendbuffer at the top of the queue. The removed buffer is destructed.
- * This must only be called if there is at least one send buffer inside the queue.
- * rgerhards, 2008-03-17
- */
-relpRetVal
-relpSendqDelFirstBuf(relpSendq_t *pThis)
-{
-	relpSendqe_t *pEntry;
-
-	ENTER_RELPFUNC;
-	RELPOBJ_assert(pThis, Sendq);
-	RELPOBJ_assert(pThis->pRoot, Sendqe);
-
-	pthread_mutex_lock(&pThis->mut);
-	pEntry = pThis->pRoot;
-	DLL_Del(pEntry, pThis->pRoot, pThis->pLast);
-	pthread_mutex_unlock(&pThis->mut);
-
-	CHKRet(relpSendqeDestruct(&pEntry));
-
-finalize_it:
 	LEAVE_RELPFUNC;
 }
 
