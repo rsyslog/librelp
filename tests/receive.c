@@ -96,7 +96,7 @@ watchdog_expired(LIBRELP_ATTR_UNUSED const int sig)
 void LIBRELP_ATTR_NORETURN
 do_signal(const int sig)
 {
-	fprintf(stderr, "send: UNEXPECTED SIGNAL %d%s- terminating\n", sig,
+	fprintf(stderr, "receive: UNEXPECTED SIGNAL %d%s- terminating\n", sig,
 		sig == SIGPIPE ? " [SIGPIPE]" : "");
 	fflush(stderr);
 	exit(100);
@@ -197,6 +197,7 @@ onAuthErr(LIBRELP_ATTR_UNUSED void *pUsr, char *authinfo,
 static void
 exit_hdlr(void)
 {
+	fprintf(stderr, "receive: EXIT HDLR\n");
 	if(userdata != NULL) {
 		free(userdata->progname);
 		free(userdata);
@@ -233,6 +234,7 @@ int main(int argc, char *argv[]) {
 	int ret = 0;
 	int append_outfile = 0;
 	int watchdog_timeout = 60; /* one seconds looks like a good default */
+	int no_exit_on_err = 0;
 	const char *tlslib = NULL;
 	const char* outfile_name = NULL;
 
@@ -250,6 +252,7 @@ int main(int argc, char *argv[]) {
 		{"tls-lib", required_argument, 0, 'l'},
 		{"tlsconfcmd", required_argument, 0, 'c'},
 		{"watchdog-timeout", required_argument, 0, 'W'},
+		{"no-exit-on-error", no_argument, 0, 'N'},
 		{0, 0, 0, 0}
 	};
 
@@ -332,6 +335,9 @@ int main(int argc, char *argv[]) {
 		case 'z':
 			myPrivKeyFile = optarg;
 			break;
+		case 'N':
+			no_exit_on_err = 1;
+			break;
 		default:
 			print_usage();
 			return -1;
@@ -379,10 +385,14 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	hdlr_enable(SIGTERM, terminate);
+	if (no_exit_on_err == 0) {
+		hdlr_enable(SIGPIPE, do_signal);
+	} else {
+		signal(SIGPIPE, SIG_IGN);
+	}
 	hdlr_enable(SIGUSR1, do_exit);
+	hdlr_enable(SIGTERM, terminate);
 	hdlr_enable(SIGALRM, watchdog_expired);
-	hdlr_enable(SIGPIPE, do_signal);
 
 	if(outfile_name != NULL) {
 		if((outFile = fopen(outfile_name, append_outfile ? "a" : "w")) == NULL) {

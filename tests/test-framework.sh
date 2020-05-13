@@ -88,6 +88,7 @@ stop_receiver() {
 	fi
 	kill $RECEIVE_PID &> /dev/null
 	wait $RECEIVE_PID
+	export RECEIVE_EXIT=$?
 	printf 'receiver %d stopped\n' $RECEIVE_PID
 }
 

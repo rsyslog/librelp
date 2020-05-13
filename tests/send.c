@@ -242,6 +242,7 @@ int main(int argc, char *argv[]) {
 	int verbose = 0;
 	int protFamily = 2; /* IPv4=2, IPv6=10 */
 	int bEnableTLS = 0;
+	int no_exit_on_err = 0;
 	char *caCertFile = NULL;
 	char *myCertFile = NULL;
 	char *myPrivKeyFile = NULL;
@@ -276,6 +277,7 @@ int main(int argc, char *argv[]) {
 		{"kill-signal", required_argument, 0, KILL_SIGNAL},
 		{"kill-pid", required_argument, 0, KILL_PID},
 		{"connect-retries", required_argument, 0, CONNECT_RETRIES},
+		{"no-exit-on-error", no_argument, 0, 'N'},
 		{0, 0, 0, 0}
 	};
 
@@ -345,6 +347,9 @@ int main(int argc, char *argv[]) {
 		case 'z':
 			myPrivKeyFile = optarg;
 			break;
+		case 'N':
+			no_exit_on_err = 1;
+			break;
 		case KILL_ON_MSG:
 			kill_on_msg = atoi(optarg);
 			break;
@@ -364,7 +369,11 @@ int main(int argc, char *argv[]) {
 	}
 
 	atexit(exit_hdlr);
-	hdlr_enable(SIGPIPE, do_signal);
+	if (no_exit_on_err == 0) {
+		hdlr_enable(SIGPIPE, do_signal);
+	} else {
+		signal(SIGPIPE, SIG_IGN);
+	}
 
 	if(msgDataLen != 0 && msgDataLen < lenMsg) {
 		fprintf(stderr, "send: message is larger than configured message size!\n");

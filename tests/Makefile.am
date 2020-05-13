@@ -13,7 +13,9 @@ chkseq_SOURCES=chkseq.c
 have_tlslib_SOURCES=have_tlslib.c
 
 VALGRIND_TESTS= \
-	duplicate-receiver-vg.sh
+	duplicate-receiver-vg.sh \
+	basic-sessionbreak-vg.sh
+
 
 # TLS tests that work both with gnutls and openssl
 TLS_TESTS=  \
