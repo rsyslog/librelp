@@ -235,6 +235,7 @@ int main(int argc, char *argv[]) {
 	int append_outfile = 0;
 	int watchdog_timeout = 60; /* one seconds looks like a good default */
 	int no_exit_on_err = 0;
+	int i = 0;
 	const char *tlslib = NULL;
 	const char* outfile_name = NULL;
 
@@ -471,7 +472,6 @@ int main(int argc, char *argv[]) {
 		fclose(fp);
 	}
 
-	int i = 0;
 	while(relpEngineRun(pRelpEngine) != RELP_RET_OK) {
 		fprintf(stderr, "receive: error starting relp engine, try %d\n", i);
 		++i;
