@@ -3070,7 +3070,6 @@ relpTcpRcv(relpTcp_t *const pThis, relpOctet_t *const pRcvBuf, ssize_t *const pL
 			*pLenBuf, pThis->sock);
 		if(lenRcvd == 0) {
 			pThis->pEngine->dbgprint((char*)"relpTcpRcv: invalidating closed socket\n");
-			pThis->sock = -1; /* socket is closed, no longer valid! */
 		}
 	}
 
