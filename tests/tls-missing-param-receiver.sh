@@ -6,7 +6,7 @@ echo 'Start Receiver...'
 function actual_test() {
 	# NOT USING startup_receiver!
 	./receive --tls-lib $TEST_TLS_LIB -p $TESTPORT -T -a "name" \
-		-y ${srcdir}/tls-certs/cert.pem -z ${srcdir}/tls-certs/key.pem -P "rsyslog" \
+		-y ${srcdir}/tls-certs/cert.pem -P "rsyslog" \
 		2> $OUTFILE
 
 	check_output "receive:.*parameter missing; certificates and permittedPeer required"
