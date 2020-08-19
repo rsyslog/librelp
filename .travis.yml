@@ -30,37 +30,10 @@ install:
   - sudo apt-get install -qq --force-yes libestr-dev libfastjson-dev liblogging-stdlog-dev
 
 script:
-  - devtools/travis-run-compile-tests.sh
+  #- devtools/travis-run-compile-tests.sh
   - export CFLAGS="-g"
-#  - export CFLAGS="-g -fsanitize=address"
   - autoreconf -fvi
   - ./configure --enable-tls
   - make -j2
   - make -j2 check
   - cat tests/test-suite.log
-#  - make distcheck V=0
-  # and now with openssl
-# temporarily disabled as one tests shows an error
-#  - make clean
-#  - ./configure --enable-tls-openssl
-#  - make -j2
-#  - make check
-#  - cat tests/test-suite.log
-
-#  - make distcheck V=0
-
-#  - cat /home/travis/build/rsyslog/librelp/librelp-1.2.16.master/_build/tests/test-suite.log
-#  - sudo make install
-# now we use the rsyslog testbench for testing. This also means we need to
-# build a basic rsyslog instance
-#  - mkdir rsyslog-temp
-#  - cd rsyslog-temp
-#  - git clone https://github.com/rsyslog/rsyslog.git
-#  - cd rsyslog
-#  - autoreconf -fvi
-#  - ./configure --enable-testbench --enable-relp --enable-omrelp-default-port=13515 --enable-imdiag --enable-omstdout
-#  - make
-#  - cd tests
-#  - export LD_LIBRARY_PATH=/usr/local/lib
-#  - make check TESTS="imrelp-basic.sh  imrelp-manyconn.sh  sndrcv_relp.sh sndrcv_relp_dflt_pt.sh sndrcv_relp_tls.sh"
-#  - cat test-suite.log

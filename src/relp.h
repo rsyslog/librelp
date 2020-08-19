@@ -230,7 +230,7 @@ static inline int relpEngineShouldStop(relpEngine_t *pThis) {
 /* prototypes needed by library itself (rest is in librelp.h) */
 relpRetVal relpEngineDispatchFrame(relpEngine_t *pThis, relpSess_t *pSess, relpFrame_t *pFrame);
 void LIBRELP_ATTR_FORMAT(printf, 4, 5) relpEngineCallOnGenericErr(relpEngine_t *pThis,
-	char *eobj, relpRetVal ecode, char *fmt, ...);
+	const char *eobj, relpRetVal ecode, const char *fmt, ...);
 const char * _relpEngine_strerror_r(const int errnum, char *buf, const size_t buflen);
 
 #endif /* #ifndef RELP_H_INCLUDED */

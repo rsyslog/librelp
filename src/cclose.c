@@ -41,7 +41,7 @@
  */
 BEGINcommand(S, Close)
 	ENTER_RELPFUNC;
-	pSess->pEngine->dbgprint("in close command handler\n");
+	pSess->pEngine->dbgprint((char*)"in close command handler\n");
 
 	/* and send it... */
 	CHKRet(relpSessSendResponse(pSess, pFrame->txnr, (unsigned char*) "", 0));

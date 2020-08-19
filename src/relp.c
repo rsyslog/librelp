@@ -52,7 +52,7 @@
 /* ------------------------------ some internal functions ------------------------------ */
 
 void LIBRELP_ATTR_FORMAT(printf, 4, 5)
-relpEngineCallOnGenericErr(relpEngine_t *pThis, char *eobj, relpRetVal ecode, char *fmt, ...)
+relpEngineCallOnGenericErr(relpEngine_t *pThis, const char *eobj, relpRetVal ecode, const char *fmt, ...)
 {
 	va_list ap;
 	char emsg[1024];
@@ -62,10 +62,10 @@ relpEngineCallOnGenericErr(relpEngine_t *pThis, char *eobj, relpRetVal ecode, ch
 	emsg[sizeof(emsg)/sizeof(char) - 1] = '\0'; /* just to be on the safe side... */
 	va_end(ap);
 
-	pThis->dbgprint("librelp: generic error: ecode %d, eobj %s,"
+	pThis->dbgprint((char*)"librelp: generic error: ecode %d, eobj %s,"
 		"emsg '%s'\n", ecode, eobj, emsg);
 	if(pThis->onGenericErr != NULL) {
-		pThis->onGenericErr(eobj, emsg, ecode);
+		pThis->onGenericErr((char*)eobj, emsg, ecode);
 	}
 }
 
@@ -105,7 +105,7 @@ addToEpollSet(relpEngine_t *pThis, epolld_type_t typ, void *ptr, int sock, epoll
 	epd->ev.events = EPOLLIN;
 	epd->ev.data.ptr = (void*) epd;
 
-	pThis->dbgprint("librelp: add socket %d to epoll set (ptr %p)\n", sock, ptr);
+	pThis->dbgprint((char*)"librelp: add socket %d to epoll set (ptr %p)\n", sock, ptr);
 	if(epoll_ctl(pThis->efd, EPOLL_CTL_ADD, sock, &epd->ev) != 0) {
 		char errStr[1024];
 		int eno = errno;
@@ -130,7 +130,7 @@ static void
 delFromEpollSet(relpEngine_t *pThis, epolld_t *epd)
 {
 	int r;
-	pThis->dbgprint("librelp: delete sock %d from epoll set\n", epd->sock);
+	pThis->dbgprint((char*)"librelp: delete sock %d from epoll set\n", epd->sock);
 	if((r = epoll_ctl(pThis->efd, EPOLL_CTL_DEL, epd->sock, &epd->ev)) != 0) {
 		char errStr[1024];
 		int eno = errno;
@@ -343,7 +343,7 @@ relpEngineSetTLSLib(relpEngine_t *const pThis, NOTLS_UNUSED const int tls_lib)
 		ABORT_FINALIZE(RELP_RET_PARAM_ERROR);
 	}
 
-	pThis->dbgprint("relpEngineSetTLSLib, req lib is %d\n", tls_lib);
+	pThis->dbgprint((char*)"relpEngineSetTLSLib, req lib is %d\n", tls_lib);
 	#if defined(WITH_TLS)
 		if(tls_lib == RELP_USE_GNUTLS) {
 			#if defined(ENABLE_TLS)
@@ -361,12 +361,12 @@ relpEngineSetTLSLib(relpEngine_t *const pThis, NOTLS_UNUSED const int tls_lib)
 			ABORT_FINALIZE(RELP_RET_PARAM_ERROR);
 		}
 	#else /* defined(WITH_TLS) */
-		pThis->dbgprint("relpEngineSetTLSLib, error, librelp not with TLS support\n");
+		pThis->dbgprint((char*)"relpEngineSetTLSLib, error, librelp not with TLS support\n");
 		ABORT_FINALIZE(RELP_RET_NOT_SUPPORTED);
 	#endif
 
 finalize_it:
-	pThis->dbgprint("relpEngineSetTLSLib, lib now %d, ret %d\n", pThis->tls_lib, iRet);
+	pThis->dbgprint((char*)"relpEngineSetTLSLib, lib now %d, ret %d\n", pThis->tls_lib, iRet);
 	LEAVE_RELPFUNC;
 }
 
@@ -633,7 +633,7 @@ doRecv(relpEngine_t *pThis, relpEngSessLst_t *pSessEtry, int sock)
 	 * session, which may eventually be followed by a new connect.
 	 */
 	if(localRet != RELP_RET_OK) {
-		pThis->dbgprint("relp session %d iRet %d, tearing it down\n",
+		pThis->dbgprint((char*)"relp session %d iRet %d, tearing it down\n",
 				sock, localRet);
 		relpEngineDelSess(pThis, pSessEtry);
 	}
@@ -652,7 +652,7 @@ doSend(relpEngine_t *pThis, relpEngSessLst_t *pSessEtry, int sock)
 	 * session, which may eventually be followed by a new connect.
 	 */
 	if(localRet != RELP_RET_OK) {
-		pThis->dbgprint("relp session %d iRet %d during send, tearing it down\n",
+		pThis->dbgprint((char*)"relp session %d iRet %d during send, tearing it down\n",
 				sock, localRet);
 		relpEngineDelSess(pThis, pSessEtry);
 	}
@@ -664,7 +664,7 @@ handleConnectionRequest(relpEngine_t *pThis, relpSrv_t *pSrv, int sock)
 	relpRetVal localRet;
 	relpSess_t *pNewSess;
 
-	pThis->dbgprint("new connect on RELP socket #%d\n", sock);
+	pThis->dbgprint((char*)"new connect on RELP socket #%d\n", sock);
 	localRet = relpSessAcceptAndConstruct(&pNewSess, pSrv, sock);
 	if(localRet == RELP_RET_OK) {
 		relpEngineAddToSess(pThis, pNewSess);
@@ -679,11 +679,11 @@ epoll_set_events(relpEngine_t *pThis, relpEngSessLst_t *pSessEtry, int sock, uin
 {
 	ENTER_RELPFUNC;
 	/* TODO: remove the status dbgprint's once we have some practice drill 2013-07-05 */
-	pThis->dbgprint("librelp: epoll_set_events sock %d, target bits %2.2x, current %2.2x\n",
+	pThis->dbgprint((char*)"librelp: epoll_set_events sock %d, target bits %2.2x, current %2.2x\n",
 		sock, events, pSessEtry->epevt->ev.events);
 	if(pSessEtry->epevt->ev.events != events) {
 		pSessEtry->epevt->ev.events = events;
-		pThis->dbgprint("librelp: epoll_set_events sock %d, setting new bits\n", sock);
+		pThis->dbgprint((char*)"librelp: epoll_set_events sock %d, setting new bits\n", sock);
 		if(epoll_ctl(pThis->efd, EPOLL_CTL_MOD, sock, &pSessEtry->epevt->ev) != 0) {
 			char errStr[1024];
 			int eno = errno;
@@ -715,7 +715,7 @@ engineEventLoopInit(relpEngine_t LIBRELP_ATTR_UNUSED *pThis)
 	}
 
 	if(pThis->efd < 0) {
-		pThis->dbgprint("epoll_create1() could not create fd\n");
+		pThis->dbgprint((char*)"epoll_create1() could not create fd\n");
 		ABORT_FINALIZE(RELP_RET_IO_ERR);
 	}
 
@@ -769,12 +769,12 @@ handleSessIO(relpEngine_t *pThis, epolld_t *epd)
 #			if defined(ENABLE_TLS) || defined(ENABLE_TLS_OPENSSL)
 				const relpRetVal localRet = relpTcpRtryHandshake(pTcp);
 				if(localRet != RELP_RET_OK) {
-					pThis->dbgprint("relp session %d handshake iRet %d, tearing it down\n",
+					pThis->dbgprint((char*)"relp session %d handshake iRet %d, tearing it down\n",
 							epd->sock, localRet);
 					relpEngineDelSess(pThis, pSessEtry);
 				}
 #			else
-					pThis->dbgprint("librelp error: handshake retry requested in "
+					pThis->dbgprint((char*)"librelp error: handshake retry requested in "
 							"non-TLS mode");
 
 #			endif /* #ifdef ENABLE_TLS | ENABLE_TLS_OPENSSL*/
@@ -811,7 +811,7 @@ engineEventLoopRun(relpEngine_t *pThis)
 			sock = relpSessGetSock(pSessEtry->pSess);
 #			if defined(ENABLE_TLS) || defined(ENABLE_TLS_OPENSSL)
 			if(relpSessTcpRequiresRtry(pSessEtry->pSess)) {
-				pThis->dbgprint("librelp: retry op requested for sock %d\n", sock);
+				pThis->dbgprint((char*)"librelp: retry op requested for sock %d\n", sock);
 				if(relpTcpGetRtryDirection(pSessEtry->pSess->pTcp) == 0) {
 					epoll_set_events(pThis, pSessEtry, sock, EPOLLIN);
 				} else {
@@ -831,9 +831,9 @@ engineEventLoopRun(relpEngine_t *pThis)
 
 		/* wait for io to become ready */
 		if(relpEngineShouldStop(pThis)) break;
-		pThis->dbgprint("librelp: doing epoll_wait\n");
+		pThis->dbgprint((char*)"librelp: doing epoll_wait\n");
 		const int nEvents = epoll_wait(pThis->efd, events, sizeof(events)/sizeof(struct epoll_event), -1);
-		pThis->dbgprint("librelp: done epoll_wait, nEvents:%d\n", nEvents);
+		pThis->dbgprint((char*)"librelp: done epoll_wait, nEvents:%d\n", nEvents);
 		if(relpEngineShouldStop(pThis)) break;
 
 		for(i = 0 ; i < nEvents ; ++i) {
@@ -896,7 +896,7 @@ engineEventLoopRun(relpEngine_t *pThis)
 			sock = relpSessGetSock(pSessEtry->pSess);
 #			if defined(ENABLE_TLS) || defined(ENABLE_TLS_OPENSSL)
 			if(relpSessTcpRequiresRtry(pSessEtry->pSess)) {
-				pThis->dbgprint("librelp: retry op requested for sock %d\n", sock);
+				pThis->dbgprint((char*)"librelp: retry op requested for sock %d\n", sock);
 				if(relpTcpGetRtryDirection(pSessEtry->pSess->pTcp) == 0) {
 					FD_SET(sock, &readfds);
 				} else {
@@ -916,24 +916,24 @@ engineEventLoopRun(relpEngine_t *pThis)
 
 		/* done adding all sockets */
 		if(pThis->dbgprint != dbgprintDummy) {
-			pThis->dbgprint("librelp: calling select, active file descriptors (max %d): ", maxfds);
+			pThis->dbgprint((char*)"librelp: calling select, active file descriptors (max %d): ", maxfds);
 			for(nfds = 0; nfds <= maxfds; ++nfds)
 				if(FD_ISSET(nfds, &readfds))
-					pThis->dbgprint("%d ", nfds);
-			pThis->dbgprint("\n");
+					pThis->dbgprint((char*)"%d ", nfds);
+			pThis->dbgprint((char*)"\n");
 		}
 
 		/* wait for io to become ready */
 		if(relpEngineShouldStop(pThis)) break;
 		nfds = select(maxfds+1, (fd_set *) &readfds, &writefds, NULL, NULL);
-		pThis->dbgprint("relp select returns, nfds %d\n", nfds);
+		pThis->dbgprint((char*)"relp select returns, nfds %d\n", nfds);
 		if(relpEngineShouldStop(pThis)) break;
 
 		if(nfds == -1) {
 			if(errno == EINTR) {
-				pThis->dbgprint("relp select interrupted\n");
+				pThis->dbgprint((char*)"relp select interrupted\n");
 			} else {
-				pThis->dbgprint("relp select returned error %d\n", errno);
+				pThis->dbgprint((char*)"relp select returned error %d\n", errno);
 			}
 			continue;
 		}
@@ -968,13 +968,13 @@ engineEventLoopRun(relpEngine_t *pThis)
 #						if defined(ENABLE_TLS) || defined(ENABLE_TLS_OPENSSL)
 							localRet = relpTcpRtryHandshake(pSessEtry->pSess->pTcp);
 							if(localRet != RELP_RET_OK) {
-								pThis->dbgprint("relp session %d handshake "
+								pThis->dbgprint((char*)"relp session %d handshake "
 										"iRet %d, tearing it down\n",
 										sock, localRet);
 								relpEngineDelSess(pThis, pSessEtry);
 							}
 #						else
-							pThis->dbgprint("librelp error: handshake retry "
+							pThis->dbgprint((char*)"librelp error: handshake retry "
 									"requested in non-TLS mode");
 
 #						endif /* #ifdef ENABLE_TLS | ENABLE_TLS_OPENSSL */
@@ -1056,7 +1056,7 @@ relpEngineDispatchFrame(relpEngine_t *pThis, relpSess_t *pSess, relpFrame_t *pFr
 	RELPOBJ_assert(pSess, Sess);
 	RELPOBJ_assert(pFrame, Frame);
 
-	pThis->dbgprint("relp engine is dispatching frame with command '%s'\n", pFrame->cmd);
+	pThis->dbgprint((char*)"relp engine is dispatching frame with command '%s'\n", pFrame->cmd);
 
 	/* currently, we hardcode the commands. Over time, they may be dynamically
 	 * loaded and, when so, should come from a linked list.
@@ -1079,7 +1079,7 @@ relpEngineDispatchFrame(relpEngine_t *pThis, relpSess_t *pSess, relpFrame_t *pFr
 	} else if(!strcmp((char*)pFrame->cmd, "serverclose")) {
 		CHKRet(relpCCServerclose(pFrame, pSess));
 	} else {
-		pThis->dbgprint("invalid or not supported relp command '%s'\n", pFrame->cmd);
+		pThis->dbgprint((char*)"invalid or not supported relp command '%s'\n", pFrame->cmd);
 		ABORT_FINALIZE(RELP_RET_INVALID_CMD);
 	}
 
@@ -1102,7 +1102,7 @@ relpEngineCltConstruct(relpEngine_t *pThis, relpClt_t **ppClt)
 	assert(ppClt != NULL);
 
 	CHKRet(relpCltConstruct(ppClt, pThis));
-	pThis->dbgprint("relp engine created new client %p\n", (void*) *ppClt);
+	pThis->dbgprint((char*)"relp engine created new client %p\n", (void*) *ppClt);
 
 finalize_it:
 	LEAVE_RELPFUNC;
@@ -1121,7 +1121,7 @@ relpEngineCltDestruct(relpEngine_t *pThis, relpClt_t **ppClt)
 	assert(ppClt != NULL);
 	RELPOBJ_assert(*ppClt, Clt);
 
-	pThis->dbgprint("relp engine destructing client %p\n", (void*) *ppClt);
+	pThis->dbgprint((char*)"relp engine destructing client %p\n", (void*) *ppClt);
 	CHKRet(relpCltDestruct(ppClt));
 
 finalize_it:
@@ -1136,9 +1136,9 @@ finalize_it:
 char *relpEngineGetVersion(void)
 {
 #	ifdef DEBUG
-		return VERSION "(debug mode)";
+		return (char*) (VERSION "(debug mode)");
 #	else
-		return VERSION;
+		return (char*) (VERSION);
 #	endif
 }
 
@@ -1164,7 +1164,7 @@ relpEngineSetEnableCmd(relpEngine_t *pThis, unsigned char *pszCmd, relpCmdEnaSta
 		if(pThis->stateCmdSyslog != eRelpCmdState_Forbidden)
 			pThis->stateCmdSyslog = stateCmd;
 	} else {
-		pThis->dbgprint("tried to set unknown command '%s' to %d\n", pszCmd, stateCmd);
+		pThis->dbgprint((char*)"tried to set unknown command '%s' to %d\n", pszCmd, stateCmd);
 		ABORT_FINALIZE(RELP_RET_UNKNOWN_CMD);
 	}
 

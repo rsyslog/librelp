@@ -97,7 +97,7 @@ BEGINcommand(S, Rsp)
 
 	ENTER_RELPFUNC;
 	CHKRet(readRspHdr(pFrame, &rspCode, bufText));
-	pSess->pEngine->dbgprint("in rsp command handler, txnr %d, code %d, text '%s'\n",
+	pSess->pEngine->dbgprint((char*)"in rsp command handler, txnr %d, code %d, text '%s'\n",
 				 pFrame->txnr, rspCode, bufText);
 	CHKRet(relpSessGetUnacked(pSess, &pSendbuf, pFrame->txnr));
 
@@ -108,8 +108,8 @@ BEGINcommand(S, Rsp)
 		CHKRet(relpSendbufDestruct(&pSendbuf));
 	} else {
 		if(pSess->pEngine->onErr != NULL) {
-			pSess->pEngine->onErr(pSess->pUsr, "rsp command",
-				"peer sent error response", RELP_RET_RSP_STATE_ERR);
+			pSess->pEngine->onErr(pSess->pUsr, (char*)"rsp command",
+				(char*)"peer sent error response", RELP_RET_RSP_STATE_ERR);
 		}
 		iRet = RELP_RET_RSP_STATE_ERR;
 		/* TODO: add a hock to a logger function of the caller */

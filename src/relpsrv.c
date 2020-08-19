@@ -140,7 +140,7 @@ relpSrvAddPermittedPeer(relpSrv_t *pThis, char *peer)
 	}
 	pThis->permittedPeers.name = newName;
 	pThis->permittedPeers.nmemb = newMemb;
-	pThis->pEngine->dbgprint("librelp: SRV permitted peer added: '%s'\n", peer);
+	pThis->pEngine->dbgprint((char*)"librelp: SRV permitted peer added: '%s'\n", peer);
 
 finalize_it:
 	LEAVE_RELPFUNC;
@@ -450,16 +450,16 @@ relpSrvSetEnableCmd(relpSrv_t *pThis, unsigned char *pszCmd, relpCmdEnaState_t s
 	RELPOBJ_assert(pThis, Srv);
 	assert(pszCmd != NULL);
 
-pThis->pEngine->dbgprint("SRV SetEnableCmd in syslog cmd state: %d\n", pThis->stateCmdSyslog);
+pThis->pEngine->dbgprint((char*)"SRV SetEnableCmd in syslog cmd state: %d\n", pThis->stateCmdSyslog);
 	if(!strcmp((char*)pszCmd, "syslog")) {
 		if(pThis->stateCmdSyslog != eRelpCmdState_Forbidden)
 			pThis->stateCmdSyslog = stateCmd;
 	} else {
-		pThis->pEngine->dbgprint("tried to set unknown command '%s' to %d\n", pszCmd, stateCmd);
+		pThis->pEngine->dbgprint((char*)"tried to set unknown command '%s' to %d\n", pszCmd, stateCmd);
 		ABORT_FINALIZE(RELP_RET_UNKNOWN_CMD);
 	}
 
 finalize_it:
-pThis->pEngine->dbgprint("SRV SetEnableCmd out syslog cmd state: %d, iRet %d\n", pThis->stateCmdSyslog, iRet);
+pThis->pEngine->dbgprint((char*)"SRV SetEnableCmd out syslog cmd state: %d, iRet %d\n", pThis->stateCmdSyslog, iRet);
 	LEAVE_RELPFUNC;
 }
