@@ -307,6 +307,9 @@ relpEngineDestruct(relpEngine_t **ppThis)
 		free(pSrvL);
 	}
 
+	/* destruct TLS structures */
+	relpTcpExitTLS();
+
 	pthread_mutex_destroy(&pThis->mutSrvLst);
 	pthread_mutex_destroy(&pThis->mutSessLst);
 	/* done with de-init work, now free engine object itself */

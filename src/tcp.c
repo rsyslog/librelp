@@ -1385,23 +1385,6 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 
-#if 0
-/* We comment this out to pass the clang-9 check. A final solution will be
- * worked out as part of https://github.com/rsyslog/librelp/issues/199
- * Quick discussion makes this look like a copy&paste leftover when the
- * initial implementation was done.
- */
-static void
-relpTcpExitTLS(void)
-{
-	SSL_CTX_free(ctx);
-	ENGINE_cleanup();
-	ERR_free_strings();
-	EVP_cleanup();
-	CRYPTO_cleanup_all_ex_data();
-}
-#endif
-
 /* Perform additional certificate name checks
  */
 relpRetVal
@@ -1871,9 +1854,24 @@ relpTcpLstnInitTLS_ossl(relpTcp_t *const pThis)
 finalize_it:
 	LEAVE_RELPFUNC;
 }
+
+static void
+relpTcpExitTLS_ossl(void)
+{
+	if(called_openssl_global_init == 1) {
+		if (ctx != NULL)
+			SSL_CTX_free(ctx);
+		ENGINE_cleanup();
+		ERR_free_strings();
+		EVP_cleanup();
+		CRYPTO_cleanup_all_ex_data();
+	}
+}
+
 #ifndef _AIX
 #pragma GCC diagnostic pop
 #endif
+
 
 
 #else /* #ifdef ENABLE_TLS_OPENSSL*/
@@ -3684,4 +3682,13 @@ relpTcpGetRtryDirection(NOTLS_UNUSED relpTcp_t *const pThis)
 	}
 	#endif /* #ifdef  WITH_TLS*/
 	return r;
+}
+
+void
+relpTcpExitTLS(void) {
+#ifdef ENABLE_TLS_OPENSSL
+	// Call OSSL exit!
+	relpTcpExitTLS_ossl();
+#endif /* #ifdef ENABLE_TLS_OPENSSL */
+	return;
 }
