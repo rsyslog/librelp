@@ -1,5 +1,16 @@
 ----------------------------------------------------------------------
 Version 1.7.0 - 2020-??-??
+- TLS: Added call to destruct OpenSSL remains to relpEngineDestruct
+  For a clean cleanup, OpenSSL remains are now being removed at the end
+  of relpEngineDestruct()
+  closes: https://github.com/rsyslog/librelp/issues/199
+- fix memory leak on session break
+  When librelp session breaks unexpected, a memory leak could happen in sendq.c
+  when relpSendqeConstruct was called before the session break happened.
+  - Also Adds a new valgrind test basic-sessionbreak-vg.sh to reproduce
+    the problem. without the fix, the test will fail.
+  - Adjusted testbench plumbing to support session break valgrind test.
+  closes: https://github.com/rsyslog/librelp/issues/188
 ----------------------------------------------------------------------
 Version 1.6.0 - 2020-04-21
 - fix namespace pollution - some non-API functions were exported
