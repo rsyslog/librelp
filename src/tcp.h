@@ -182,6 +182,8 @@ void relpTcpHintBurstBegin(relpTcp_t *pThis);
 void relpTcpHintBurstEnd(relpTcp_t *pThis);
 int LIBRELP_ATTR_NONNULL() relpTcpGetRtryDirection(relpTcp_t *pThis);
 int relpTcpWaitWriteable(relpTcp_t *pThis, struct timespec *timeout);
+void relpTcpExitTLS(void);
+
 
 #ifdef ENABLE_TLS_OPENSSL
 /*-----------------------------------------------------------------------------*/
@@ -212,7 +214,7 @@ void locking_function(int mode, int n,
 /* Helper to detect when OpenSSL is initialized */
 static int called_openssl_global_init = 0;
 /* Main OpenSSL CTX pointer */
-static SSL_CTX *ctx;
+static SSL_CTX *ctx = NULL;
 #endif
 
 #endif /* #ifndef RELPTCP_H_INCLUDED */
