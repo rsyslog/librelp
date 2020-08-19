@@ -42,7 +42,7 @@
  */
 BEGINcommand(C, Serverclose)
 	ENTER_RELPFUNC;
-	pSess->pEngine->dbgprint("in serverclose command handler\n");
+	pSess->pEngine->dbgprint((char*)"in serverclose command handler\n");
 
 	/* We use state "broken" so that our usual recovery can kick in */
 	relpSessSetSessState(pSess, eRelpSessState_BROKEN);

@@ -239,7 +239,7 @@ relpCltAddPermittedPeer(relpClt_t *pThis, char *peer)
 	}
 	pThis->permittedPeers.name = newName;
 	pThis->permittedPeers.nmemb = newMemb;
-	pThis->pEngine->dbgprint("librelp: CLT permitted peer added: '%s'\n", peer);
+	pThis->pEngine->dbgprint((char*)"librelp: CLT permitted peer added: '%s'\n", peer);
 
 finalize_it:
 	LEAVE_RELPFUNC;

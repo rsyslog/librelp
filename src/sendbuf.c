@@ -126,7 +126,7 @@ relpSendbufSend(relpSendbuf_t *pThis, relpTcp_t *pTcp)
 
 	lenToWrite = pThis->lenData - pThis->bufPtr;
 	lenWritten = lenToWrite;
-//pTcp->pEngine->dbgprint("sendbuf len %d, still to write %d\n", (int) pThis->lenData, (int) lenToWrite);
+//pTcp->pEngine->dbgprint((char*)"sendbuf len %d, still to write %d\n", (int) pThis->lenData, (int) lenToWrite);
 
 	CHKRet(relpTcpSend(pTcp, pThis->pData + (9 - pThis->lenTxnr) + pThis->bufPtr, &lenWritten));
 
@@ -176,7 +176,7 @@ relpSendbufSendAll(relpSendbuf_t *pThis, relpSess_t *pSess, int bAddToUnacked)
 		if(lenWritten == -1) {
 			ABORT_FINALIZE(RELP_RET_IO_ERR);
 		} else if(lenWritten == 0) {
-			pSess->pEngine->dbgprint("relpSendbufSendAll() wrote 0 octets, waiting...\n");
+			pSess->pEngine->dbgprint((char*)"relpSendbufSendAll() wrote 0 octets, waiting...\n");
 			if(relpTcpWaitWriteable(pSess->pTcp, &tTimeout) == 0) {
 				ABORT_FINALIZE(RELP_RET_IO_ERR); /* timed out! */
 			}
@@ -203,13 +203,13 @@ relpSendbufSendAll(relpSendbuf_t *pThis, relpSess_t *pSess, int bAddToUnacked)
 			relpSendbufDestruct(&pThis);
 			FINALIZE;
 		}
-pSess->pEngine->dbgprint("sendbuf added to unacked list\n");
+pSess->pEngine->dbgprint((char*)"sendbuf added to unacked list\n");
 #if 0
 {
 	relpSessUnacked_t *pUnackedEtry;
 	pUnackedEtry = pThis->pUnackedLstRoot;
 	if(pUnackedEtry != NULL) {
-		pThis->pEngine->dbgprint("resending frame '%s'\n",
+		pThis->pEngine->dbgprint((char*)"resending frame '%s'\n",
 			pUnackedEtry->pSendbuf->pData + 9 - pUnackedEtry->pSendbuf->lenTxnr);
 		CHKRet(relpFrameRewriteTxnr(pUnackedEtry->pSendbuf, pThis->txnr));
 		pThis->txnr = relpEngineNextTXNR(pThis->txnr);
@@ -219,7 +219,7 @@ pSess->pEngine->dbgprint("sendbuf added to unacked list\n");
 }
 #endif
 	}
-else pSess->pEngine->dbgprint("sendbuf NOT added to unacked list\n");
+else pSess->pEngine->dbgprint((char*)"sendbuf NOT added to unacked list\n");
 
 finalize_it:
 	LEAVE_RELPFUNC;

@@ -44,7 +44,7 @@
  */
 BEGINcommand(S, Syslog)
 	ENTER_RELPFUNC;
-	pSess->pEngine->dbgprint("in 'syslog' command handler\n");
+	pSess->pEngine->dbgprint((char*)"in 'syslog' command handler\n");
 
 	if(pSess->stateCmdSyslog != eRelpCmdState_Enabled) {
 		relpSessSendResponse(pSess, pFrame->txnr, (unsigned char*) "500 command disabled", 20);
@@ -63,7 +63,7 @@ BEGINcommand(S, Syslog)
 		pSess->pEngine->onSyslogRcv(pSess->pTcp->pRemHostName, pSess->pTcp->pRemHostIP,
 						    pFrame->pData, pFrame->lenData);
 	} else {
-		pSess->pEngine->dbgprint("error: no syslog reception callback is set, nothing done\n");
+		pSess->pEngine->dbgprint((char*)"error: no syslog reception callback is set, nothing done\n");
 	}
 
 	/* send response */

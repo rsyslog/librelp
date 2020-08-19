@@ -68,7 +68,7 @@ callOnErr(const relpSess_t *__restrict__ const pThis,
 	const relpRetVal ecode)
 {
 	relpTcp_t *const pTcp = pThis->pTcp;
-	//pThis->pEngine->dbgprint("librelp: generic error: ecode %d, "
+	//pThis->pEngine->dbgprint((char*)"librelp: generic error: ecode %d, "
 		//"emsg '%s'\n", ecode, emsg);
 	if(pThis->pEngine->onErr != NULL) {
 		char objinfo[1024];
@@ -270,8 +270,8 @@ relpSessRcvData(relpSess_t *pThis)
 	CHKRet(relpTcpRcv(pThis->pTcp, rcvBuf, &lenBuf));
 
 	if(lenBuf == 0) {
-		callOnErr(pThis, "server closed relp session, session broken", RELP_RET_SESSION_BROKEN);
-		pThis->pEngine->dbgprint("server closed relp session %p, session broken\n", (void*)pThis);
+		callOnErr(pThis, (char*) "server closed relp session, session broken", RELP_RET_SESSION_BROKEN);
+		pThis->pEngine->dbgprint((char*)"server closed relp session %p, session broken\n", (void*)pThis);
 		/* even though we had a "normal" close, it is unexpected at this
 		 * stage. Consequently, we consider the session to be broken, because
 		 * the recovery action is the same no matter how it is broken.
@@ -280,8 +280,8 @@ relpSessRcvData(relpSess_t *pThis)
 		ABORT_FINALIZE(RELP_RET_SESSION_BROKEN);
 	} else if ((int) lenBuf == -1) {
 		if(errno != EAGAIN) {
-			callOnErr(pThis, "error when receiving data, session broken", RELP_RET_SESSION_BROKEN);
-			pThis->pEngine->dbgprint("errno %d during relp session %p, session broken\n",
+			callOnErr(pThis, (char*) "error when receiving data, session broken", RELP_RET_SESSION_BROKEN);
+			pThis->pEngine->dbgprint((char*)"errno %d during relp session %p, session broken\n",
 				errno, (void*)pThis);
 			pThis->sessState = eRelpSessState_BROKEN;
 			ABORT_FINALIZE(RELP_RET_SESSION_BROKEN);
@@ -289,12 +289,12 @@ relpSessRcvData(relpSess_t *pThis)
 	} else {
 		/* Terminate buffer and output received data to debug*/
 		rcvBuf[lenBuf] = '\0';
-		pThis->pEngine->dbgprint("relp session read %d octets, buf '%s'\n", (int) lenBuf, rcvBuf);
+		pThis->pEngine->dbgprint((char*)"relp session read %d octets, buf '%s'\n", (int) lenBuf, rcvBuf);
 
 		/* we have regular data, which we now can process */
 		for(i = 0 ; i < lenBuf ; ++i) {
 			if(relpEngineShouldStop(pThis->pEngine)) {
-				pThis->pEngine->dbgprint("imrelp is instructed to shut down, thus "
+				pThis->pEngine->dbgprint((char*)"imrelp is instructed to shut down, thus "
 					"breaking session %p\n", (void*) pThis);
 				ABORT_FINALIZE(RELP_RET_SESSION_BROKEN);
 			}
@@ -326,8 +326,8 @@ relpSessSendResponse(relpSess_t *pThis, relpTxnr_t txnr, unsigned char *pData, s
 finalize_it:
 	if(iRet != RELP_RET_OK) {
 		if(iRet == RELP_RET_IO_ERR) {
-			callOnErr(pThis, "io error, session broken", RELP_RET_SESSION_BROKEN);
-			pThis->pEngine->dbgprint("relp session %p is broken, io error\n", (void*)pThis);
+			callOnErr(pThis, (char*) "io error, session broken", RELP_RET_SESSION_BROKEN);
+			pThis->pEngine->dbgprint((char*)"relp session %p is broken, io error\n", (void*)pThis);
 			pThis->sessState = eRelpSessState_BROKEN;
 		} else {
 			/*	alorbach, 2020-04-08:
@@ -382,7 +382,7 @@ relpSessSrvSendHint(relpSess_t *pThis, unsigned char *pHint, size_t lenHint,
 
 	CHKRet(relpFrameBuildSendbuf(&pSendbuf, 0, pHint, lenHint, pData, lenData, pThis, NULL));
 	/* now send it */
-	pThis->pEngine->dbgprint("hint-frame to send: '%s'\n", pSendbuf->pData + (9 - pSendbuf->lenTxnr));
+	pThis->pEngine->dbgprint((char*)"hint-frame to send: '%s'\n", pSendbuf->pData + (9 - pSendbuf->lenTxnr));
 	CHKRet(relpSendbufSend(pSendbuf, pThis->pTcp));
 
 finalize_it:
@@ -450,10 +450,10 @@ relpSessAddUnacked(relpSess_t *pThis, relpSendbuf_t *pSendbuf)
 		 */
 		relpSessSetSessState(pThis, eRelpSessState_WINDOW_FULL);
 		if(pThis->lenUnackedLst >= pThis->sizeWindow)
-			pThis->pEngine->dbgprint("Warning: exceeding window size, max %d, curr %d\n",
+			pThis->pEngine->dbgprint((char*)"Warning: exceeding window size, max %d, curr %d\n",
 						 pThis->lenUnackedLst, pThis->sizeWindow);
 	}
-	pThis->pEngine->dbgprint("ADD sess %p unacked %d, sessState %d\n",
+	pThis->pEngine->dbgprint((char*)"ADD sess %p unacked %d, sessState %d\n",
 		(void*)pThis, pThis->lenUnackedLst, pThis->sessState);
 
 finalize_it:
@@ -487,7 +487,7 @@ relpSessDelUnacked(relpSess_t *pThis, relpSessUnacked_t *pUnackedLstEntry)
 
 	free(pUnackedLstEntry);
 
-	pThis->pEngine->dbgprint("DEL sess %p unacked %d, sessState %d\n",
+	pThis->pEngine->dbgprint((char*)"DEL sess %p unacked %d, sessState %d\n",
 		(void*)pThis, pThis->lenUnackedLst, pThis->sessState);
 	LEAVE_RELPFUNC;
 }
@@ -554,7 +554,7 @@ relpSessWaitState(relpSess_t *const pThis, const relpSessState_t stateExpected, 
 	 */
 	localRet = relpSessRcvData(pThis);
 	if(localRet != RELP_RET_OK) {
-		pThis->pEngine->dbgprint("relpSessWaitRsp error initial rcv: %d\n", localRet);
+		pThis->pEngine->dbgprint((char*)"relpSessWaitRsp error initial rcv: %d\n", localRet);
 		ABORT_FINALIZE(localRet);
 	}
 
@@ -580,25 +580,25 @@ relpSessWaitState(relpSess_t *const pThis, const relpSessState_t stateExpected, 
 
 		pfd.fd = sock;
 		pfd.events = POLLIN;
-		pThis->pEngine->dbgprint("relpSessWaitRsp waiting for data on "
+		pThis->pEngine->dbgprint((char*)"relpSessWaitRsp waiting for data on "
 			"fd %d, timeout %d, state expected %d\n", sock, timeout, stateExpected);
 		nfds = poll(&pfd, 1, timeout*1000);
 		if(nfds == -1) {
 			if(errno == EINTR) {
-				pThis->pEngine->dbgprint("relpSessWaitRsp select interrupted, continue\n");
+				pThis->pEngine->dbgprint((char*)"relpSessWaitRsp select interrupted, continue\n");
 			} else {
-				pThis->pEngine->dbgprint("relpSessWaitRsp select returned error %d\n", errno);
+				pThis->pEngine->dbgprint((char*)"relpSessWaitRsp select returned error %d\n", errno);
 				ABORT_FINALIZE(RELP_RET_SESSION_BROKEN);
 			}
 		}
 		else
-			pThis->pEngine->dbgprint("relpSessWaitRsp poll returns, "
+			pThis->pEngine->dbgprint((char*)"relpSessWaitRsp poll returns, "
 				"nfds %d, errno %d\n", nfds, errno);
 		if(relpEngineShouldStop(pThis->pEngine))
 			break;
 		/* we don't check if we had a timeout-we give it one last chance*/
 		CHKRet(relpSessRcvData(pThis));
-		pThis->pEngine->dbgprint("iRet after relpSessRcvData %d\n", iRet);
+		pThis->pEngine->dbgprint((char*)"iRet after relpSessRcvData %d\n", iRet);
 		if(   pThis->sessState == stateExpected
 		   || pThis->sessState == eRelpSessState_BROKEN) {
 			FINALIZE;
@@ -608,12 +608,12 @@ relpSessWaitState(relpSess_t *const pThis, const relpSessState_t stateExpected, 
 	}
 
 finalize_it:
-	pThis->pEngine->dbgprint("relpSessWaitState returns %d\n", iRet);
+	pThis->pEngine->dbgprint((char*)"relpSessWaitState returns %d\n", iRet);
 	if(	iRet == RELP_RET_TIMED_OUT ||
 		iRet == RELP_RET_SESSION_BROKEN ||
 		relpEngineShouldStop(pThis->pEngine)) {
 		/* the session is broken! */
-		callOnErr(pThis, "error waiting on required session state, session broken",
+		callOnErr(pThis, (char*) "error waiting on required session state, session broken",
 			RELP_RET_SESSION_BROKEN);
 		pThis->sessState = eRelpSessState_BROKEN;
 	}
@@ -641,12 +641,12 @@ relpSessRawSendCommand(relpSess_t *pThis, unsigned char *pCmd, size_t lenCmd,
 	CHKRet(relpFrameBuildSendbuf(&pSendbuf, pThis->txnr, pCmd, lenCmd, pData, lenData, pThis, rspHdlr));
 	pThis->txnr = relpEngineNextTXNR(pThis->txnr);
 	/* now send it */
-	pThis->pEngine->dbgprint("frame to send: '%s'\n", pSendbuf->pData + (9 - pSendbuf->lenTxnr));
+	pThis->pEngine->dbgprint((char*)"frame to send: '%s'\n", pSendbuf->pData + (9 - pSendbuf->lenTxnr));
 	iRet = relpSendbufSendAll(pSendbuf, pThis, 1);
 
 	if(iRet == RELP_RET_IO_ERR) {
-		pThis->pEngine->dbgprint("relp session %p flagged as broken, IO error\n", (void*)pThis);
-		callOnErr(pThis, "io error in RawSendCommand, session broken", RELP_RET_SESSION_BROKEN);
+		pThis->pEngine->dbgprint((char*)"relp session %p flagged as broken, IO error\n", (void*)pThis);
+		callOnErr(pThis, (char*) "io error in RawSendCommand, session broken", RELP_RET_SESSION_BROKEN);
 		pThis->sessState = eRelpSessState_BROKEN;
 		ABORT_FINALIZE(RELP_RET_SESSION_BROKEN);
 	}
@@ -718,12 +718,12 @@ relpSessTryReestablish(relpSess_t *pThis)
 	 */
 	pUnackedEtry = pThis->pUnackedLstRoot;
 	if(pUnackedEtry != NULL)
-		pThis->pEngine->dbgprint("relp session %p reestablished, state %d, "
+		pThis->pEngine->dbgprint((char*)"relp session %p reestablished, state %d, "
 			"now resending %d unacked frames\n",
 			(void*)pThis, pThis->sessState, pThis->lenUnackedLst);
 	assert(pThis->sessState != eRelpSessState_BROKEN);
 	while(pUnackedEtry != NULL) {
-		pThis->pEngine->dbgprint("resending frame '%s'\n", pUnackedEtry->pSendbuf->pData + 9
+		pThis->pEngine->dbgprint((char*)"resending frame '%s'\n", pUnackedEtry->pSendbuf->pData + 9
 								   - pUnackedEtry->pSendbuf->lenTxnr);
 		CHKRet(relpFrameRewriteTxnr(pUnackedEtry->pSendbuf, pThis->txnr));
 		pThis->txnr = relpEngineNextTXNR(pThis->txnr);
@@ -737,7 +737,7 @@ relpSessTryReestablish(relpSess_t *pThis)
 	}
 
 finalize_it:
-	pThis->pEngine->dbgprint("after TryReestablish, sess state %d\n", pThis->sessState);
+	pThis->pEngine->dbgprint((char*)"after TryReestablish, sess state %d\n", pThis->sessState);
 	LEAVE_RELPFUNC;
 }
 
@@ -780,7 +780,7 @@ relpSessCBrspOpen(relpSess_t *pThis, relpFrame_t *pFrame)
 	 * something truely unacceptable, we break the session.
 	 */
 	for(pOffer = pOffers->pRoot ; pOffer != NULL ; pOffer = pOffer->pNext) {
-		pEngine->dbgprint("processing server offer '%s'\n", pOffer->szName);
+		pEngine->dbgprint((char*)"processing server offer '%s'\n", pOffer->szName);
 		if(!strcmp((char*)pOffer->szName, "relp_version")) {
 			if(pOffer->pValueRoot == NULL)
 				ABORT_FINALIZE(RELP_RET_INVALID_OFFER);
@@ -797,7 +797,7 @@ relpSessCBrspOpen(relpSess_t *pThis, relpFrame_t *pFrame)
 			for(pOfferVal = pOffer->pValueRoot ; pOfferVal != NULL ; pOfferVal = pOfferVal->pNext) {
 				/* we do not care about return code in this case */
 				relpSessSetEnableCmd(pThis, pOfferVal->szVal, eRelpCmdState_Enabled);
-				pEngine->dbgprint("enabled command '%s'\n", pOfferVal->szVal);
+				pEngine->dbgprint((char*)"enabled command '%s'\n", pOfferVal->szVal);
 			}
 		} else if(!strcmp((char*)pOffer->szName, "relp_software")) {
 			/* we know this parameter, but we do not do anything
@@ -809,7 +809,7 @@ relpSessCBrspOpen(relpSess_t *pThis, relpFrame_t *pFrame)
 			 * case, we may simply not support it (but the client does and
 			 * must now live without it...)
 			 */
-			pEngine->dbgprint("ignoring unknown server offer '%s'\n", pOffer->szName);
+			pEngine->dbgprint((char*)"ignoring unknown server offer '%s'\n", pOffer->szName);
 		}
 	}
 
@@ -839,7 +839,7 @@ relpSessCltConnChkOffers(relpSess_t *pThis)
 
 finalize_it:
 	if(iRet != RELP_RET_OK) {
-		callOnErr(pThis, "error in CltConnChkOffers, session broken", RELP_RET_SESSION_BROKEN);
+		callOnErr(pThis, (char*) "error in CltConnChkOffers, session broken", RELP_RET_SESSION_BROKEN);
 		pThis->sessState = eRelpSessState_BROKEN;
 	}
 
@@ -918,10 +918,10 @@ relpSessConnect(relpSess_t *pThis, int protFamily, unsigned char *port, unsigned
 finalize_it:
 	free(pszOffers);
 	if(iRet != RELP_RET_OK) {
-		callOnErr(pThis, "error opening connection to remote peer", iRet);
+		callOnErr(pThis, (char*) "error opening connection to remote peer", iRet);
 		if((pThis->pUnackedLstLast != NULL) &&
 		   !strncmp((char*)pThis->pUnackedLstLast->pSendbuf->pData + 9, " open ", 6)) {
-			pThis->pEngine->dbgprint("relpSessConnect remove 'open' from unacked list\n");
+			pThis->pEngine->dbgprint((char*)"relpSessConnect remove 'open' from unacked list\n");
 			relpSessUnacked_t *pDel = pThis->pUnackedLstLast;
 			DLL_Del(pDel, pThis->pUnackedLstRoot, pThis->pUnackedLstLast);
 			--pThis->lenUnackedLst;
@@ -1207,7 +1207,7 @@ relpSessSetEnableCmd(relpSess_t *pThis, unsigned char *pszCmd, relpCmdEnaState_t
 		if(pThis->stateCmdSyslog != eRelpCmdState_Forbidden)
 			pThis->stateCmdSyslog = stateCmd;
 	} else {
-		pThis->pEngine->dbgprint("tried to set unknown command '%s' to %d\n", pszCmd, stateCmd);
+		pThis->pEngine->dbgprint((char*)"tried to set unknown command '%s' to %d\n", pszCmd, stateCmd);
 		ABORT_FINALIZE(RELP_RET_UNKNOWN_CMD);
 	}
 

@@ -205,7 +205,7 @@ send_msgs_counter(void)
 static int
 send_msgs_single(const char *pMsg)
 {
-	int ret;
+	int ret = 0;
 	char *msgData = NULL;
 
 	if(msgDataLen != 0) {

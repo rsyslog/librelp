@@ -60,7 +60,7 @@ selectOffers(relpSess_t *pSess, relpOffers_t *pCltOffers, relpOffers_t **ppSrvOf
 
 	/* we loop through the offers and set session parameters */
 	for(pOffer = pCltOffers->pRoot ; pOffer != NULL ; pOffer = pOffer->pNext) {
-		pEngine->dbgprint("processing client offer '%s'\n", pOffer->szName);
+		pEngine->dbgprint((char*)"processing client offer '%s'\n", pOffer->szName);
 		if(!strcmp((char*)pOffer->szName, "relp_version")) {
 			if(pOffer->pValueRoot == NULL)
 				ABORT_FINALIZE(RELP_RET_INVALID_OFFER);
@@ -72,7 +72,7 @@ selectOffers(relpSess_t *pSess, relpOffers_t *pCltOffers, relpOffers_t **ppSrvOf
 				relpSessSetProtocolVersion(pSess, pOffer->pValueRoot->intVal);
 		} else if(!strcmp((char*)pOffer->szName, "commands")) {
 			for(pOfferVal = pOffer->pValueRoot ; pOfferVal != NULL ; pOfferVal = pOfferVal->pNext) {
-pSess->pEngine->dbgprint("cmd syslog state in srv session: %d\n", pSess->stateCmdSyslog);
+pSess->pEngine->dbgprint((char*)"cmd syslog state in srv session: %d\n", pSess->stateCmdSyslog);
 				if(   pSess->stateCmdSyslog == eRelpCmdState_Desired
 				   || pSess->stateCmdSyslog == eRelpCmdState_Required) {
 					/* we do not care about return code in this case */
@@ -89,7 +89,7 @@ pSess->pEngine->dbgprint("cmd syslog state in srv session: %d\n", pSess->stateCm
 			 * case, we may simply not support it (but the client does and
 			 * must now live without it...)
 			 */
-			pEngine->dbgprint("ignoring unknown client offer '%s'\n", pOffer->szName);
+			pEngine->dbgprint((char*)"ignoring unknown client offer '%s'\n", pOffer->szName);
 		}
 	}
 
@@ -131,11 +131,11 @@ BEGINcommand(S, Init)
 	size_t lenErrMsg;
 
 	ENTER_RELPFUNC;
-	pSess->pEngine->dbgprint("in open command handler\n");
+	pSess->pEngine->dbgprint((char*)"in open command handler\n");
 
 	if(pSess->bServerConnOpen) {
 		if(pSess->pEngine->onErr) { // TODO: generalize!
-			pSess->pEngine->onErr(pSess->pUsr, "session", "received session open "
+			pSess->pEngine->onErr(pSess->pUsr, (char*) "session", (char*) "received session open "
 				"request for already open session - aborting session",
 				RELP_RET_INVALID_FRAME);
 		}
