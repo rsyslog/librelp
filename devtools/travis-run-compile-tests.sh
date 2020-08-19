@@ -22,14 +22,14 @@ $DO_IN_CONTAINER devtools/run-static-analyzer.sh
 # #################### newer compilers ####################
 
 printf "\n\n============ STEP: gcc-7 compile test ================\n\n\n"
-export CC=gcc-7
+export CC=gcc-9
 export CFLAGS=
 $DO_IN_CONTAINER devtools/run-configure.sh
 $DO_IN_CONTAINER make check TESTS=""
 
 $DO_IN_CONTAINER make clean
-printf "\n\n============ STEP: clang-5.0 compile test ================\n\n\n"
-export CC=clang-5.0
+printf "\n\n============ STEP: clang-9 compile test ================\n\n\n"
+export CC=clang-9
 export CFLAGS=
 $DO_IN_CONTAINER devtools/run-configure.sh
 $DO_IN_CONTAINER make check TESTS=""
@@ -53,12 +53,18 @@ $DO_IN_CONTAINER devtools/run-static-analyzer.sh
 
 # #################### newer compilers ####################
 
-printf "\n\n============ STEP: gcc-7 compile test ================\n\n\n"
-export CC=gcc-7
+printf "\n\n============ STEP: gcc-9 compile test ================\n\n\n"
+export CC=gcc-9
 export CFLAGS=
 $DO_IN_CONTAINER devtools/run-configure.sh
 $DO_IN_CONTAINER make check TESTS=""
 
+$DO_IN_CONTAINER make clean
+printf "\n\n============ STEP: clang-9 compile test ================\n\n\n"
+export CC=clang-9
+export CFLAGS=
+$DO_IN_CONTAINER devtools/run-configure.sh
+$DO_IN_CONTAINER make check TESTS=""
 
 exit 0
 

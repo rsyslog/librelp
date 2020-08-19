@@ -865,8 +865,10 @@ relpSessConnect(relpSess_t *pThis, int protFamily, unsigned char *port, unsigned
 		pThis->protFamily = protFamily;
 		if((pThis->srvPort = (unsigned char*) strdup((char*)port)) == NULL)
 			ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
-		if((pThis->srvAddr = (unsigned char*) strdup((char*)host)) == NULL)
-			ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+		if (host != NULL) { // host can be the same pointer as pThis->srvAddr, so check for NULL!
+			if((pThis->srvAddr = (unsigned char*) strdup((char*)host)) == NULL)
+				ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+		}
 	}
 
 	if (pThis->pCurrRcvFrame != NULL) {

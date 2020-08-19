@@ -1,3 +1,3 @@
 #!/bin/bash
 set -e
-find . -name "*.[ch]" -exec rsyslog_stylecheck {} +
+find . -type f \( -iname "*.[ch]" ! -iname "config.h" \) -exec rsyslog_stylecheck {} +
