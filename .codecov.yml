@@ -1,4 +1,4 @@
-#comment: off
+comment: off
 
 coverage:
   # to get things started, let's aim at a lower goal. This actually helps
