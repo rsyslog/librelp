@@ -26,6 +26,7 @@ TLS_TESTS=  \
 	tls-basic-fingerprint.sh \
 	tls-basic-wildcard.sh \
 	tls-basic-tlscommand.sh \
+	tls-basic-certchain.sh \
 	tls-receiver-abort.sh \
 	tls-missing-param-sender.sh \
 	tls-missing-param-receiver.sh

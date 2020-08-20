@@ -359,7 +359,7 @@ int main(int argc, char *argv[]) {
 
 	if(authMode != NULL) {
 		if(	(strcasecmp(authMode, "certvalid") != 0 && permittedPeer == NULL) ||
-			caCertFile == NULL || myCertFile == NULL || myPrivKeyFile == NULL) {
+			myCertFile == NULL || myPrivKeyFile == NULL) {
 			fprintf(stderr, "receive: mode '%s' parameter missing; certificates and "
 				"permittedPeer required\n", authMode);
 			goto done;

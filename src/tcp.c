@@ -1372,13 +1372,26 @@ relpTcpInitTLS(relpTcp_t *const pThis)
 	/* Init CA Certificate first */
 	if(	pThis->caCertFile != NULL ) {
 		if (SSL_CTX_load_verify_locations(ctx, pThis->caCertFile, NULL) != 1) {
-			pThis->pEngine->dbgprint((char*)"relpTcpInitTLS: Error, CA certificate could not be accessed."
-					" Is the file at the right path? And do we have the permissions?\n");
+			callOnErr(pThis, (char*)"relpTcpInitTLS: Error, CA certificate could not be accessed."
+					" Is the file at the right path? And do we have the permissions?\n",
+					RELP_RET_ERR_TLS_SETUP);
+			/* Output Additional OpenSSL output */
+			relpTcpLastSSLErrorMsg(0, pThis, "relpTcpInitTLS");
 			ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
 		} else
 			pThis->pEngine->dbgprint((char*)"relpTcpInitTLS: Successfully initialized CA certificate\n");
-	} else
-		pThis->pEngine->dbgprint((char*)"relpTcpInitTLS: CA certificate MISSING\n");
+	} else {
+		// Init local System default certificate storage instead. 
+		if (SSL_CTX_set_default_verify_paths(ctx) != 1) {
+			callOnErr(pThis, (char*)"relpTcpInitTLS: Error, CA default certificate storage could not be set.",
+					RELP_RET_ERR_TLS_SETUP);
+			/* Output Additional OpenSSL output */
+			relpTcpLastSSLErrorMsg(0, pThis, "relpTcpInitTLS");
+			ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
+		} else
+			pThis->pEngine->dbgprint((char*)"relpTcpInitTLS: Successfully initialized default CA certificate "
+				"storage\n");
+	}
 
 	called_openssl_global_init = 1;
 finalize_it:
@@ -1469,10 +1482,16 @@ relpTcpSslInitCerts(relpTcp_t *const pThis, char *ownCertFile, char *privKeyFile
 	ENTER_RELPFUNC;
 
 	if(	ownCertFile!= NULL ) {
+	#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+		if (SSL_use_certificate_chain_file(pThis->ssl, ownCertFile) != 1) {
+	#else
 		if (SSL_use_certificate_file(pThis->ssl, ownCertFile, SSL_FILETYPE_PEM) != 1) {
-			pThis->pEngine->dbgprint((char*)"relpTcpSslInitCerts: error, Certificate file could not be "
+	#endif
+			callOnErr(pThis, (char*)"relpTcpSslInitCerts: error, Certificate file could not be "
 				"accessed. Is the file at the right path? And do we have the "
-				"permissions?");
+				"permissions?", RELP_RET_ERR_TLS_SETUP);
+			/* Output Additional OpenSSL output */
+			relpTcpLastSSLErrorMsg(0, pThis, "relpTcpSslInitCerts");
 			ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
 		} else
 			pThis->pEngine->dbgprint((char*)"relpTcpSslInitCerts: Successfully "
@@ -1482,8 +1501,11 @@ relpTcpSslInitCerts(relpTcp_t *const pThis, char *ownCertFile, char *privKeyFile
 
 	if(	privKeyFile!= NULL ) {
 		if (SSL_use_PrivateKey_file(pThis->ssl, privKeyFile, SSL_FILETYPE_PEM) != 1) {
-			pThis->pEngine->dbgprint((char*)"relpTcpSslInitCerts: Error, Key file could not be accessed. "
-				"Is the file at the right path? And do we have the permissions?");
+			callOnErr(pThis, (char*)"relpTcpSslInitCerts: Error, Key file could not be accessed. "
+				"Is the file at the right path? And do we have the permissions?"
+				, RELP_RET_ERR_TLS_SETUP);
+			/* Output Additional OpenSSL output */
+			relpTcpLastSSLErrorMsg(0, pThis, "relpTcpSslInitCerts");
 			ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
 		} else
 			pThis->pEngine->dbgprint((char*)"relpTcpSslInitCerts: Successfully initialized key file\n");

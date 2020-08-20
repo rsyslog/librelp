@@ -388,7 +388,7 @@ int main(int argc, char *argv[]) {
 
 	if(authMode != NULL) {
 		if(	(strcasecmp(authMode, "certvalid")  != 0 && permittedPeer == NULL) ||
-			caCertFile == NULL || myCertFile == NULL || myPrivKeyFile == NULL) {
+			myCertFile == NULL || myPrivKeyFile == NULL) {
 			printf("send: mode '%s' parameter missing; certificates and permittedPeer required\n",
 				authMode);
 			exit(1);
