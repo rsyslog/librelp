@@ -1,5 +1,12 @@
 ----------------------------------------------------------------------
 Version 1.7.0 - 2020-??-??
+- fix FD leak when socket shutdown is one-sided
+  AWS LB has timeouts when connection is inactive and when this
+  happens, AWS LB shuts down socket from one-side only. When rsyslog
+  detects one-sided shutdown, it assumes that connection is closed
+  while it isn't. The connection is left unclosed and unclosed FD
+  are piling up, eventually filling up FD number space.
+  Thanks to Ognyan Kulev for the patch.
 - TLS: Added call to destruct OpenSSL remains to relpEngineDestruct
   For a clean cleanup, OpenSSL remains are now being removed at the end
   of relpEngineDestruct()
