@@ -12,6 +12,7 @@ endif
 DEBUG = -g
 # Uncomment for debugging
 #CFLAGS += $(DEBUG)
+AM_CFLAGS=-fvisibility=hidden
 
 lib_LTLIBRARIES = librelp.la
 

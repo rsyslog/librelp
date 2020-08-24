@@ -1,6 +1,6 @@
 /* The RELP (reliable event logging protocol) core protocol library.
  *
- * Copyright 2008-2018 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2020 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
@@ -38,6 +38,8 @@
 #else
 	#define	NOTLS_UNUSED LIBRELP_ATTR_UNUSED
 #endif
+
+#define PART_OF_API __attribute__((visibility("default")))
 
 #include <pthread.h>
 #if HAVE_SYS_EPOLL_H

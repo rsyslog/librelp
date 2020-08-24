@@ -1,6 +1,6 @@
 /* The relp client.
  *
- * Copyright 2008-2018 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2020 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
@@ -45,7 +45,7 @@
  * RELP function. The relp clt must only destructed after all RELP
  * operations have been finished.
  */
-relpRetVal
+relpRetVal PART_OF_API
 relpCltConstruct(relpClt_t **ppThis, relpEngine_t *pEngine)
 {
 	relpClt_t *pThis;
@@ -78,7 +78,7 @@ finalize_it:
 
 /** Destruct a RELP clt instance
  */
-relpRetVal
+relpRetVal PART_OF_API
 relpCltDestruct(relpClt_t **ppThis)
 {
 	int i;
@@ -112,7 +112,7 @@ relpCltDestruct(relpClt_t **ppThis)
  * remote servers parameters must already have been set.
  * rgerhards, 2008-03-19
  */
-relpRetVal
+relpRetVal PART_OF_API
 relpCltConnect(relpClt_t *pThis, int protFamily, unsigned char *port, unsigned char *host)
 {
 	ENTER_RELPFUNC;
@@ -155,7 +155,7 @@ finalize_it:
  * remote host) can not be changed.
  * rgerhards, 2008-03-23
  */
-relpRetVal
+relpRetVal PART_OF_API
 relpCltReconnect(relpClt_t *pThis)
 {
 	ENTER_RELPFUNC;
@@ -172,7 +172,7 @@ finalize_it:
 /** Set the relp window size for this client. Value 0 means
  * that the default value is to be used.
  */
-relpRetVal
+relpRetVal PART_OF_API
 relpCltSetWindowSize(relpClt_t *pThis, int sizeWindow)
 {
 	ENTER_RELPFUNC;
@@ -186,7 +186,8 @@ finalize_it:
 }
 
 /** Set the timeout value for this client.  */
-relpRetVal relpCltSetTimeout(relpClt_t *pThis, unsigned timeout)
+relpRetVal PART_OF_API
+relpCltSetTimeout(relpClt_t *pThis, unsigned timeout)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Clt);
@@ -195,7 +196,8 @@ relpRetVal relpCltSetTimeout(relpClt_t *pThis, unsigned timeout)
 }
 
 /** Set the timeout value for this client socket connection.  */
-relpRetVal relpCltSetConnTimeout(relpClt_t *pThis, int connTimeout)
+relpRetVal PART_OF_API
+relpCltSetConnTimeout(relpClt_t *pThis, int connTimeout)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Clt);
@@ -211,7 +213,8 @@ finalize_it:
 
 /** Set the local IP address to be used when acting as a client.
  */
-relpRetVal relpCltSetClientIP(relpClt_t *pThis, unsigned char *ipAddr)
+relpRetVal PART_OF_API
+relpCltSetClientIP(relpClt_t *pThis, unsigned char *ipAddr)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Clt);
@@ -221,7 +224,7 @@ relpRetVal relpCltSetClientIP(relpClt_t *pThis, unsigned char *ipAddr)
 	LEAVE_RELPFUNC;
 }
 
-relpRetVal
+relpRetVal PART_OF_API
 relpCltAddPermittedPeer(relpClt_t *pThis, char *peer)
 {
 	char **newName;
@@ -245,7 +248,7 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 
-relpRetVal
+relpRetVal PART_OF_API
 relpCltSetUsrPtr(relpClt_t *pThis, void *pUsr)
 {
 	ENTER_RELPFUNC;
@@ -255,7 +258,7 @@ relpCltSetUsrPtr(relpClt_t *pThis, void *pUsr)
 }
 
 /* Note: mode==NULL is valid and means "no change" */
-relpRetVal
+relpRetVal PART_OF_API
 relpCltSetAuthMode(relpClt_t *pThis, char *mode)
 {
 	ENTER_RELPFUNC;
@@ -279,7 +282,7 @@ finalize_it:
 /* set the GnuTLS priority string. Providing NULL does re-set
  * any previously set string. -- rgerhards, 2013-06-12
  */
-relpRetVal
+relpRetVal PART_OF_API
 relpCltSetGnuTLSPriString(relpClt_t *pThis, char *pristr)
 {
 	ENTER_RELPFUNC;
@@ -294,7 +297,7 @@ relpCltSetGnuTLSPriString(relpClt_t *pThis, char *pristr)
 finalize_it:
 	LEAVE_RELPFUNC;
 }
-relpRetVal
+relpRetVal PART_OF_API
 relpCltSetCACert(relpClt_t *pThis, char *file)
 {
 	ENTER_RELPFUNC;
@@ -309,7 +312,7 @@ relpCltSetCACert(relpClt_t *pThis, char *file)
 finalize_it:
 	LEAVE_RELPFUNC;
 }
-relpRetVal
+relpRetVal PART_OF_API
 relpCltSetOwnCert(relpClt_t *pThis, char *file)
 {
 	ENTER_RELPFUNC;
@@ -324,7 +327,7 @@ relpCltSetOwnCert(relpClt_t *pThis, char *file)
 finalize_it:
 	LEAVE_RELPFUNC;
 }
-relpRetVal
+relpRetVal PART_OF_API
 relpCltSetPrivKey(relpClt_t *pThis, char *file)
 {
 	ENTER_RELPFUNC;
@@ -339,7 +342,7 @@ relpCltSetPrivKey(relpClt_t *pThis, char *file)
 finalize_it:
 	LEAVE_RELPFUNC;
 }
-relpRetVal
+relpRetVal PART_OF_API
 relpCltSetTlsConfigCmd(relpClt_t *pThis, char *cfgcmd)
 {
 	ENTER_RELPFUNC;
@@ -356,7 +359,7 @@ finalize_it:
 
 }
 /* Enable TLS mode. */
-relpRetVal
+relpRetVal PART_OF_API
 relpCltEnableTLS(relpClt_t *pThis)
 {
 	ENTER_RELPFUNC;
@@ -365,7 +368,7 @@ relpCltEnableTLS(relpClt_t *pThis)
 	LEAVE_RELPFUNC;
 }
 
-relpRetVal
+relpRetVal PART_OF_API
 relpCltEnableTLSZip(relpClt_t *pThis)
 {
 	ENTER_RELPFUNC;
@@ -396,7 +399,7 @@ relpCltHintBurstEnd(relpClt_t *pThis)
  * must free it if it is no longer needed.
  * rgerhards, 2008-03-20
  */
-relpRetVal
+relpRetVal PART_OF_API
 relpCltSendSyslog(relpClt_t *pThis, unsigned char *pMsg, size_t lenMsg)
 {
 
