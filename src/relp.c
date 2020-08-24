@@ -1145,7 +1145,7 @@ char *relpEngineGetVersion(void)
 #	endif
 }
 
-void
+void PART_OF_API
 relpEngineSetShutdownImmdtPtr(relpEngine_t *pThis, int *ptr)
 {
 	if(pThis->bShutdownImmdt != ptr)
