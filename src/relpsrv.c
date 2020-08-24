@@ -47,7 +47,7 @@
  * RELP function. The relp srv must only destructed after all RELP
  * operations have been finished.
  */
-relpRetVal
+relpRetVal PART_OF_API
 relpSrvConstruct(relpSrv_t **ppThis, relpEngine_t *pEngine)
 {
 	relpSrv_t *pThis;
@@ -82,7 +82,7 @@ finalize_it:
 
 /** Destruct a RELP srv instance
  */
-relpRetVal
+relpRetVal PART_OF_API
 relpSrvDestruct(relpSrv_t **ppThis)
 {
 	relpSrv_t *pThis;
@@ -122,7 +122,7 @@ relpSrvDestruct(relpSrv_t **ppThis)
  * has been started. In that case, races can happen.
  * rgerhards, 2013-06-18
  */
-relpRetVal
+relpRetVal PART_OF_API
 relpSrvAddPermittedPeer(relpSrv_t *pThis, char *peer)
 {
 	char **newName;
@@ -150,7 +150,7 @@ finalize_it:
 /* set the user pointer. Whatever value the user provides is accepted.
  * rgerhards, 2008-07-08
  */
-relpRetVal
+relpRetVal PART_OF_API
 relpSrvSetUsrPtr(relpSrv_t *pThis, void *pUsr)
 {
 	ENTER_RELPFUNC;
@@ -159,14 +159,15 @@ relpSrvSetUsrPtr(relpSrv_t *pThis, void *pUsr)
 	LEAVE_RELPFUNC;
 }
 
-relpRetVal relpSrvSetMaxDataSize(relpSrv_t *pThis, size_t maxSize) {
+relpRetVal PART_OF_API
+relpSrvSetMaxDataSize(relpSrv_t *pThis, size_t maxSize) {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Srv);
 	pThis->maxDataSize = maxSize;
 	LEAVE_RELPFUNC;
 }
 
-relpRetVal LIBRELP_ATTR_NONNULL()
+relpRetVal PART_OF_API LIBRELP_ATTR_NONNULL()
 relpSrvSetOversizeMode(relpSrv_t *const pThis, const int oversizeMode)
 {
 	ENTER_RELPFUNC;
@@ -186,7 +187,7 @@ finalize_it:
  * free the passed-in string.
  * rgerhards, 2008-03-17
  */
-relpRetVal
+relpRetVal PART_OF_API
 relpSrvSetLstnPort(relpSrv_t *pThis, unsigned char *pLstnPort)
 {
 	ENTER_RELPFUNC;
@@ -210,7 +211,7 @@ finalize_it:
  * free the passed-in string.
  * perlei, 2018-04-19
  */
-relpRetVal
+relpRetVal PART_OF_API
 relpSrvSetLstnAddr(relpSrv_t *pThis, unsigned char *pLstnAddr)
 {
 	ENTER_RELPFUNC;
@@ -230,7 +231,7 @@ finalize_it:
 }
 
 /* mode==NULL is valid and means "no change" */
-relpRetVal
+relpRetVal PART_OF_API
 relpSrvSetAuthMode(relpSrv_t *pThis, char *mode)
 {
 	ENTER_RELPFUNC;
@@ -254,7 +255,7 @@ finalize_it:
 /* set the IPv4/v6 type to be used. Default is both (PF_UNSPEC)
  * rgerhards, 2013-03-15
  */
-relpRetVal
+relpRetVal PART_OF_API
 relpSrvSetFamily(relpSrv_t *pThis, int ai_family)
 {
 	ENTER_RELPFUNC;
@@ -266,7 +267,7 @@ relpSrvSetFamily(relpSrv_t *pThis, int ai_family)
 /* set the GnuTLS priority string. Providing NULL does re-set
  * any previously set string. -- rgerhards, 2013-06-12
  */
-relpRetVal
+relpRetVal PART_OF_API
 relpSrvSetGnuTLSPriString(relpSrv_t *pThis, char *pristr)
 {
 	ENTER_RELPFUNC;
@@ -282,7 +283,7 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 
-relpRetVal
+relpRetVal PART_OF_API
 relpSrvSetCACert(relpSrv_t *pThis, char *cert)
 {
 	ENTER_RELPFUNC;
@@ -297,7 +298,7 @@ relpSrvSetCACert(relpSrv_t *pThis, char *cert)
 finalize_it:
 	LEAVE_RELPFUNC;
 }
-relpRetVal
+relpRetVal PART_OF_API
 relpSrvSetOwnCert(relpSrv_t *pThis, char *cert)
 {
 	ENTER_RELPFUNC;
@@ -312,7 +313,7 @@ relpSrvSetOwnCert(relpSrv_t *pThis, char *cert)
 finalize_it:
 	LEAVE_RELPFUNC;
 }
-relpRetVal
+relpRetVal PART_OF_API
 relpSrvSetPrivKey(relpSrv_t *pThis, char *cert)
 {
 	ENTER_RELPFUNC;
@@ -328,7 +329,7 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 
-relpRetVal
+relpRetVal PART_OF_API
 relpSrvSetTlsConfigCmd(relpSrv_t *pThis, char *cfgcmd)
 {
 	ENTER_RELPFUNC;
@@ -343,12 +344,12 @@ relpSrvSetTlsConfigCmd(relpSrv_t *pThis, char *cfgcmd)
 finalize_it:
 	LEAVE_RELPFUNC;
 }
-void
+void PART_OF_API
 relpSrvSetDHBits(relpSrv_t *pThis, int bits)
 {
 	pThis->dhBits = bits;
 }
-relpRetVal
+relpRetVal PART_OF_API
 relpSrvEnableTLS2(relpSrv_t LIBRELP_ATTR_UNUSED *pThis)
 {
 	ENTER_RELPFUNC;
@@ -359,7 +360,7 @@ relpSrvEnableTLS2(relpSrv_t LIBRELP_ATTR_UNUSED *pThis)
 #endif /* #ifdef ENABLE_TLS | ENABLE_TLS_OPENSSL */
 	LEAVE_RELPFUNC;
 }
-relpRetVal
+relpRetVal PART_OF_API
 relpSrvEnableTLSZip2(relpSrv_t LIBRELP_ATTR_UNUSED *pThis)
 {
 	ENTER_RELPFUNC;
@@ -381,7 +382,7 @@ relpSrvEnableTLSZip(relpSrv_t *pThis)
 	relpSrvEnableTLSZip2(pThis);
 }
 
-void
+void PART_OF_API
 relpSrvSetKeepAlive(relpSrv_t *pThis,
 	const int bEnabled,
 	const int iKeepAliveIntvl,
@@ -397,7 +398,7 @@ relpSrvSetKeepAlive(relpSrv_t *pThis,
 /* start a relp server - the server object must have all properties set
  * rgerhards, 2008-03-17
  */
-relpRetVal
+relpRetVal PART_OF_API
 relpSrvRun(relpSrv_t *pThis)
 {
 	relpTcp_t *pTcp;
@@ -443,7 +444,7 @@ finalize_it:
  * case.
  * rgerhards, 2008-03-27
  */
-relpRetVal
+relpRetVal PART_OF_API
 relpSrvSetEnableCmd(relpSrv_t *pThis, unsigned char *pszCmd, relpCmdEnaState_t stateCmd)
 {
 	ENTER_RELPFUNC;

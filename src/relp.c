@@ -51,7 +51,7 @@
 
 /* ------------------------------ some internal functions ------------------------------ */
 
-void LIBRELP_ATTR_FORMAT(printf, 4, 5)
+void PART_OF_API LIBRELP_ATTR_FORMAT(printf, 4, 5)
 relpEngineCallOnGenericErr(relpEngine_t *pThis, const char *eobj, relpRetVal ecode, const char *fmt, ...)
 {
 	va_list ap;
@@ -247,7 +247,7 @@ relpEngineDelSess(relpEngine_t *pThis, relpEngSessLst_t *pSessLstEntry)
  * RELP function. The relp engine must only destructed after all RELP
  * operations have been finished.
  */
-relpRetVal
+relpRetVal PART_OF_API
 relpEngineConstruct(relpEngine_t **ppThis)
 {
 	relpEngine_t *pThis;
@@ -281,7 +281,7 @@ finalize_it:
  * Terminates librelp operations, no calls are permitted after engine
  * destruction.
  */
-relpRetVal
+relpRetVal PART_OF_API
 relpEngineDestruct(relpEngine_t **ppThis)
 {
 	relpEngine_t *pThis;
@@ -325,7 +325,7 @@ static void dbgprintDummy(char LIBRELP_ATTR_UNUSED *fmt, ...) {}
  * function that already has been set, provide a NULL function pointer.
  * rgerhards, 2008-03-17
  */
-relpRetVal
+relpRetVal PART_OF_API
 relpEngineSetDbgprint(relpEngine_t *pThis, void (*dbgprint)(char *fmt, ...) LIBRELP_ATTR_FORMAT(printf, 1, 2))
 {
 	ENTER_RELPFUNC;
@@ -336,7 +336,7 @@ relpEngineSetDbgprint(relpEngine_t *pThis, void (*dbgprint)(char *fmt, ...) LIBR
 }
 
 
-relpRetVal
+relpRetVal PART_OF_API
 relpEngineSetTLSLib(relpEngine_t *const pThis, NOTLS_UNUSED const int tls_lib)
 {
 	ENTER_RELPFUNC;
@@ -374,7 +374,7 @@ finalize_it:
 }
 
 
-relpRetVal
+relpRetVal PART_OF_API
 relpEngineSetTLSLibByName(relpEngine_t *const pThis, const char *const name)
 {
 	ENTER_RELPFUNC;
@@ -408,7 +408,7 @@ finalize_it:
  * * relgEngineListnerConstructFinalize()
  * rgerhards, 2013-05-14
  */
-relpRetVal
+relpRetVal PART_OF_API
 relpEngineListnerConstruct(relpEngine_t *pThis, relpSrv_t **ppSrv)
 {
 	relpSrv_t *pSrv;
@@ -421,7 +421,7 @@ relpEngineListnerConstruct(relpEngine_t *pThis, relpSrv_t **ppSrv)
 finalize_it:
 	LEAVE_RELPFUNC;
 }
-relpRetVal
+relpRetVal PART_OF_API
 relpEngineListnerConstructFinalize(relpEngine_t *pThis, relpSrv_t *pSrv)
 {
 	ENTER_RELPFUNC;
@@ -449,7 +449,7 @@ static relpRetVal relpSrvSyslogRcvDummy2(void LIBRELP_ATTR_UNUSED *pUsr,
 /* set the syslog receive callback. If NULL is provided, it is set to the
  * not implemented dummy.
  */
-relpRetVal
+relpRetVal PART_OF_API
 relpEngineSetSyslogRcv2(relpEngine_t *pThis, relpRetVal (*pCB)(void *, unsigned char*,
 	unsigned char*, unsigned char*, size_t))
 {
@@ -482,7 +482,7 @@ relpEngineSetSyslogRcv2(relpEngine_t *pThis, relpRetVal (*pCB)(void *, unsigned 
  * errmsg   - error message as far as librelp is concerned
  * errcode  - contains librelp error status that lead to the failed auth.
  */
-relpRetVal
+relpRetVal PART_OF_API
 relpEngineSetOnAuthErr(relpEngine_t *pThis, void (*pCB)(void*pUsr, char *authinfo, char*errmsg, relpRetVal errcode) )
 {
 	ENTER_RELPFUNC;
@@ -506,7 +506,7 @@ relpEngineSetOnAuthErr(relpEngine_t *pThis, void (*pCB)(void*pUsr, char *authinf
  * errmsg   - error message as far as librelp is concerned
  * errcode  - contains librelp error status
  */
-relpRetVal
+relpRetVal PART_OF_API
 relpEngineSetOnErr(relpEngine_t *pThis, void (*pCB)(void*pUsr, char *objinfo, char*errmsg, relpRetVal errcode) )
 {
 	ENTER_RELPFUNC;
@@ -526,7 +526,7 @@ relpEngineSetOnErr(relpEngine_t *pThis, void (*pCB)(void*pUsr, char *objinfo, ch
  * errmsg   - error message as far as librelp is concerned
  * errcode  - contains librelp error status
  */
-relpRetVal
+relpRetVal PART_OF_API
 relpEngineSetOnGenericErr(relpEngine_t *pThis, void (*pCB)(char *objinfo, char*errmsg, relpRetVal errcode) )
 {
 	ENTER_RELPFUNC;
@@ -538,7 +538,7 @@ relpEngineSetOnGenericErr(relpEngine_t *pThis, void (*pCB)(char *objinfo, char*e
 /* Deprecated, use relpEngineListnerConstruct() family of functions.
  * See there for further information.
  */
-relpRetVal
+relpRetVal PART_OF_API
 relpEngineAddListner2(relpEngine_t *pThis, unsigned char *pLstnPort, void *pUsr)
 {
 	relpSrv_t *pSrv = NULL;
@@ -566,7 +566,7 @@ static relpRetVal relpSrvSyslogRcvDummy(unsigned char LIBRELP_ATTR_UNUSED *pHost
 /* set the syslog receive callback. If NULL is provided, it is set to the
  * not implemented dummy.
  */
-relpRetVal
+relpRetVal PART_OF_API
 relpEngineSetSyslogRcv(relpEngine_t *pThis, relpRetVal (*pCB)(unsigned char*, unsigned char*, unsigned char*, size_t))
 {
 	ENTER_RELPFUNC;
@@ -580,7 +580,7 @@ relpEngineSetSyslogRcv(relpEngine_t *pThis, relpRetVal (*pCB)(unsigned char*, un
 /* Deprecated, use relpEngineListnerConstruct() family of functions.
  * See there for further information.
  */
-relpRetVal
+relpRetVal PART_OF_API
 relpEngineAddListner(relpEngine_t *pThis, unsigned char *pLstnPort)
 {
 	relpSrv_t *pSrv = NULL;
@@ -604,7 +604,7 @@ finalize_it:
  * signal is sent, it may take rather long to stop the server (until another
  * machine sends data).
  */
-relpRetVal relpEngineSetStop(relpEngine_t *pThis)
+relpRetVal PART_OF_API relpEngineSetStop(relpEngine_t *pThis)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Engine);
@@ -615,7 +615,7 @@ relpRetVal relpEngineSetStop(relpEngine_t *pThis)
 
 /* set the socket family to use
  */
-relpRetVal relpEngineSetFamily(relpEngine_t *pThis, int ai_family)
+relpRetVal PART_OF_API relpEngineSetFamily(relpEngine_t *pThis, int ai_family)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Engine);
@@ -1017,7 +1017,7 @@ engineEventLoopRun(relpEngine_t *pThis)
  * the several flavours of enhanced OS APIs.
  * rgerhards, 2008-03-17
  */
-relpRetVal
+relpRetVal PART_OF_API
 relpEngineRun(relpEngine_t *pThis)
 {
 	ENTER_RELPFUNC;
@@ -1051,7 +1051,7 @@ PROTOTYPEcommand(S, Syslog)
  * by this function - this must be done by the caller.
  * rgerhards, 2008-03-17
  */
-relpRetVal
+relpRetVal PART_OF_API
 relpEngineDispatchFrame(relpEngine_t *pThis, relpSess_t *pSess, relpFrame_t *pFrame)
 {
 	ENTER_RELPFUNC;
@@ -1097,7 +1097,7 @@ finalize_it:
  * users should always call the client-generating functions inside the engine.
  * rgerhards, 2008-03-19
  */
-relpRetVal
+relpRetVal PART_OF_API
 relpEngineCltConstruct(relpEngine_t *pThis, relpClt_t **ppClt)
 {
 	ENTER_RELPFUNC;
@@ -1116,7 +1116,7 @@ finalize_it:
  * relpEngineCltConstruct(), see comment there for details.
  * rgerhards, 2008-03-19
  */
-relpRetVal
+relpRetVal PART_OF_API
 relpEngineCltDestruct(relpEngine_t *pThis, relpClt_t **ppClt)
 {
 	ENTER_RELPFUNC;
@@ -1156,7 +1156,7 @@ relpEngineSetShutdownImmdtPtr(relpEngine_t *pThis, int *ptr)
  * it has been set to forbidden! There will be no error return state in this
  * case. -- rgerhards, 2008-03-27
  */
-relpRetVal
+relpRetVal PART_OF_API
 relpEngineSetEnableCmd(relpEngine_t *pThis, unsigned char *pszCmd, relpCmdEnaState_t stateCmd)
 {
 	ENTER_RELPFUNC;
@@ -1180,7 +1180,7 @@ finalize_it:
  * session. If disabled, the IP address will be used as the hostname.
  * rgerhards, 2008-03-31
  */
-relpRetVal
+relpRetVal PART_OF_API
 relpEngineSetDnsLookupMode(relpEngine_t *pThis, int iMode)
 {
 	ENTER_RELPFUNC;
