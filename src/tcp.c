@@ -1379,18 +1379,32 @@ relpTcpInitTLS(relpTcp_t *const pThis)
 			relpTcpLastSSLErrorMsg(0, pThis, "relpTcpInitTLS");
 			ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
 		} else
-			pThis->pEngine->dbgprint((char*)"relpTcpInitTLS: Successfully initialized CA certificate\n");
+			pThis->pEngine->dbgprint((char*)"relpTcpInitTLS: Successfully initialized CA certificate #1\n");
 	} else {
-		// Init local System default certificate storage instead. 
+		/* Init CA from own Certificate */
+		if(	pThis->ownCertFile != NULL ) {
+			if (SSL_CTX_load_verify_locations(ctx, pThis->ownCertFile, NULL) != 1) {
+				callOnErr(pThis, (char*)"relpTcpInitTLS: Error, Certificate could not be accessed."
+						" Is the file at the right path? And do we have the permissions?\n",
+						RELP_RET_ERR_TLS_SETUP);
+				/* Output Additional OpenSSL output */
+				relpTcpLastSSLErrorMsg(0, pThis, "relpTcpInitTLS");
+				ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
+			} else
+				pThis->pEngine->dbgprint(
+					(char*)"relpTcpInitTLS: Successfully initialized CA Certificate #2\n");
+		}
+
+		// Init local System default certificate storage instead.
 		if (SSL_CTX_set_default_verify_paths(ctx) != 1) {
-			callOnErr(pThis, (char*)"relpTcpInitTLS: Error, CA default certificate storage could not be set.",
-					RELP_RET_ERR_TLS_SETUP);
+			callOnErr(pThis, (char*)"relpTcpInitTLS: Error, CA default certificate storage "
+					"could not be set.", RELP_RET_ERR_TLS_SETUP);
 			/* Output Additional OpenSSL output */
 			relpTcpLastSSLErrorMsg(0, pThis, "relpTcpInitTLS");
 			ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
 		} else
-			pThis->pEngine->dbgprint((char*)"relpTcpInitTLS: Successfully initialized default CA certificate "
-				"storage\n");
+			pThis->pEngine->dbgprint((char*)"relpTcpInitTLS: Successfully initialized default "
+					"CA certificate storage\n");
 	}
 
 	called_openssl_global_init = 1;
