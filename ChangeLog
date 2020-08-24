@@ -1,5 +1,11 @@
 ----------------------------------------------------------------------
-Version 1.7.0 - 2020-??-??
+Version 1.7.0 - 2020-08-25
+- openssl: Fix chained certificate files for older OpenSSL Version.
+  For older OpenSSL Versions, we are loading the Own Certfile
+  (Which can be chained) into CTX Verify locations. This enables
+  chained certificates for older OpenSSL Versions as well
+  devtools: updated devcontainer.sh (based on rsyslog version)
+  see also: https://github.com/rsyslog/librelp/issues/195
 - fix FD leak when socket shutdown is one-sided
   AWS LB has timeouts when connection is inactive and when this
   happens, AWS LB shuts down socket from one-side only. When rsyslog
