@@ -1,5 +1,7 @@
 ----------------------------------------------------------------------
 Version 1.7.0 - 2020-08-25
+- bugfix: library did export non-API symbols
+  closes https://github.com/rsyslog/librelp/issues/187
 - openssl: Fix chained certificate files for older OpenSSL Version.
   For older OpenSSL Versions, we are loading the Own Certfile
   (Which can be chained) into CTX Verify locations. This enables
