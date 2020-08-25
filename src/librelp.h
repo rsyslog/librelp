@@ -189,7 +189,7 @@ typedef enum relpCmdEnaState_e relpCmdEnaState_t;
 #define CHKRet_Hdlr(code) if((iRet = code) != RELP_RET_OK)
 
 /* prototypes needed by library users */
-char *relpEngineGetVersion(void); /* use this entry point for configure check */
+const char *relpEngineGetVersion(void); /* use this entry point for configure check */
 void relpEngineSetShutdownImmdtPtr(relpEngine_t *pThis, int *ptr);
 relpRetVal relpEngineConstruct(relpEngine_t **ppThis);
 relpRetVal relpEngineDestruct(relpEngine_t **ppThis);
