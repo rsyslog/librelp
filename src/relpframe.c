@@ -1,6 +1,6 @@
 /* This module implements the relp frame object.
  *
- * Copyright 2008-2018 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2020 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
@@ -42,7 +42,7 @@
 /** Construct a RELP frame instance
  */
 relpRetVal
-relpFrameConstruct(relpFrame_t **ppThis, relpEngine_t *pEngine)
+relpFrameConstruct(relpFrame_t **ppThis, relpEngine_t *const pEngine)
 {
 	relpFrame_t *pThis;
 
@@ -284,7 +284,7 @@ finalize_it:
  * rgerhards, 2008-03-16
  */
 relpRetVal
-relpFrameSetTxnr(relpFrame_t *pThis, int txnr)
+relpFrameSetTxnr(relpFrame_t *const pThis, int txnr)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Frame);
@@ -304,7 +304,7 @@ finalize_it:
  * rgerhards, 2008-03-16
  */
 relpRetVal
-relpFrameSetCmd(relpFrame_t *pThis, relpOctet_t *pCmd)
+relpFrameSetCmd(relpFrame_t *const pThis, relpOctet_t *pCmd)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Frame);
@@ -325,7 +325,7 @@ finalize_it:
  * rgerhards, 2008-03-16
  */
 relpRetVal
-relpFrameSetData(relpFrame_t *pThis, relpOctet_t *pData, int lenData, int bHandoverBuffer)
+relpFrameSetData(relpFrame_t *const pThis, relpOctet_t *pData, int lenData, int bHandoverBuffer)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Frame);
@@ -429,7 +429,7 @@ finalize_it:
  * for destructing it. -- rgerhards, 2008-03-19
  */
 relpRetVal
-relpFrameBuildSendbuf(relpSendbuf_t **ppSendbuf, relpTxnr_t txnr, unsigned char *pCmd, size_t lenCmd,
+relpFrameBuildSendbuf(relpSendbuf_t **ppSendbuf, relpTxnr_t txnr, unsigned char *pCmd, const size_t lenCmd,
 		      relpOctet_t *pData, size_t lenData, relpSess_t *pSess,
 		      relpRetVal (*rspHdlr)(relpSess_t*, relpFrame_t*))
 {
@@ -502,7 +502,7 @@ finalize_it:
  * rgerhards, 2008-03-24
  */
 relpRetVal
-relpFrameGetNextC(relpFrame_t *pThis, unsigned char *pC)
+relpFrameGetNextC(relpFrame_t *const pThis, unsigned char *const pC)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Frame);

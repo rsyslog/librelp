@@ -123,7 +123,7 @@ relpSrvDestruct(relpSrv_t **ppThis)
  * rgerhards, 2013-06-18
  */
 relpRetVal PART_OF_API
-relpSrvAddPermittedPeer(relpSrv_t *pThis, char *peer)
+relpSrvAddPermittedPeer(relpSrv_t *const pThis, char *peer)
 {
 	char **newName;
 	int newMemb;
@@ -151,7 +151,7 @@ finalize_it:
  * rgerhards, 2008-07-08
  */
 relpRetVal PART_OF_API
-relpSrvSetUsrPtr(relpSrv_t *pThis, void *pUsr)
+relpSrvSetUsrPtr(relpSrv_t *const pThis, void *pUsr)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Srv);
@@ -160,7 +160,7 @@ relpSrvSetUsrPtr(relpSrv_t *pThis, void *pUsr)
 }
 
 relpRetVal PART_OF_API
-relpSrvSetMaxDataSize(relpSrv_t *pThis, size_t maxSize) {
+relpSrvSetMaxDataSize(relpSrv_t *const pThis, size_t maxSize) {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Srv);
 	pThis->maxDataSize = maxSize;
@@ -188,7 +188,7 @@ finalize_it:
  * rgerhards, 2008-03-17
  */
 relpRetVal PART_OF_API
-relpSrvSetLstnPort(relpSrv_t *pThis, unsigned char *pLstnPort)
+relpSrvSetLstnPort(relpSrv_t *const pThis, unsigned char *pLstnPort)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Srv);
@@ -212,7 +212,7 @@ finalize_it:
  * perlei, 2018-04-19
  */
 relpRetVal PART_OF_API
-relpSrvSetLstnAddr(relpSrv_t *pThis, unsigned char *pLstnAddr)
+relpSrvSetLstnAddr(relpSrv_t *const pThis, unsigned char *pLstnAddr)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Srv);
@@ -232,7 +232,7 @@ finalize_it:
 
 /* mode==NULL is valid and means "no change" */
 relpRetVal PART_OF_API
-relpSrvSetAuthMode(relpSrv_t *pThis, char *mode)
+relpSrvSetAuthMode(relpSrv_t *const pThis, char *mode)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Srv);
@@ -256,7 +256,7 @@ finalize_it:
  * rgerhards, 2013-03-15
  */
 relpRetVal PART_OF_API
-relpSrvSetFamily(relpSrv_t *pThis, int ai_family)
+relpSrvSetFamily(relpSrv_t *const pThis, int ai_family)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Srv);
@@ -268,7 +268,7 @@ relpSrvSetFamily(relpSrv_t *pThis, int ai_family)
  * any previously set string. -- rgerhards, 2013-06-12
  */
 relpRetVal PART_OF_API
-relpSrvSetGnuTLSPriString(relpSrv_t *pThis, char *pristr)
+relpSrvSetGnuTLSPriString(relpSrv_t *const pThis, char *pristr)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Srv);
@@ -284,7 +284,7 @@ finalize_it:
 }
 
 relpRetVal PART_OF_API
-relpSrvSetCACert(relpSrv_t *pThis, char *cert)
+relpSrvSetCACert(relpSrv_t *const pThis, char *cert)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Srv);
@@ -299,7 +299,7 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 relpRetVal PART_OF_API
-relpSrvSetOwnCert(relpSrv_t *pThis, char *cert)
+relpSrvSetOwnCert(relpSrv_t *const pThis, char *cert)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Srv);
@@ -314,7 +314,7 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 relpRetVal PART_OF_API
-relpSrvSetPrivKey(relpSrv_t *pThis, char *cert)
+relpSrvSetPrivKey(relpSrv_t *const pThis, char *cert)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Srv);
@@ -330,7 +330,7 @@ finalize_it:
 }
 
 relpRetVal PART_OF_API
-relpSrvSetTlsConfigCmd(relpSrv_t *pThis, char *cfgcmd)
+relpSrvSetTlsConfigCmd(relpSrv_t *const pThis, char *cfgcmd)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Srv);
@@ -345,7 +345,7 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 void PART_OF_API
-relpSrvSetDHBits(relpSrv_t *pThis, int bits)
+relpSrvSetDHBits(relpSrv_t *const pThis, int bits)
 {
 	pThis->dhBits = bits;
 }
@@ -371,19 +371,19 @@ relpSrvEnableTLSZip2(relpSrv_t LIBRELP_ATTR_UNUSED *pThis)
 #endif /* #ifdef ENABLE_TLS | ENABLE_TLS_OPENSSL */
 	LEAVE_RELPFUNC;
 }
-void
-relpSrvEnableTLS(relpSrv_t *pThis)
+void PART_OF_API
+relpSrvEnableTLS(relpSrv_t *const pThis)
 {
 	relpSrvEnableTLS2(pThis);
 }
-void
-relpSrvEnableTLSZip(relpSrv_t *pThis)
+void PART_OF_API
+relpSrvEnableTLSZip(relpSrv_t *const pThis)
 {
 	relpSrvEnableTLSZip2(pThis);
 }
 
 void PART_OF_API
-relpSrvSetKeepAlive(relpSrv_t *pThis,
+relpSrvSetKeepAlive(relpSrv_t *const pThis,
 	const int bEnabled,
 	const int iKeepAliveIntvl,
 	const int iKeepAliveProbes,
@@ -399,7 +399,7 @@ relpSrvSetKeepAlive(relpSrv_t *pThis,
  * rgerhards, 2008-03-17
  */
 relpRetVal PART_OF_API
-relpSrvRun(relpSrv_t *pThis)
+relpSrvRun(relpSrv_t *const pThis)
 {
 	relpTcp_t *pTcp;
 
@@ -445,7 +445,7 @@ finalize_it:
  * rgerhards, 2008-03-27
  */
 relpRetVal PART_OF_API
-relpSrvSetEnableCmd(relpSrv_t *pThis, unsigned char *pszCmd, relpCmdEnaState_t stateCmd)
+relpSrvSetEnableCmd(relpSrv_t *const pThis, unsigned char *const pszCmd, const relpCmdEnaState_t stateCmd)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Srv);

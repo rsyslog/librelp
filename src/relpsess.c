@@ -1,6 +1,6 @@
 /* This module implements the relp sess object.
  *
- * Copyright 2008-2018 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2020 by Rainer Gerhards and Adiscon GmbH.
  *
  * To clarify on session handling: There is no upper limit of the number
  * of sessions, except for system ressources. Some left-over comment
@@ -57,9 +57,9 @@
 #include "dbllinklist.h"
 
 /* forward definitions */
-static relpRetVal relpSessCltDoDisconnect(relpSess_t *pThis);
-static relpRetVal relpSessFixCmdStates(relpSess_t *pThis);
-static relpRetVal relpSessSrvDoDisconnect(relpSess_t *pThis);
+static relpRetVal relpSessCltDoDisconnect(relpSess_t *const pThis);
+static relpRetVal relpSessFixCmdStates(relpSess_t *const pThis);
+static relpRetVal relpSessSrvDoDisconnect(relpSess_t *const pThis);
 
 /* helper to call onErr if set */
 static void
@@ -92,7 +92,7 @@ callOnErr(const relpSess_t *__restrict__ const pThis,
 
 /* helper to free permittedPeer structure */
 static inline void
-relpSessFreePermittedPeers(relpSess_t *pThis)
+relpSessFreePermittedPeers(relpSess_t *const pThis)
 {
 	int i;
 	for(i = 0 ; i < pThis->permittedPeers.nmemb ; ++i)
@@ -224,7 +224,7 @@ relpSessDestruct(relpSess_t **ppThis)
  * rgerhards, 2008-03-17
  */
 relpRetVal
-relpSessAcceptAndConstruct(relpSess_t **ppThis, relpSrv_t *pSrv, int sock)
+relpSessAcceptAndConstruct(relpSess_t **ppThis, relpSrv_t *const pSrv, const int sock)
 {
 	relpSess_t *pThis = NULL;
 
@@ -257,7 +257,7 @@ finalize_it:
  * rgerhards, 2008-03-17
  */
 relpRetVal
-relpSessRcvData(relpSess_t *pThis)
+relpSessRcvData(relpSess_t *const pThis)
 {
 	relpOctet_t rcvBuf[RELP_RCV_BUF_SIZE+1];
 	ssize_t lenBuf;
@@ -311,7 +311,7 @@ finalize_it:
  * rgerhards, 2008-03-19
  */
 relpRetVal
-relpSessSendResponse(relpSess_t *pThis, relpTxnr_t txnr, unsigned char *pData, size_t lenData)
+relpSessSendResponse(relpSess_t *const pThis, relpTxnr_t txnr, unsigned char *pData, size_t lenData)
 {
 	relpSendbuf_t *pSendbuf;
 
@@ -348,7 +348,7 @@ finalize_it:
  * rgerhards, 2008-03-19
  */
 relpRetVal
-relpSessSndData(relpSess_t *pThis)
+relpSessSndData(relpSess_t *const pThis)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
@@ -370,7 +370,7 @@ finalize_it:
  * rgerhards, 2008-03-31
  */
 static relpRetVal
-relpSessSrvSendHint(relpSess_t *pThis, unsigned char *pHint, size_t lenHint,
+relpSessSrvSendHint(relpSess_t *const pThis, unsigned char *pHint, size_t lenHint,
 		    unsigned char *pData, size_t lenData)
 {
 	relpSendbuf_t *pSendbuf = NULL;
@@ -398,7 +398,7 @@ finalize_it:
  * rgerhards, 2008-03-31
  */
 static relpRetVal
-relpSessSrvDoDisconnect(relpSess_t *pThis)
+relpSessSrvDoDisconnect(relpSess_t *const pThis)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
@@ -426,7 +426,7 @@ finalize_it:
  * rgerhards, 2008-03-20
  */
 relpRetVal
-relpSessAddUnacked(relpSess_t *pThis, relpSendbuf_t *pSendbuf)
+relpSessAddUnacked(relpSess_t *const pThis, relpSendbuf_t *pSendbuf)
 {
 	relpSessUnacked_t *pUnackedLstEntry;
 
@@ -466,7 +466,7 @@ finalize_it:
  * rgerhards, 2008-03-20
  */
 static relpRetVal
-relpSessDelUnacked(relpSess_t *pThis, relpSessUnacked_t *pUnackedLstEntry)
+relpSessDelUnacked(relpSess_t *const pThis, relpSessUnacked_t *pUnackedLstEntry)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
@@ -499,7 +499,7 @@ relpSessDelUnacked(relpSess_t *pThis, relpSessUnacked_t *pUnackedLstEntry)
  * rgerhards, 20080-03-20
  */
 relpRetVal
-relpSessGetUnacked(relpSess_t *pThis, relpSendbuf_t **ppSendbuf, relpTxnr_t txnr)
+relpSessGetUnacked(relpSess_t *const pThis, relpSendbuf_t **ppSendbuf, relpTxnr_t txnr)
 {
 	relpSessUnacked_t *pUnackedEtry;
 
@@ -630,7 +630,7 @@ finalize_it:
  * rgerhards, 2008-03-19
  */
 static relpRetVal
-relpSessRawSendCommand(relpSess_t *pThis, unsigned char *pCmd, size_t lenCmd,
+relpSessRawSendCommand(relpSess_t *const pThis, unsigned char *pCmd, size_t lenCmd,
 		    unsigned char *pData, size_t lenData, relpRetVal (*rspHdlr)(relpSess_t*,relpFrame_t*))
 {
 	relpSendbuf_t *pSendbuf;
@@ -664,7 +664,7 @@ finalize_it:
  * rgerhards, 2008-03-19
  */
 relpRetVal
-relpSessSendCommand(relpSess_t *pThis, unsigned char *pCmd, size_t lenCmd,
+relpSessSendCommand(relpSess_t *const pThis, unsigned char *pCmd, size_t lenCmd,
 		    unsigned char *pData, size_t lenData, relpRetVal (*rspHdlr)(relpSess_t*,relpFrame_t*))
 {
 	ENTER_RELPFUNC;
@@ -700,7 +700,7 @@ finalize_it:
  * rgerhards, 2008-03-22
  */
 relpRetVal
-relpSessTryReestablish(relpSess_t *pThis)
+relpSessTryReestablish(relpSess_t *const pThis)
 {
 	relpSessUnacked_t *pUnackedEtry;
 
@@ -761,7 +761,7 @@ finalize_it:
  * rgerhards, 2008-03-25
  */
 static relpRetVal
-relpSessCBrspOpen(relpSess_t *pThis, relpFrame_t *pFrame)
+relpSessCBrspOpen(relpSess_t *const pThis, relpFrame_t *pFrame)
 {
 	relpEngine_t *pEngine;
 	relpOffers_t *pOffers = NULL;
@@ -829,7 +829,7 @@ finalize_it:
  * in which case we can not open the session. -- rgerhards, 2008-03-27
  */
 relpRetVal
-relpSessCltConnChkOffers(relpSess_t *pThis)
+relpSessCltConnChkOffers(relpSess_t *const pThis)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
@@ -852,7 +852,7 @@ finalize_it:
  * rgerhards, 2008-03-19
  */
 relpRetVal
-relpSessConnect(relpSess_t *pThis, int protFamily, unsigned char *port, unsigned char *host)
+relpSessConnect(relpSess_t *const pThis, int protFamily, unsigned char *port, unsigned char *host)
 {
 	relpOffers_t *pOffers;
 	unsigned char *pszOffers = NULL;
@@ -940,7 +940,7 @@ finalize_it:
  * rgerhars, 2008-03-21
  */
 static relpRetVal
-relpSessCBrspClose(relpSess_t *pThis, relpFrame_t LIBRELP_ATTR_UNUSED *pFrame)
+relpSessCBrspClose(relpSess_t *const pThis, relpFrame_t LIBRELP_ATTR_UNUSED *pFrame)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
@@ -957,7 +957,7 @@ relpSessCBrspClose(relpSess_t *pThis, relpFrame_t LIBRELP_ATTR_UNUSED *pFrame)
  * rgerhards, 2008-03-21
  */
 static relpRetVal
-relpSessCltDoDisconnect(relpSess_t *pThis)
+relpSessCltDoDisconnect(relpSess_t *const pThis)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
@@ -982,7 +982,7 @@ finalize_it:
 
 
 relpRetVal
-relpSessSetWindowSize(relpSess_t *pThis, int sizeWindow)
+relpSessSetWindowSize(relpSess_t *const pThis, int sizeWindow)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
@@ -992,7 +992,7 @@ relpSessSetWindowSize(relpSess_t *pThis, int sizeWindow)
 }
 
 relpRetVal
-relpSessSetTimeout(relpSess_t *pThis, unsigned timeout)
+relpSessSetTimeout(relpSess_t *const pThis, unsigned timeout)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
@@ -1001,7 +1001,7 @@ relpSessSetTimeout(relpSess_t *pThis, unsigned timeout)
 }
 
 relpRetVal
-relpSessSetConnTimeout(relpSess_t *pThis, int connTimeout)
+relpSessSetConnTimeout(relpSess_t *const pThis, int connTimeout)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
@@ -1010,7 +1010,7 @@ relpSessSetConnTimeout(relpSess_t *pThis, int connTimeout)
 }
 
 relpRetVal
-relpSessSetClientIP(relpSess_t *pThis, unsigned char *ip)
+relpSessSetClientIP(relpSess_t *const pThis, unsigned char *ip)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
@@ -1026,7 +1026,7 @@ relpSessSetClientIP(relpSess_t *pThis, unsigned char *ip)
  * session object.
  */
 relpRetVal
-relpSessSetPermittedPeers(relpSess_t *pThis, relpPermittedPeers_t *pPeers)
+relpSessSetPermittedPeers(relpSess_t *const pThis, relpPermittedPeers_t *pPeers)
 {
 	ENTER_RELPFUNC;
 	int i;
@@ -1051,7 +1051,7 @@ finalize_it:
 
 /* Enable TLS mode. */
 relpRetVal
-relpSessEnableTLS(relpSess_t *pThis)
+relpSessEnableTLS(relpSess_t *const pThis)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
@@ -1060,7 +1060,7 @@ relpSessEnableTLS(relpSess_t *pThis)
 }
 
 relpRetVal
-relpSessSetUsrPtr(relpSess_t *pThis, void *pUsr)
+relpSessSetUsrPtr(relpSess_t *const pThis, void *pUsr)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
@@ -1068,7 +1068,7 @@ relpSessSetUsrPtr(relpSess_t *pThis, void *pUsr)
 	LEAVE_RELPFUNC;
 }
 
-relpRetVal relpSessSetMaxDataSize(relpSess_t *pThis, size_t maxSize) {
+relpRetVal relpSessSetMaxDataSize(relpSess_t *const pThis, size_t maxSize) {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
 	pThis->maxDataSize = maxSize;
@@ -1076,7 +1076,7 @@ relpRetVal relpSessSetMaxDataSize(relpSess_t *pThis, size_t maxSize) {
 }
 
 relpRetVal
-relpSessSetAuthMode(relpSess_t *pThis, relpAuthMode_t authmode)
+relpSessSetAuthMode(relpSess_t *const pThis, relpAuthMode_t authmode)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
@@ -1086,7 +1086,7 @@ relpSessSetAuthMode(relpSess_t *pThis, relpAuthMode_t authmode)
 
 /* Enable TLS Zip mode. */
 relpRetVal
-relpSessEnableTLSZip(relpSess_t *pThis)
+relpSessEnableTLSZip(relpSess_t *const pThis)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
@@ -1095,7 +1095,7 @@ relpSessEnableTLSZip(relpSess_t *pThis)
 }
 
 relpRetVal
-relpSessSetGnuTLSPriString(relpSess_t *pThis, char *pristr)
+relpSessSetGnuTLSPriString(relpSess_t *const pThis, char *pristr)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
@@ -1112,7 +1112,7 @@ finalize_it:
 }
 
 relpRetVal
-relpSessSetCACert(relpSess_t *pThis, char *cert)
+relpSessSetCACert(relpSess_t *const pThis, char *cert)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
@@ -1129,7 +1129,7 @@ finalize_it:
 }
 
 relpRetVal
-relpSessSetOwnCert(relpSess_t *pThis, char *cert)
+relpSessSetOwnCert(relpSess_t *const pThis, char *cert)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
@@ -1146,7 +1146,7 @@ finalize_it:
 }
 
 relpRetVal
-relpSessSetPrivKey(relpSess_t *pThis, char *cert)
+relpSessSetPrivKey(relpSess_t *const pThis, char *cert)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
@@ -1163,7 +1163,7 @@ finalize_it:
 }
 
 relpRetVal
-relpSessSetTlsConfigCmd(relpSess_t *pThis, char *cfgcmd)
+relpSessSetTlsConfigCmd(relpSess_t *const pThis, char *cfgcmd)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
@@ -1184,7 +1184,7 @@ finalize_it:
  * rgerhards, 2008-03-25
  */
 relpRetVal
-relpSessSetProtocolVersion(relpSess_t *pThis, int protocolVersion)
+relpSessSetProtocolVersion(relpSess_t *const pThis, int protocolVersion)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
@@ -1199,7 +1199,7 @@ relpSessSetProtocolVersion(relpSess_t *pThis, int protocolVersion)
  * rgerhards, 2008-03-25
  */
 relpRetVal
-relpSessSetEnableCmd(relpSess_t *pThis, unsigned char *pszCmd, relpCmdEnaState_t stateCmd)
+relpSessSetEnableCmd(relpSess_t *const pThis, unsigned char *pszCmd, relpCmdEnaState_t stateCmd)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
@@ -1222,7 +1222,7 @@ finalize_it:
  * rgerhards, 2008-03-25
  */
 relpRetVal
-relpSessConstructOffers(relpSess_t *pThis, relpOffers_t **ppOffers)
+relpSessConstructOffers(relpSess_t *const pThis, relpOffers_t **ppOffers)
 {
 	relpOffers_t *pOffers;
 	relpOffer_t *pOffer;
@@ -1272,7 +1272,7 @@ finalize_it:
  * rgerhards, 2008-03-25
  */
 static relpRetVal
-relpSessFixCmdStates(relpSess_t *pThis)
+relpSessFixCmdStates(relpSess_t *const pThis)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
@@ -1292,7 +1292,7 @@ relpSessFixCmdStates(relpSess_t *pThis)
  * rgerhards, 2008-03-25
  */
 relpRetVal
-relpSessSendSyslog(relpSess_t *pThis, unsigned char *pMsg, size_t lenMsg)
+relpSessSendSyslog(relpSess_t *const pThis, unsigned char *pMsg, const size_t lenMsg)
 {
 
 	ENTER_RELPFUNC;

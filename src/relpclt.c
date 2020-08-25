@@ -46,7 +46,7 @@
  * operations have been finished.
  */
 relpRetVal PART_OF_API
-relpCltConstruct(relpClt_t **ppThis, relpEngine_t *pEngine)
+relpCltConstruct(relpClt_t **ppThis, relpEngine_t *const pEngine)
 {
 	relpClt_t *pThis;
 
@@ -113,7 +113,7 @@ relpCltDestruct(relpClt_t **ppThis)
  * rgerhards, 2008-03-19
  */
 relpRetVal PART_OF_API
-relpCltConnect(relpClt_t *pThis, int protFamily, unsigned char *port, unsigned char *host)
+relpCltConnect(relpClt_t *const pThis, int protFamily, unsigned char *port, unsigned char *host)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Clt);
@@ -156,7 +156,7 @@ finalize_it:
  * rgerhards, 2008-03-23
  */
 relpRetVal PART_OF_API
-relpCltReconnect(relpClt_t *pThis)
+relpCltReconnect(relpClt_t *const pThis)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Clt);
@@ -173,7 +173,7 @@ finalize_it:
  * that the default value is to be used.
  */
 relpRetVal PART_OF_API
-relpCltSetWindowSize(relpClt_t *pThis, int sizeWindow)
+relpCltSetWindowSize(relpClt_t *const pThis, int sizeWindow)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Clt);
@@ -187,7 +187,7 @@ finalize_it:
 
 /** Set the timeout value for this client.  */
 relpRetVal PART_OF_API
-relpCltSetTimeout(relpClt_t *pThis, unsigned timeout)
+relpCltSetTimeout(relpClt_t *const pThis, unsigned timeout)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Clt);
@@ -197,7 +197,7 @@ relpCltSetTimeout(relpClt_t *pThis, unsigned timeout)
 
 /** Set the timeout value for this client socket connection.  */
 relpRetVal PART_OF_API
-relpCltSetConnTimeout(relpClt_t *pThis, int connTimeout)
+relpCltSetConnTimeout(relpClt_t *const pThis, int connTimeout)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Clt);
@@ -214,7 +214,7 @@ finalize_it:
 /** Set the local IP address to be used when acting as a client.
  */
 relpRetVal PART_OF_API
-relpCltSetClientIP(relpClt_t *pThis, unsigned char *ipAddr)
+relpCltSetClientIP(relpClt_t *const pThis, unsigned char *ipAddr)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Clt);
@@ -225,7 +225,7 @@ relpCltSetClientIP(relpClt_t *pThis, unsigned char *ipAddr)
 }
 
 relpRetVal PART_OF_API
-relpCltAddPermittedPeer(relpClt_t *pThis, char *peer)
+relpCltAddPermittedPeer(relpClt_t *const pThis, char *peer)
 {
 	char **newName;
 	int newMemb;
@@ -249,7 +249,7 @@ finalize_it:
 }
 
 relpRetVal PART_OF_API
-relpCltSetUsrPtr(relpClt_t *pThis, void *pUsr)
+relpCltSetUsrPtr(relpClt_t *const pThis, void *pUsr)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Clt);
@@ -259,7 +259,7 @@ relpCltSetUsrPtr(relpClt_t *pThis, void *pUsr)
 
 /* Note: mode==NULL is valid and means "no change" */
 relpRetVal PART_OF_API
-relpCltSetAuthMode(relpClt_t *pThis, char *mode)
+relpCltSetAuthMode(relpClt_t *const pThis, char *mode)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Clt);
@@ -283,7 +283,7 @@ finalize_it:
  * any previously set string. -- rgerhards, 2013-06-12
  */
 relpRetVal PART_OF_API
-relpCltSetGnuTLSPriString(relpClt_t *pThis, char *pristr)
+relpCltSetGnuTLSPriString(relpClt_t *const pThis, char *pristr)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Clt);
@@ -298,7 +298,7 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 relpRetVal PART_OF_API
-relpCltSetCACert(relpClt_t *pThis, char *file)
+relpCltSetCACert(relpClt_t *const pThis, char *file)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Clt);
@@ -313,7 +313,7 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 relpRetVal PART_OF_API
-relpCltSetOwnCert(relpClt_t *pThis, char *file)
+relpCltSetOwnCert(relpClt_t *const pThis, char *file)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Clt);
@@ -328,7 +328,7 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 relpRetVal PART_OF_API
-relpCltSetPrivKey(relpClt_t *pThis, char *file)
+relpCltSetPrivKey(relpClt_t *const pThis, char *file)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Clt);
@@ -343,7 +343,7 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 relpRetVal PART_OF_API
-relpCltSetTlsConfigCmd(relpClt_t *pThis, char *cfgcmd)
+relpCltSetTlsConfigCmd(relpClt_t *const pThis, char *cfgcmd)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Clt);
@@ -360,7 +360,7 @@ finalize_it:
 }
 /* Enable TLS mode. */
 relpRetVal PART_OF_API
-relpCltEnableTLS(relpClt_t *pThis)
+relpCltEnableTLS(relpClt_t *const pThis)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Clt);
@@ -369,7 +369,7 @@ relpCltEnableTLS(relpClt_t *pThis)
 }
 
 relpRetVal PART_OF_API
-relpCltEnableTLSZip(relpClt_t *pThis)
+relpCltEnableTLSZip(relpClt_t *const pThis)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Clt);
@@ -382,14 +382,14 @@ relpCltEnableTLSZip(relpClt_t *pThis)
  * The function is intentionally void as it must operate in a way that
  * does not interfere with normal operations.
  */
-void
-relpCltHintBurstBegin(relpClt_t *pThis)
+void PART_OF_API
+relpCltHintBurstBegin(relpClt_t *const pThis)
 {
 	relpTcpHintBurstBegin(pThis->pSess->pTcp);
 }
 /* this is the counterpart to relpCltHintBurstBegin -- see there for doc */
-void
-relpCltHintBurstEnd(relpClt_t *pThis)
+void PART_OF_API
+relpCltHintBurstEnd(relpClt_t *const pThis)
 {
 	relpTcpHintBurstEnd(pThis->pSess->pTcp);
 }
@@ -400,7 +400,7 @@ relpCltHintBurstEnd(relpClt_t *pThis)
  * rgerhards, 2008-03-20
  */
 relpRetVal PART_OF_API
-relpCltSendSyslog(relpClt_t *pThis, unsigned char *pMsg, size_t lenMsg)
+relpCltSendSyslog(relpClt_t *const pThis, unsigned char *const pMsg, const size_t lenMsg)
 {
 
 	ENTER_RELPFUNC;
