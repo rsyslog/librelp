@@ -79,12 +79,15 @@ EXTRA_DIST=$(TESTS) \
 	tls-certs/ca.pem \
 	tls-certs/cert.pem \
 	tls-certs/key.pem \
+	tls-certs/certchain.pem \
 	tls-certs/ossl-ca.pem \
 	tls-certs/ossl-ca-key.pem \
 	tls-certs/ossl-client-cert.pem \
 	tls-certs/ossl-client-key.pem \
+	tls-certs/ossl-client-certchain.pem \
 	tls-certs/ossl-clientbrok-cert.pem \
 	tls-certs/ossl-clientbrok-key.pem \
 	tls-certs/ossl-server-cert.pem \
-	tls-certs/ossl-server-key.pem
+	tls-certs/ossl-server-key.pem \
+	tls-certs/ossl-server-certchain.pem
 
