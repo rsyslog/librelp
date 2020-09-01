@@ -45,7 +45,7 @@
  * RELP function. The relp clt must only destructed after all RELP
  * operations have been finished.
  */
-relpRetVal PART_OF_API
+relpRetVal
 relpCltConstruct(relpClt_t **ppThis, relpEngine_t *const pEngine)
 {
 	relpClt_t *pThis;
@@ -78,7 +78,7 @@ finalize_it:
 
 /** Destruct a RELP clt instance
  */
-relpRetVal PART_OF_API
+relpRetVal
 relpCltDestruct(relpClt_t **ppThis)
 {
 	int i;

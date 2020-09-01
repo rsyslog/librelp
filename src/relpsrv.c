@@ -47,7 +47,7 @@
  * RELP function. The relp srv must only destructed after all RELP
  * operations have been finished.
  */
-relpRetVal PART_OF_API
+relpRetVal
 relpSrvConstruct(relpSrv_t **ppThis, relpEngine_t *pEngine)
 {
 	relpSrv_t *pThis;
@@ -82,7 +82,7 @@ finalize_it:
 
 /** Destruct a RELP srv instance
  */
-relpRetVal PART_OF_API
+relpRetVal
 relpSrvDestruct(relpSrv_t **ppThis)
 {
 	relpSrv_t *pThis;
@@ -255,7 +255,7 @@ finalize_it:
 /* set the IPv4/v6 type to be used. Default is both (PF_UNSPEC)
  * rgerhards, 2013-03-15
  */
-relpRetVal PART_OF_API
+relpRetVal
 relpSrvSetFamily(relpSrv_t *const pThis, int ai_family)
 {
 	ENTER_RELPFUNC;
@@ -398,7 +398,7 @@ relpSrvSetKeepAlive(relpSrv_t *const pThis,
 /* start a relp server - the server object must have all properties set
  * rgerhards, 2008-03-17
  */
-relpRetVal PART_OF_API
+relpRetVal
 relpSrvRun(relpSrv_t *const pThis)
 {
 	relpTcp_t *pTcp;
@@ -435,32 +435,5 @@ finalize_it:
 			relpTcpDestruct(&pTcp);
 	}
 
-	LEAVE_RELPFUNC;
-}
-
-
-/* Enable or disable a command. Note that a command can not be enabled once
- * it has been set to forbidden! There will be no error return state in this
- * case.
- * rgerhards, 2008-03-27
- */
-relpRetVal PART_OF_API
-relpSrvSetEnableCmd(relpSrv_t *const pThis, unsigned char *const pszCmd, const relpCmdEnaState_t stateCmd)
-{
-	ENTER_RELPFUNC;
-	RELPOBJ_assert(pThis, Srv);
-	assert(pszCmd != NULL);
-
-pThis->pEngine->dbgprint((char*)"SRV SetEnableCmd in syslog cmd state: %d\n", pThis->stateCmdSyslog);
-	if(!strcmp((char*)pszCmd, "syslog")) {
-		if(pThis->stateCmdSyslog != eRelpCmdState_Forbidden)
-			pThis->stateCmdSyslog = stateCmd;
-	} else {
-		pThis->pEngine->dbgprint((char*)"tried to set unknown command '%s' to %d\n", pszCmd, stateCmd);
-		ABORT_FINALIZE(RELP_RET_UNKNOWN_CMD);
-	}
-
-finalize_it:
-pThis->pEngine->dbgprint((char*)"SRV SetEnableCmd out syslog cmd state: %d, iRet %d\n", pThis->stateCmdSyslog, iRet);
 	LEAVE_RELPFUNC;
 }

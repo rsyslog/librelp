@@ -51,7 +51,7 @@
 
 /* ------------------------------ some internal functions ------------------------------ */
 
-void PART_OF_API LIBRELP_ATTR_FORMAT(printf, 4, 5)
+void LIBRELP_ATTR_FORMAT(printf, 4, 5)
 relpEngineCallOnGenericErr(relpEngine_t *const pThis, const char *eobj, relpRetVal ecode, const char *fmt, ...)
 {
 	va_list ap;
@@ -1053,7 +1053,7 @@ PROTOTYPEcommand(S, Syslog)
  * by this function - this must be done by the caller.
  * rgerhards, 2008-03-17
  */
-relpRetVal PART_OF_API
+relpRetVal
 relpEngineDispatchFrame(relpEngine_t *const pThis, relpSess_t *pSess, relpFrame_t *pFrame)
 {
 	ENTER_RELPFUNC;
