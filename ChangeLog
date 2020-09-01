@@ -1,4 +1,10 @@
 ----------------------------------------------------------------------
+Version 1.7.1 - 2020-09-??
+- removed some more externally visible symbols not being part of API
+- testbench tooling improvements
+- distcheck bugfix: add missing testbench cert files
+  closes: https://github.com/rsyslog/librelp/issues/206
+----------------------------------------------------------------------
 Version 1.7.0 - 2020-08-25
 - some internal cleanup (const attributes and such)
 - bugfix: library did export non-API symbols
