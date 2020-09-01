@@ -33,6 +33,25 @@ jobs:
     timeout-minutes: 50
 
     steps:
+      - name: prepare
+        run: |
+          sudo apt-get install -y libgnutls28-dev
+
       - name: git checkout project
         uses: actions/checkout@v1
 
+      - name: autoreconf
+        run: autoreconf -fvi
+
+      - name: configure
+        run: ./configure
+
+      - name: distcheck
+        run: |
+          make distcheck
+
+      - name: show error logs (if we errored)
+        if:  ${{ failure() || cancelled() }}
+        run: |
+          devtools/gather-check-logs.sh
+          cat failed-tests.log
