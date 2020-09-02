@@ -231,7 +231,6 @@ void relpSrvSetDHBits(relpSrv_t *pThis, int bits);
 void relpSrvSetKeepAlive(relpSrv_t *pThis, const int bEnabled, const int iKeepAliveIntvl,
 	const int iKeepAliveProbes, const int iKeepAliveTime);
 relpRetVal relpSrvSetGnuTLSPriString(relpSrv_t *pThis, char *pristr);
-relpRetVal relpSrvSetCACert(relpSrv_t *pThis, char *cert);
 relpRetVal relpSrvSetOwnCert(relpSrv_t *pThis, char *cert);
 relpRetVal relpSrvSetTlsConfigCmd(relpSrv_t *pThis, char *cfgcmd);
 relpRetVal relpSrvSetCACert(relpSrv_t *pThis, char *cert);
