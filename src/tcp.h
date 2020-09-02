@@ -183,7 +183,7 @@ void relpTcpHintBurstEnd(relpTcp_t *pThis);
 int LIBRELP_ATTR_NONNULL() relpTcpGetRtryDirection(relpTcp_t *pThis);
 int relpTcpWaitWriteable(relpTcp_t *pThis, struct timespec *timeout);
 void relpTcpExitTLS(void);
-
+relpRetVal LIBRELP_ATTR_NONNULL() relpTcpDestructTLS(NOTLS_UNUSED relpTcp_t *pThis);
 
 #ifdef ENABLE_TLS_OPENSSL
 /*-----------------------------------------------------------------------------*/
@@ -209,12 +209,16 @@ struct CRYPTO_dynlock_value * dyn_create_function(
 unsigned long id_function(void);
 void locking_function(int mode, int n,
 	__attribute__((unused)) const char * file, __attribute__((unused)) int line);
-/*-----------------------------------------------------------------------------*/
 
-/* Helper to detect when OpenSSL is initialized */
-static int called_openssl_global_init = 0;
-/* Main OpenSSL CTX pointer */
-static SSL_CTX *ctx = NULL;
+int opensslh_THREAD_setup(void);
+int opensslh_THREAD_cleanup(void);
+void relpTcpLastSSLErrorMsg(int ret, relpTcp_t *pThis, const char* pszCallSource);
+int verify_callback(int status, X509_STORE_CTX *store);
+relpRetVal relpTcpChkPeerAuth(relpTcp_t *const pThis);
+relpRetVal relpTcpPostHandshakeCheck(relpTcp_t *const pThis);
+relpRetVal LIBRELP_ATTR_NONNULL(1) relpTcpSslInitCerts(relpTcp_t *const pThis, char *ownCertFile, char *privKeyFile);
+
+/*-----------------------------------------------------------------------------*/
 #endif
 
 #endif /* #ifndef RELPTCP_H_INCLUDED */

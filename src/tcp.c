@@ -138,6 +138,10 @@ callOnAuthErr(relpTcp_t *const pThis, const char *authdata, const char *emsg, re
 #endif /* #ifdef  WITH_TLS */
 
 #ifdef ENABLE_TLS_OPENSSL
+/* Helper to detect when OpenSSL is initialized */
+static int called_openssl_global_init = 0;
+/* Main OpenSSL CTX pointer */
+static SSL_CTX *ctx = NULL;
 /*--------------------------------------MT OpenSSL helpers ------------------------------------------*/
 static MUTEX_TYPE *mutex_buf = NULL;
 
@@ -2330,14 +2334,14 @@ done:
 	//gnutls_mac_algorithm_t and gnutls_digest_algorithm_t are aligned
 	//So we can use the result to get the fingerprint without trouble
 	typedef  gnutls_mac_algorithm_t digest_id_t;
-	digest_id_t digest_get_id(const char * name){return gnutls_mac_get_id (name);}
-	const char* digest_get_name(digest_id_t id){return gnutls_mac_get_name (id);}
+	static digest_id_t digest_get_id(const char * name){return gnutls_mac_get_id (name);}
+	static const char* digest_get_name(digest_id_t id){return gnutls_mac_get_name (id);}
 #	define UNK_DIGEST GNUTLS_MAC_UNKNOWN
 
 #else
 	typedef  gnutls_digest_algorithm_t digest_id_t;
-	digest_id_t digest_get_id(const char * name){return gnutls_digest_get_id (name);}
-	const char* digest_get_name(digest_id_t id){return gnutls_digest_get_name (id);}
+	static digest_id_t digest_get_id(const char * name){return gnutls_digest_get_id (name);}
+	static const char* digest_get_name(digest_id_t id){return gnutls_digest_get_name (id);}
 #	define UNK_DIGEST GNUTLS_DIG_UNKNOWN
 #endif
 

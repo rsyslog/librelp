@@ -62,7 +62,7 @@ hdlr_enable(int sig, void (*hdlr)())
 	sigaction(sig, &sigAct, NULL);
 }
 /* handler for unexpected signals.  */
-void LIBRELP_ATTR_NORETURN
+static void LIBRELP_ATTR_NORETURN
 do_signal(const int sig)
 {
 	fprintf(stderr, "send: UNEXPECTED SIGNAL %d%s- terminating\n", sig,
@@ -83,7 +83,7 @@ dbgprintf(char *fmt, ...)
 	fprintf(dbgFile, "send.c: %s", pszWriteBuf);
 }
 
-void print_usage(void)
+static void print_usage(void)
 {
 	printf("Usage: send -t <SERVER> -p <PORTNUM> -m <MESSAGE>\n");
 }

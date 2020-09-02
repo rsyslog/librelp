@@ -57,5 +57,6 @@ relpRetVal relpSendbufConstruct(relpSendbuf_t **ppThis, relpSess_t *pSess);
 relpRetVal relpSendbufDestruct(relpSendbuf_t **ppThis);
 relpRetVal relpSendbufSend(relpSendbuf_t *pThis, relpTcp_t *pTcp);
 relpRetVal relpSendbufSendAll(relpSendbuf_t *pThis, relpSess_t *pSess, int bAddToUnacked);
+relpRetVal relpSendbufSetData(relpSendbuf_t *pThis, relpOctet_t *pData, size_t lenData);
 
 #endif /* #ifndef RELPSENDBUF_H_INCLUDED */

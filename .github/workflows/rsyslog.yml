@@ -29,7 +29,7 @@ on:
 
 jobs:
   check_run:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     timeout-minutes: 25
 
     steps:
@@ -52,7 +52,7 @@ jobs:
               flex \
               iproute2 \
               libcurl4-gnutls-dev \
-              libgcrypt11-dev \
+              libgcrypt20-dev \
               libglib2.0-dev \
               libgnutls28-dev \
               libgrok1 libgrok-dev \
@@ -77,8 +77,8 @@ jobs:
               net-tools \
               pkg-config \
               python-docutils  \
-              python-pip \
-              python-pysnmp4 \
+              python3-pip \
+              python3-pysnmp4 \
               software-properties-common \
               uuid-dev \
               valgrind \

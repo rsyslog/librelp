@@ -38,6 +38,13 @@
 #include "offers.h"
 #include "cmdif.h"
 
+/* as a quick hack, we provide our command handler prototypes here
+ * right in front of the dispatcher. This saves us many otherwise-unneeded
+ * header files (and will go away if we make them dynamically loadable).
+ * alorbach, 2020-09-09
+ */
+/* core (protocol) commands */
+PROTOTYPEcommand(S, Init)
 
 /* Select which offers to use during a session. This takes the client offers
  * and constructs a new server offers object based on it. This new object

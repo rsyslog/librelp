@@ -165,5 +165,7 @@ relpRetVal relpSessSetUsrPtr(relpSess_t *pThis, void *pUsr);
 relpRetVal relpSessSendSyslog(relpSess_t *pThis, unsigned char *pMsg, size_t lenMsg);
 relpRetVal relpSessSetEnableCmd(relpSess_t *pThis, unsigned char *pszCmd, relpCmdEnaState_t stateCmd);
 relpRetVal relpSessSetMaxDataSize(relpSess_t *pThis, size_t maxSize);
+relpRetVal relpSessCltConnChkOffers(relpSess_t *const pThis);
+
 
 #endif /* #ifndef RELPSESS_H_INCLUDED */
