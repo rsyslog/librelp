@@ -71,6 +71,12 @@ relpRetVal relpFrameBuildSendbuf(relpSendbuf_t **ppSendbuf, relpTxnr_t txnr, uns
 	   relpOctet_t *pData, size_t lenData, relpSess_t *pSess, relpRetVal (*rspHdlr)(relpSess_t*,relpFrame_t*));
 relpRetVal relpFrameRewriteTxnr(relpSendbuf_t *pSendbuf, relpTxnr_t txnr);
 relpRetVal relpFrameGetNextC(relpFrame_t *pThis, unsigned char *pC);
+relpRetVal relpFrameConstruct(relpFrame_t **ppThis, relpEngine_t *const pEngine);
+relpRetVal relpFrameSetTxnr(relpFrame_t *const pThis, int txnr);
+relpRetVal relpFrameSetCmd(relpFrame_t *const pThis, relpOctet_t *pCmd);
+relpRetVal relpFrameSetData(relpFrame_t *const pThis, relpOctet_t *pData, int lenData, int bHandoverBuffer);
+relpRetVal relpFrameConstructWithData(relpFrame_t **ppThis, relpEngine_t *pEngine, unsigned char *pCmd,
+			   relpOctet_t *pData, size_t lenData, int bHandoverBuffer);
 
 
 #endif /* #ifndef RELPFRAME_H_INCLUDED */

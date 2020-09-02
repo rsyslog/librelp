@@ -36,6 +36,14 @@
 #include "relp.h"
 #include "cmdif.h"
 
+/* as a quick hack, we provide our command handler prototypes here
+ * right in front of the dispatcher. This saves us many otherwise-unneeded
+ * header files (and will go away if we make them dynamically loadable).
+ * alorbach, 2020-09-09
+ */
+/* core (protocol) commands */
+PROTOTYPEcommand(C, Serverclose)
+
 /* process the command
  * Note: this is a hint, so we do not (and MUST NOT) send a response.
  * rgerhards, 2008-03-31

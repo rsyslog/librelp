@@ -97,6 +97,32 @@ static relpRetVal relpTcpPermittedPeerWildcardCompile(tcpPermittedPeerEntry_t *p
 static relpRetVal LIBRELP_ATTR_NONNULL() relpTcpLstnInitTLS(relpTcp_t *const pThis);
 static relpRetVal LIBRELP_ATTR_NONNULL() relpTcpTLSSetPrio(relpTcp_t *const pThis);
 
+/* helper to call onErr if set */
+static void
+callOnErr(const relpTcp_t *__restrict__ const pThis,
+	char *__restrict__ const emsg,
+	const relpRetVal ecode)
+{
+	char objinfo[1024];
+	pThis->pEngine->dbgprint((char*)"librelp: generic error: ecode %d, "
+		"emsg '%s'\n", ecode, emsg);
+	if(pThis->pEngine->onErr != NULL) {
+		if(pThis->pSrv == NULL) { /* client */
+			snprintf(objinfo, sizeof(objinfo), "conn to srvr %s:%s",
+				 pThis->pClt->pSess->srvAddr,
+				 pThis->pClt->pSess->srvPort);
+		} else if(pThis->pRemHostIP == NULL) { /* server listener */
+			snprintf(objinfo, sizeof(objinfo), "lstn %s",
+				 pThis->pSrv->pLstnPort);
+		} else { /* server connection to client */
+			snprintf(objinfo, sizeof(objinfo), "lstn %s: conn to clt %s/%s",
+				 pThis->pSrv->pLstnPort, pThis->pRemHostIP,
+				 pThis->pRemHostName);
+		}
+		objinfo[sizeof(objinfo)-1] = '\0';
+		pThis->pEngine->onErr(pThis->pUsr, objinfo, emsg, ecode);
+	}
+}
 
 #if  defined(WITH_TLS)
 /* forward definitions */
@@ -134,10 +160,13 @@ callOnAuthErr(relpTcp_t *const pThis, const char *authdata, const char *emsg, re
 		pThis->pEngine->onAuthErr(pThis->pUsr, (char*)authdata, (char*)emsg, ecode);
 	}
 }
-
 #endif /* #ifdef  WITH_TLS */
 
 #ifdef ENABLE_TLS_OPENSSL
+/* Helper to detect when OpenSSL is initialized */
+static int called_openssl_global_init = 0;
+/* Main OpenSSL CTX pointer */
+static SSL_CTX *ctx = NULL;
 /*--------------------------------------MT OpenSSL helpers ------------------------------------------*/
 static MUTEX_TYPE *mutex_buf = NULL;
 
@@ -341,45 +370,36 @@ long BIO_debug_callback(BIO *bio, int cmd, const char LIBRELP_ATTR_UNUSED *argp,
 	return (r);
 }
 
-void relpTcpLastSSLErrorMsg(int ret, relpTcp_t *pThis, const char* pszCallSource)
+void relpTcpLastSSLErrorMsg(int ret, relpTcp_t *const pThis, const char* pszCallSource)
 {
 	unsigned long un_error = 0;
 	char psz[256];
 	char errstr[512];
-	long iMyRet = SSL_get_error(pThis->ssl, ret);
+	char errmsg[1024];
+	/* Save errno */
+	int org_errno = errno;
 
-	ERR_error_string_n(iMyRet, errstr, sizeof(errstr));
-	/* Check which kind of error we have */
-	pThis->pEngine->dbgprint((char*)"relpTcpLastSSLErrorMsg: openssl error '%s' with error code=%ld: %s\n",
-		pszCallSource, iMyRet, errstr);
-	if(iMyRet == SSL_ERROR_SSL) {
-		/* Loop through errors */
-		while ((un_error = ERR_get_error()) != 0){
-			ERR_error_string_n(un_error, psz, 256);
-			pThis->pEngine->dbgprint((char*)"relpTcpLastSSLErrorMsg: Errorstack: %s\n", psz);
-		}
-
-	} else if(iMyRet == SSL_ERROR_SYSCALL){
-		iMyRet = ERR_get_error();
-		if(ret == 0) {
-			iMyRet = SSL_get_error(pThis->ssl, iMyRet);
-			if(iMyRet == 0) {
-				*psz = '\0';
-			} else {
-				ERR_error_string_n(iMyRet, psz, 256);
-			}
-			pThis->pEngine->dbgprint((char*)"relpTcpLastSSLErrorMsg: SysErr: %s\n", psz);
-		} else {
-			/* Loop through errors */
-			while ((un_error = ERR_get_error()) != 0){
-				ERR_error_string_n(un_error, psz, 256);
-				pThis->pEngine->dbgprint((char*)"relpTcpLastSSLErrorMsg: Errorstack: %s\n", psz);
-			}
-		}
+	if (pThis->ssl == NULL) {
+		/* Output Error Info*/
+		pThis->pEngine->dbgprint((char*)"relpTcpLastSSLErrorMsg: %s Error %d\n", pszCallSource, ret);
 	} else {
-		pThis->pEngine->dbgprint((char*)"relpTcpLastSSLErrorMsg: "
-			"Unknown SSL Error in '%s' (%d), SSL_get_error: %ld\n",
-			pszCallSource, ret, iMyRet);
+		// Get Error details
+		long iSSLErr = SSL_get_error(pThis->ssl, ret);
+		ERR_error_string_n(iSSLErr, errstr, sizeof(errstr));
+
+		/* Output error message */
+		pThis->pEngine->dbgprint((char*)"relpTcpLastSSLErrorMsg: %s Error %s: %s(%ld) (ret=%d, errno=%d)\n",
+			pszCallSource,
+			(iSSLErr == SSL_ERROR_SSL ? "SSL_ERROR_SSL" :
+			(iSSLErr == SSL_ERROR_SYSCALL ? "SSL_ERROR_SYSCALL" : "SSL_ERROR_UNKNOWN")),
+			errstr, iSSLErr, ret, org_errno);
+	}
+
+	/* Loop through errors */
+	while ((un_error = ERR_get_error()) > 0){
+		ERR_error_string_n(un_error, psz, 256);
+		snprintf(errmsg, sizeof(errmsg),"relpTcpLastSSLErrorMsg: OpenSSL Error Stack: %s\n", psz);
+		callOnErr(pThis, errmsg, RELP_RET_ERR_TLS);
 	}
 }
 
@@ -784,35 +804,6 @@ relpTcpDestruct(relpTcp_t **ppThis)
 
 	LEAVE_RELPFUNC;
 }
-
-
-/* helper to call onErr if set */
-static void
-callOnErr(const relpTcp_t *__restrict__ const pThis,
-	char *__restrict__ const emsg,
-	const relpRetVal ecode)
-{
-	char objinfo[1024];
-	pThis->pEngine->dbgprint((char*)"librelp: generic error: ecode %d, "
-		"emsg '%s'\n", ecode, emsg);
-	if(pThis->pEngine->onErr != NULL) {
-		if(pThis->pSrv == NULL) { /* client */
-			snprintf(objinfo, sizeof(objinfo), "conn to srvr %s:%s",
-				 pThis->pClt->pSess->srvAddr,
-				 pThis->pClt->pSess->srvPort);
-		} else if(pThis->pRemHostIP == NULL) { /* server listener */
-			snprintf(objinfo, sizeof(objinfo), "lstn %s",
-				 pThis->pSrv->pLstnPort);
-		} else { /* server connection to client */
-			snprintf(objinfo, sizeof(objinfo), "lstn %s: conn to clt %s/%s",
-				 pThis->pSrv->pLstnPort, pThis->pRemHostIP,
-				 pThis->pRemHostName);
-		}
-		objinfo[sizeof(objinfo)-1] = '\0';
-		pThis->pEngine->onErr(pThis->pUsr, objinfo, emsg, ecode);
-	}
-}
-
 
 #ifdef ENABLE_TLS
 /* helper to call an error code handler if gnutls failed. If there is a failure,
@@ -1549,6 +1540,7 @@ static relpRetVal
 relpTcpRtryHandshake_ossl(relpTcp_t *const pThis)
 {
 	int res, resErr;
+	char errmsg[1024];
 	ENTER_RELPFUNC;
 	pThis->pEngine->dbgprint((char*)"relpTcpRtryHandshake: "
 		"Starting TLS Handshake for ssl[%p]\n", (void *)pThis->ssl);
@@ -1565,11 +1557,15 @@ relpTcpRtryHandshake_ossl(relpTcp_t *const pThis)
 					"complete immediately - setting to retry (this is OK and normal)\n");
 				FINALIZE;
 			} else if(resErr == SSL_ERROR_SYSCALL) {
-				pThis->pEngine->dbgprint((char*)"relpTcpRtryHandshake: Server handshake failed with "
-					"SSL_ERROR_SYSCALL - Aborting handshake.\n");
+				callOnErr(pThis, (char*)"relpTcpRtryHandshake_ossl: Server handshake failed with "
+						"SSL_ERROR_SYSCALL - Aborting handshake.", RELP_RET_ERR_TLS_SETUP);
 				relpTcpLastSSLErrorMsg(res, pThis, "relpTcpRtryHandshake Server");
 				ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
 			} else {
+				snprintf(errmsg, sizeof(errmsg), 
+				"relpTcpRtryHandshake_ossl: Server handshake failed with %d - Aborting handshake.",
+					resErr);
+				callOnErr(pThis, errmsg, RELP_RET_ERR_TLS_SETUP);
 				relpTcpLastSSLErrorMsg(res, pThis, "relpTcpRtryHandshake Server");
 				ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
 			}
@@ -1590,11 +1586,15 @@ relpTcpRtryHandshake_ossl(relpTcp_t *const pThis)
 					"- setting to retry (this is OK and normal)\n");
 				FINALIZE;
 			} else if(resErr == SSL_ERROR_SYSCALL) {
-				pThis->pEngine->dbgprint((char*)"relpTcpRtryHandshake: Client handshake failed with "
-					"SSL_ERROR_SYSCALL - Aborting handshake.\n");
+				callOnErr(pThis, (char*)"relpTcpRtryHandshake_ossl: Client handshake failed with "
+						"SSL_ERROR_SYSCALL - Aborting handshake.", RELP_RET_ERR_TLS_SETUP);
 				relpTcpLastSSLErrorMsg(res, pThis, "relpTcpRtryHandshake Client");
 				ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP /*RS_RET_RETRY*/);
 			} else {
+				snprintf(errmsg, sizeof(errmsg), 
+				"relpTcpRtryHandshake_ossl: Client handshake failed with %d - Aborting handshake.",
+					resErr);
+				callOnErr(pThis, errmsg, RELP_RET_ERR_TLS_SETUP);
 				relpTcpLastSSLErrorMsg(res, pThis, "relpTcpRtryHandshake Client");
 				ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
 			}
@@ -1719,6 +1719,10 @@ relpTcpAcceptConnReqInitTLS_ossl(relpTcp_t *const pThis, relpSrv_t *const pSrv)
 	if(!(pThis->ssl = SSL_new(ctx))) {
 		relpTcpLastSSLErrorMsg(0, pThis, "relpTcpAcceptConnReqInitTLS_ossl");
 	}
+
+	// Set SSL_MODE_AUTO_RETRY to SSL obj
+	SSL_set_mode(pThis->ssl, SSL_MODE_AUTO_RETRY);
+
 	pThis->authmode = pSrv->pTcp->authmode;
 	pThis->pUsr = pSrv->pUsr;
 
@@ -1829,6 +1833,8 @@ BIO_set_nbio( conn, 1 );
 		relpTcpLastSSLErrorMsg(0, pThis, "relpTcpConnectTLSInit");
 		ABORT_FINALIZE(RELP_RET_IO_ERR);
 	}
+	// Set SSL_MODE_AUTO_RETRY to SSL obj
+	SSL_set_mode(pThis->ssl, SSL_MODE_AUTO_RETRY);
 
 	/* Load certificate data into SSL object */
 	if(!isAnonAuth(pThis)) {
@@ -2330,14 +2336,14 @@ done:
 	//gnutls_mac_algorithm_t and gnutls_digest_algorithm_t are aligned
 	//So we can use the result to get the fingerprint without trouble
 	typedef  gnutls_mac_algorithm_t digest_id_t;
-	digest_id_t digest_get_id(const char * name){return gnutls_mac_get_id (name);}
-	const char* digest_get_name(digest_id_t id){return gnutls_mac_get_name (id);}
+	static digest_id_t digest_get_id(const char * name){return gnutls_mac_get_id (name);}
+	static const char* digest_get_name(digest_id_t id){return gnutls_mac_get_name (id);}
 #	define UNK_DIGEST GNUTLS_MAC_UNKNOWN
 
 #else
 	typedef  gnutls_digest_algorithm_t digest_id_t;
-	digest_id_t digest_get_id(const char * name){return gnutls_digest_get_id (name);}
-	const char* digest_get_name(digest_id_t id){return gnutls_digest_get_name (id);}
+	static digest_id_t digest_get_id(const char * name){return gnutls_digest_get_id (name);}
+	static const char* digest_get_name(digest_id_t id){return gnutls_digest_get_name (id);}
 #	define UNK_DIGEST GNUTLS_DIG_UNKNOWN
 #endif
 
@@ -3012,14 +3018,14 @@ relpTcpRcv_gtls(relpTcp_t *const pThis, relpOctet_t *const pRcvBuf, ssize_t *con
 
 	lenRcvd = gnutls_record_recv(pThis->session, pRcvBuf, *pLenBuf);
 	if(lenRcvd == GNUTLS_E_INTERRUPTED || lenRcvd == GNUTLS_E_AGAIN) {
-		pThis->pEngine->dbgprint((char*)"librelp: gnutls_record_recv must be retried\n");
+		pThis->pEngine->dbgprint((char*)"librelp: gnutls_record_recv must be retried %d\n", lenRcvd);
 		pThis->rtryOp = relpTCP_RETRY_recv;
 	} else {
+		pThis->rtryOp = relpTCP_RETRY_none;
 		if(lenRcvd < 0) {
 			chkGnutlsCode(pThis, "TLS record reception failed", RELP_RET_IO_ERR, lenRcvd);
 			exit(1);
 		}
-		pThis->rtryOp = relpTCP_RETRY_none;
 	}
 	*pLenBuf = (lenRcvd < 0) ? -1 : lenRcvd;
 
@@ -3053,8 +3059,7 @@ relpTcpRcv_ossl(relpTcp_t *const pThis, relpOctet_t *const pRcvBuf, ssize_t *con
 				"connection may closed already\n");
 			pThis->rtryOp = relpTCP_RETRY_none;
 			ABORT_FINALIZE(RELP_RET_IO_ERR);
-		}
-		else if(err != SSL_ERROR_WANT_READ &&
+		} else if(err != SSL_ERROR_WANT_READ &&
 			err != SSL_ERROR_WANT_WRITE) {
 			/* Output error and abort */
 			relpTcpLastSSLErrorMsg(lenRcvd, pThis, "relpTcpRcv_ossl");
@@ -3063,6 +3068,7 @@ relpTcpRcv_ossl(relpTcp_t *const pThis, relpOctet_t *const pRcvBuf, ssize_t *con
 		} else {
 			pThis->pEngine->dbgprint((char*)"relpTcpRcv_ossl: SSL_get_error = %d, setting RETRY \n", err);
 			pThis->rtryOp =  relpTCP_RETRY_recv;
+			pThis->rtryOsslErr = err; /* Store SSL ErrorCode into*/
 		}
 	}
 
@@ -3102,11 +3108,21 @@ relpTcpRcv(relpTcp_t *const pThis, relpOctet_t *const pRcvBuf, ssize_t *const pL
 		}
 	} else {
 		*pLenBuf = lenRcvd = recv(pThis->sock, pRcvBuf, *pLenBuf, MSG_DONTWAIT);
-		pThis->pEngine->dbgprint((char*)"relpTcpRcv: read %zd bytes from sock %d\n",
-			*pLenBuf, pThis->sock);
-		if(lenRcvd == 0) {
-			pThis->pEngine->dbgprint((char*)"relpTcpRcv: invalidating closed socket\n");
+		if(lenRcvd > 0) {
+			pThis->pEngine->dbgprint((char*)"relpTcpRcv: read %zd bytes from sock %d\n",
+				*pLenBuf, pThis->sock);
+		} else if(lenRcvd == 0) {
+			pThis->pEngine->dbgprint((char*)"relpTcpRcv: read 0 bytes, invalidating closed socket\n");
+		} else {
+			// Handle for errno code
+			if(errno == EAGAIN) {
+				// Set mode to Retry
+				pThis->rtryOp = relpTCP_RETRY_recv;
+			} else {
+				pThis->pEngine->dbgprint((char*)"relpTcpRcv: read failed errno=%d\n", errno);
+			}
 		}
+
 	}
 
 	pThis->pEngine->dbgprint((char*)"relpTcpRcv return. relptcp [%p], iRet %d, lenRcvd %d, pLenBuf %zd\n",
@@ -3218,6 +3234,7 @@ relpTcpSend_ossl(relpTcp_t *const pThis, relpOctet_t *const pBuf, ssize_t *const
 		} else {
 			/* Output error and abort */
 			relpTcpLastSSLErrorMsg( (int)written, pThis, "relpTcpSend_ossl");
+			pThis->rtryOsslErr = err; /* Store SSL ErrorCode into*/
 			ABORT_FINALIZE(RELP_RET_IO_ERR);
 		}
 	}

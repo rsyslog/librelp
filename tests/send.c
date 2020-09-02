@@ -62,7 +62,7 @@ hdlr_enable(int sig, void (*hdlr)())
 	sigaction(sig, &sigAct, NULL);
 }
 /* handler for unexpected signals.  */
-void LIBRELP_ATTR_NORETURN
+static void LIBRELP_ATTR_NORETURN
 do_signal(const int sig)
 {
 	fprintf(stderr, "send: UNEXPECTED SIGNAL %d%s- terminating\n", sig,
@@ -83,7 +83,7 @@ dbgprintf(char *fmt, ...)
 	fprintf(dbgFile, "send.c: %s", pszWriteBuf);
 }
 
-void print_usage(void)
+static void print_usage(void)
 {
 	printf("Usage: send -t <SERVER> -p <PORTNUM> -m <MESSAGE>\n");
 }
@@ -100,7 +100,7 @@ onErr(void *pUsr, char *objinfo, char* errmesg, LIBRELP_ATTR_UNUSED relpRetVal e
 			fprintf(stderr, "send: pUsr magic incorrect in onErr, magic %8.8x "
 				"pUsr %p\n", pThis->magic, (void*) pThis);
 		}
-		printf("%s: error '%s', object '%s'\n", pThis->progname, errmesg, objinfo);
+		fprintf(stderr, "%s: error '%s', object '%s'\n", pThis->progname, errmesg, objinfo);
 	} else {
 		fprintf(stderr, "send: [pUsr==NULL] error '%s', object '%s'\n", errmesg, objinfo);
 	}
@@ -113,7 +113,7 @@ onErr(void *pUsr, char *objinfo, char* errmesg, LIBRELP_ATTR_UNUSED relpRetVal e
 static void
 onGenericErr(char *objinfo, char* errmesg, LIBRELP_ATTR_UNUSED relpRetVal errcode)
 {
-	printf("send: librelp error '%s', object '%s'\n", errmesg, objinfo);
+	fprintf(stderr, "send: librelp error '%s', object '%s'\n", errmesg, objinfo);
 	if(errFile != NULL) {
 		fprintf(errFile, "send: librelp error '%s', object '%s'\n", errmesg, objinfo);
 	}
@@ -124,7 +124,7 @@ static void
 onAuthErr( LIBRELP_ATTR_UNUSED void *pUsr, char *authinfo,
 	char* errmesg, LIBRELP_ATTR_UNUSED relpRetVal errcode)
 {
-	printf("send: authentication error '%s', object '%s'\n", errmesg, authinfo);
+	fprintf(stderr, "send: authentication error '%s', object '%s'\n", errmesg, authinfo);
 	if(errFile != NULL) {
 		fprintf(errFile, "send: authentication error '%s', object '%s'\n", errmesg, authinfo);
 	}
@@ -223,7 +223,6 @@ send_msgs_single(const char *pMsg)
 	}
 
 	TRY(relpCltSendSyslog(pRelpClt, (unsigned char *)pMsg, lenMsg));
-
 	if(msgDataLen != 0) {
 		free((void *)pMsg);
 	}
@@ -413,13 +412,13 @@ int main(int argc, char *argv[]) {
 
 	TRY(relpEngineConstruct(&pRelpEngine));
 	TRY(relpEngineSetDbgprint(pRelpEngine, verbose ? dbgprintf : NULL));
-	if(tlslib != NULL) {
-		TRY(relpEngineSetTLSLibByName(pRelpEngine, tlslib));
-	}
-
 	TRY(relpEngineSetOnErr(pRelpEngine, onErr));
 	TRY(relpEngineSetOnGenericErr(pRelpEngine, onGenericErr));
 	TRY(relpEngineSetOnAuthErr(pRelpEngine, onAuthErr));
+
+	if(tlslib != NULL) {
+		TRY(relpEngineSetTLSLibByName(pRelpEngine, tlslib));
+	}
 
 
 	TRY(relpEngineSetEnableCmd(pRelpEngine, (unsigned char*)"syslog", eRelpCmdState_Required));
@@ -443,9 +442,16 @@ int main(int argc, char *argv[]) {
 				TRY(relpCltAddPermittedPeer(pRelpClt, permittedPeer));
 			}
 		}
+		printf("send: Init TLS Parameters DONE\n");
 	}
-
-	TRY(relpCltConnect(pRelpClt, protFamily, port, target));
+	// Need to check error code!
+	ret = relpCltConnect(pRelpClt, protFamily, port, target); 
+	if(ret != RELP_RET_OK) {
+		fprintf(stderr, "send: FAILURE in 'relpCltConnect' with errorcode %d\n", ret);
+		ret = 1; 
+		goto done;
+	}
+	printf("send: Connect DONE\n");
 
 	if(num_messages == 0) {
 		send_msgs_single(pMsg);

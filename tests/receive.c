@@ -73,7 +73,7 @@ hdlr_enable(int sig, void (*hdlr)())
 	sigaction(sig, &sigAct, NULL);
 }
 
-void
+static void
 terminate(LIBRELP_ATTR_UNUSED const int sig)
 {
 	relpEngineSetStop(pRelpEngine);
@@ -83,7 +83,7 @@ terminate(LIBRELP_ATTR_UNUSED const int sig)
  * This method is to be "called" via ALARM after more time has expired
  * then "ever possible" - so we are sure we just need to cleanup.
  */
-void LIBRELP_ATTR_NORETURN
+static void LIBRELP_ATTR_NORETURN
 watchdog_expired(LIBRELP_ATTR_UNUSED const int sig)
 {
 	fprintf(stderr, "receive: watchdog timer expired, assuming we hang - "
@@ -93,7 +93,7 @@ watchdog_expired(LIBRELP_ATTR_UNUSED const int sig)
 }
 
 /* handler for unexpected signals.  */
-void LIBRELP_ATTR_NORETURN
+static void LIBRELP_ATTR_NORETURN
 do_signal(const int sig)
 {
 	fprintf(stderr, "receive: UNEXPECTED SIGNAL %d%s- terminating\n", sig,
@@ -105,7 +105,7 @@ do_signal(const int sig)
 /* handler to unconditionally exit the code - required for test where
  * server must "suddenly" abort.
  */
-void
+static void
 do_exit(LIBRELP_ATTR_UNUSED const int sig)
 {
 	immediate_exit = 1;
@@ -149,7 +149,7 @@ static relpRetVal onSyslogRcv(unsigned char *pHostname LIBRELP_ATTR_UNUSED,
 	return RELP_RET_OK;
 }
 
-void print_usage(void)
+static void print_usage(void)
 {
 	printf("Usage: ./receive -p <PORTNUM>\n");
 }
