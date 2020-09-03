@@ -1,5 +1,8 @@
 ----------------------------------------------------------------------
 Version 1.7.1 - 2020-09-??
+- testbench: obtain python binary path via AM_PATH_PYTHON
+  closes: https://github.com/rsyslog/librelp/issues/214
+- bugfix: librelp.h contains duplicate function definition
 - removed some more externally visible symbols not being part of API
 - testbench tooling improvements
 - distcheck bugfix: add missing testbench cert files
