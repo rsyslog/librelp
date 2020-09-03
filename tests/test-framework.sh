@@ -7,6 +7,7 @@
 TB_TIMEOUT_STARTUP=400  # 40 seconds - Solaris sometimes needs this...
 export valgrind="valgrind --malloc-fill=ff --free-fill=fe --log-fd=1"
 #export OPT_VERBOSE=-v # uncomment for debugging 
+source set-envvars
 
 ######################################################################
 # functions
@@ -18,7 +19,7 @@ export valgrind="valgrind --malloc-fill=ff --free-fill=fe --log-fd=1"
 # to work pretty well. In any case, we should probably call this as
 # late as possible before the usage of the port.
 get_free_port() {
-python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()'
+	$PYTHON -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()'
 }
 
 # check if command $1 is available - will exit 77 when not OK

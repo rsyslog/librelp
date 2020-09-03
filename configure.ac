@@ -59,6 +59,8 @@ AM_CONDITIONAL(OS_LINUX, test x$os_type == xlinux)
 AM_CONDITIONAL(OS_SOLARIS, test x$os_type == xsolaris)
 AM_CONDITIONAL(OS_AIX, test "x$os_type" = "xaix")
 
+AM_PATH_PYTHON(,, [:])
+
 # Checks for programs.
 AC_PROG_CC
 AC_PROG_CC_C99
@@ -248,6 +250,7 @@ AM_CONDITIONAL([HAVE_VALGRIND], test "$enable_valgrind" == "yes")
 AC_CONFIG_FILES([Makefile \
 		relp.pc \
 		doc/Makefile \
+		tests/set-envvars \
 		tests/Makefile \
 		src/Makefile])
 AC_OUTPUT

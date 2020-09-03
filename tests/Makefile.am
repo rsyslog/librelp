@@ -71,6 +71,7 @@ EXTRA_DIST=$(TESTS) \
 	$(OSSL_TESTS) \
 	$(TLS_VALGRIND_TESTS) \
 	$(VALGRIND_TESTS) \
+	set-envvars.in \
 	dummyclient.py \
 	dummyserver.py \
 	test-framework.sh \
