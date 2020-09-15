@@ -41,7 +41,7 @@
 
 /** Construct a RELP frame instance
  */
-relpRetVal
+static relpRetVal
 relpFrameConstruct(relpFrame_t **ppThis, relpEngine_t *const pEngine)
 {
 	relpFrame_t *pThis;
@@ -276,106 +276,6 @@ finalize_it:
 			relpFrameDestruct(&pThis);
 		}
 	}
-	LEAVE_RELPFUNC;
-}
-
-
-/* set the TXNR inside a relp frame
- * rgerhards, 2008-03-16
- */
-relpRetVal
-relpFrameSetTxnr(relpFrame_t *const pThis, int txnr)
-{
-	ENTER_RELPFUNC;
-	RELPOBJ_assert(pThis, Frame);
-	if(txnr < 0 || txnr > 999999999)
-		ABORT_FINALIZE(RELP_RET_PARAM_ERROR);
-
-	pThis->txnr = txnr;
-
-finalize_it:
-	LEAVE_RELPFUNC;
-}
-
-
-/* set the command inside a relp frame. The caller-provided buffer
- * is copied and NOT freed. This needs to be done by caller if
- * desired.
- * rgerhards, 2008-03-16
- */
-relpRetVal
-relpFrameSetCmd(relpFrame_t *const pThis, relpOctet_t *pCmd)
-{
-	ENTER_RELPFUNC;
-	RELPOBJ_assert(pThis, Frame);
-	if(pCmd == NULL || strlen((char*)pCmd) > 32)
-		ABORT_FINALIZE(RELP_RET_PARAM_ERROR);
-
-	strcpy((char*)pThis->cmd, (char*)pCmd);
-
-finalize_it:
-	LEAVE_RELPFUNC;
-}
-
-
-/* set the data part inside a relp frame. The caller-provided buffer
- * is taken over if "bHandoverBuffer" is set to 1. In this case, the caller
- * must no longer access (AND NOT FREE!) the buffer. If "bHandoverBuffer" is
- * set to 0, it is copied and the caller is responsible for freeing the buffer.
- * rgerhards, 2008-03-16
- */
-relpRetVal
-relpFrameSetData(relpFrame_t *const pThis, relpOctet_t *pData, int lenData, int bHandoverBuffer)
-{
-	ENTER_RELPFUNC;
-	RELPOBJ_assert(pThis, Frame);
-	if(pData == NULL && lenData != 0)
-		ABORT_FINALIZE(RELP_RET_PARAM_ERROR);
-	
-	if(bHandoverBuffer || pData == NULL) {
-		pThis->pData = pData;
-	} else {
-		/* we can not use the caller provided buffer and must copy it */
-		if((pThis->pData = malloc(lenData)) == NULL)
-			ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
-		memcpy(pThis->pData, pData, lenData);
-	}
-
-	pThis->lenData = lenData;
-
-finalize_it:
-	LEAVE_RELPFUNC;
-}
-
-
-/* create a frame based on the provided command code and data. The frame is
- * meant to be consumed by sending it to the remote peer. A txnr is
- * NOT assigned, as this happens late in the process during the actual
- * send (only the send knows the right txnr to use). This actually is a
- * shortcut for calling the individual functions.
- * rgerhards, 2008-03-18
- */
-relpRetVal
-relpFrameConstructWithData(relpFrame_t **ppThis, relpEngine_t *pEngine, unsigned char *pCmd,
-			   relpOctet_t *pData, size_t lenData, int bHandoverBuffer)
-{
-	relpFrame_t *pThis = NULL;
-
-	ENTER_RELPFUNC;
-	assert(ppThis != NULL);
-
-	CHKRet(relpFrameConstruct(&pThis, pEngine));
-	CHKRet(relpFrameSetCmd(pThis, pCmd));
-	CHKRet(relpFrameSetData(pThis, pData, lenData, bHandoverBuffer));
-
-	*ppThis = pThis;
-
-finalize_it:
-	if(iRet != RELP_RET_OK) {
-		if(pThis != NULL)
-			relpFrameDestruct(&pThis);
-	}
-
 	LEAVE_RELPFUNC;
 }
 

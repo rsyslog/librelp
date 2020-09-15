@@ -186,7 +186,6 @@ void relpTcpHintBurstEnd(relpTcp_t *pThis);
 int LIBRELP_ATTR_NONNULL() relpTcpGetRtryDirection(relpTcp_t *pThis);
 int relpTcpWaitWriteable(relpTcp_t *pThis, struct timespec *timeout);
 void relpTcpExitTLS(void);
-relpRetVal LIBRELP_ATTR_NONNULL() relpTcpDestructTLS(NOTLS_UNUSED relpTcp_t *pThis);
 
 #ifdef ENABLE_TLS_OPENSSL
 /*-----------------------------------------------------------------------------*/
@@ -217,9 +216,6 @@ int opensslh_THREAD_setup(void);
 int opensslh_THREAD_cleanup(void);
 void relpTcpLastSSLErrorMsg(int ret, relpTcp_t *const pThis, const char* pszCallSource);
 int verify_callback(int status, X509_STORE_CTX *store);
-relpRetVal relpTcpChkPeerAuth(relpTcp_t *const pThis);
-relpRetVal relpTcpPostHandshakeCheck(relpTcp_t *const pThis);
-relpRetVal LIBRELP_ATTR_NONNULL(1) relpTcpSslInitCerts(relpTcp_t *const pThis, char *ownCertFile, char *privKeyFile);
 
 /*-----------------------------------------------------------------------------*/
 #endif
