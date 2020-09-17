@@ -668,6 +668,9 @@ relpTcpConstruct(relpTcp_t **ppThis, relpEngine_t *const pEngine,
 	pThis->pUsr = NULL;
 	pThis->permittedPeers.nmemb = 0;
 	pThis->permittedPeers.peer = NULL;
+	#ifdef ENABLE_TLS
+	pThis->xcred = NULL;
+	#endif
 
 	*ppThis = pThis;
 
@@ -689,6 +692,10 @@ relpTcpDestructTLS_gtls(relpTcp_t *pThis)
 		sslRet = gnutls_bye(pThis->session, GNUTLS_SHUT_RDWR);
 	}
 	gnutls_deinit(pThis->session);
+	if (pThis->xcred != NULL) {
+		gnutls_certificate_free_credentials(pThis->xcred);
+	}
+
 	LEAVE_RELPFUNC;
 }
 #else
