@@ -279,7 +279,7 @@ relpSessRcvData(relpSess_t *const pThis)
 		pThis->sessState = eRelpSessState_BROKEN;
 		ABORT_FINALIZE(RELP_RET_SESSION_BROKEN);
 	} else if ((int) lenBuf == -1) {
-		if(errno != EAGAIN) {
+		if(pThis->pTcp->rtryOp != relpTCP_RETRY_recv) {
 			callOnErr(pThis, (char*) "error when receiving data, session broken", RELP_RET_SESSION_BROKEN);
 			pThis->pEngine->dbgprint((char*)"errno %d during relp session %p, session broken\n",
 				errno, (void*)pThis);

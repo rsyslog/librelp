@@ -3,15 +3,18 @@
 # check that receiver abort is handled gracefully
 # of messages
 . ${srcdir:=$(pwd)}/test-framework.sh
+# export OPT_VERBOSE=-v # uncomment for debugging 
+export errorlog="error.$LIBRELP_DYN.log"
+export NUMMESSAGES=100000
 check_command_available timeout
-NUMMESSAGES=100000
-startup_receiver
-./send -t 127.0.0.1 -p $TESTPORT -n$NUMMESSAGES  --kill-on-msg 20000 --kill-pid $RECEIVE_PID $OPT_VERBOSE &
+
+startup_receiver -e ${TESTDIR}/${errorlog}
+./send -t 127.0.0.1 -p $TESTPORT -n$NUMMESSAGES --no-exit-on-error --kill-on-msg 20000 --kill-pid $RECEIVE_PID $OPT_VERBOSE &
 SENDER_PID=$!
 
 for i in {1..3};  do
 	sleep 2
-	timeout 10s ${srcdir}/dummyserver.py $TESTPORT
+	timeout 10s $PYTHON ${srcdir}/dummyserver.py $TESTPORT
 done
 
 sleep 2 # make sure client goes into retry

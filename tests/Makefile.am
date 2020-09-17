@@ -27,6 +27,7 @@ TLS_TESTS=  \
 	tls-basic-wildcard.sh \
 	tls-basic-tlscommand.sh \
 	tls-basic-certchain.sh \
+	tls-basic-certvalid-mixed.sh \
 	tls-receiver-abort.sh \
 	tls-missing-param-sender.sh \
 	tls-missing-param-receiver.sh

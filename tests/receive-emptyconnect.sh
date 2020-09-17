@@ -4,10 +4,12 @@
 # be emitted. This situation can frequently happen in Proxy configurations.
 # written 2018-11-20 by Rainer Gerhards, released under ASL 2.0
 . ${srcdir:=$(pwd)}/test-framework.sh
-startup_receiver --errorfile $TESTDIR/error.out.log
-$PYTHON ${srcdir}/dummyclient.py
+export errorlog="error.$LIBRELP_DYN.log"
+
+startup_receiver --errorfile $TESTDIR/$errorlog
+timeout 10s $PYTHON ${srcdir}/dummyclient.py
 sleep 1
 stop_receiver
 # TODO: we should word the error message clearer, then also change here
-check_output "server closed relp session" $TESTDIR/error.out.log
+check_output "server closed relp session" $TESTDIR/$errorlog
 terminate
