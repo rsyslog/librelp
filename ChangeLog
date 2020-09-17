@@ -1,5 +1,25 @@
 ----------------------------------------------------------------------
 Version 1.7.1 - 2020-09-??
+- gnutls bugfix: per-session memory leak
+  Depending on callig sequence and use, there were two memory leaks
+  which could cause operational issues for long-running processes.
+  This was primarily a problem for sender processes (and not listeners)
+  closes: https://github.com/rsyslog/librelp/issues/194
+- tls bugfix: RETRY not correctly handled in TLS Mode & CI improvement
+  Relp session handling did not honor rtryOP status correctly,
+  instead it was checkong for errno=EAGAIN only.
+  This patch comes with a number of smaller patches, unfortunately
+  all rolled into a single commit.
+  - CI: Add centos8 / fedora30 workflows.
+  - CI: Switch rsyslog workflow to ubuntu-20.04
+  - CI: Imported run-ci script from rsyslog
+  - Fix multiple issue found with -Werror=missing-declarations (fedora30).
+  - openssl: Fix error output for all error cases
+  - testbench: Add test for tls basic with mixed tls libs
+  - testbench: fix python3 compatibility issues
+  - testbench: fix parallel tests for receiver-abort.sh and other tests.
+  - testbench: Added extra debug output to send.c utility.
+  closes: https://github.com/rsyslog/librelp/issues/207
 - testbench: obtain python binary path via AM_PATH_PYTHON
   closes: https://github.com/rsyslog/librelp/issues/214
 - bugfix: librelp.h contains duplicate function definition
