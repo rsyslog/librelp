@@ -88,27 +88,6 @@ relpSendbufDestruct(relpSendbuf_t **ppThis)
 }
 
 
-/* set send buffer contents. The provided data pointer is handed *over* to
- * the sendbuf, so the caller can no longer access it. Most importantly, the
- * caller MUST NOT free the buffer!
- * rgerhards, 2008-03-17
- */
-relpRetVal
-relpSendbufSetData(relpSendbuf_t *pThis, relpOctet_t *pData, size_t lenData)
-{
-	ENTER_RELPFUNC;
-	RELPOBJ_assert(pThis, Engine);
-	assert(pData != NULL);
-	assert(lenData > 0);
-
-	pThis->pData = pData;
-	pThis->lenData = lenData;
-	pThis->bufPtr = 0;
-
-	LEAVE_RELPFUNC;
-}
-
-
 /* Sends as much data from the send buffer as possible.
  * This function tries to send as much data from the send buffer
  * as possible. For partial writes, the sendbuffer is updated to

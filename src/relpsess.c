@@ -828,7 +828,7 @@ finalize_it:
  * there are some left as "Required", they are not supported by the server,
  * in which case we can not open the session. -- rgerhards, 2008-03-27
  */
-relpRetVal
+static relpRetVal
 relpSessCltConnChkOffers(relpSess_t *const pThis)
 {
 	ENTER_RELPFUNC;

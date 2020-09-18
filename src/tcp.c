@@ -752,7 +752,7 @@ relpTcpDestructTLS_ossl(LIBRELP_ATTR_UNUSED relpTcp_t *pThis)
 /* TLS-part of RELP tcp instance destruction - brought to its own function
  * to make things easier.
  */
-relpRetVal LIBRELP_ATTR_NONNULL()
+static relpRetVal LIBRELP_ATTR_NONNULL()
 relpTcpDestructTLS(NOTLS_UNUSED relpTcp_t *pThis)
 {
 	ENTER_RELPFUNC;
@@ -1412,7 +1412,7 @@ finalize_it:
 
 /* Perform additional certificate name checks
  */
-relpRetVal
+static relpRetVal
 relpTcpChkPeerAuth(relpTcp_t *const pThis)
 {
 	X509* certpeer;
@@ -1465,7 +1465,7 @@ finalize_it:
 
 /* Perform all necessary checks after Handshake
  */
-relpRetVal
+static relpRetVal
 relpTcpPostHandshakeCheck(relpTcp_t *const pThis)
 {
 	ENTER_RELPFUNC;
@@ -1488,7 +1488,7 @@ finalize_it:
 
 /* Perform all necessary checks after Handshake
  */
-relpRetVal LIBRELP_ATTR_NONNULL(1)
+static relpRetVal LIBRELP_ATTR_NONNULL(1)
 relpTcpSslInitCerts(relpTcp_t *const pThis, char *ownCertFile, char *privKeyFile)
 {
 	ENTER_RELPFUNC;
