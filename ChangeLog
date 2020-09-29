@@ -1,4 +1,6 @@
 ----------------------------------------------------------------------
+Version 1.9.0 - 2020-??-??
+----------------------------------------------------------------------
 Version 1.8.0 - 2020-09-29
 - gnutls "bugfix": handle receives who break connection on close
   Some TLS servers don't reply to graceful shutdown requests "for
