@@ -687,9 +687,9 @@ relpTcpDestructTLS_gtls(relpTcp_t *pThis)
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
 
-	sslRet = gnutls_bye(pThis->session, GNUTLS_SHUT_RDWR);
+	sslRet = gnutls_bye(pThis->session, GNUTLS_SHUT_WR);
 	while(sslRet == GNUTLS_E_INTERRUPTED || sslRet == GNUTLS_E_AGAIN) {
-		sslRet = gnutls_bye(pThis->session, GNUTLS_SHUT_RDWR);
+		sslRet = gnutls_bye(pThis->session, GNUTLS_SHUT_WR);
 	}
 	gnutls_deinit(pThis->session);
 	if (pThis->xcred != NULL) {
