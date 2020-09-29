@@ -1,5 +1,12 @@
 ----------------------------------------------------------------------
 Version 1.7.1 - 2020-09-??
+- gnutls "bugfix": handle receives who break connection on close
+  Some TLS servers don't reply to graceful shutdown requests "for
+  optimization". This can lead to librelp keeping the connection
+  for ever and thus effectively to hang on it.
+  This patch is modelled after a similiar patch by Renaud Métrich
+  for rsyslog.
+  see also https://github.com/rsyslog/rsyslog/pull/4424
 - gnutls bugfix: per-session memory leak
   Depending on callig sequence and use, there were two memory leaks
   which could cause operational issues for long-running processes.
