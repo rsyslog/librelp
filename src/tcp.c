@@ -1630,7 +1630,7 @@ relpTcpSetSslConfCmd_ossl(relpTcp_t *const pThis, char *tlsConfigCmd)
 	} else {
 		pThis->pEngine->dbgprint((char*)"relpTcpSetSslConfCmd_ossl: set to '%s'\n", tlsConfigCmd);
 		char errmsg[1424];
-#if OPENSSL_VERSION_NUMBER >= 0x10020000L && !defined(LIBRESSL_VERSION_NUMBER)
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(LIBRESSL_VERSION_NUMBER)
 		char *pCurrentPos;
 		char *pNextPos;
 		char *pszCmd;
