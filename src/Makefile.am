@@ -44,7 +44,8 @@ librelp_la_SOURCES = \
 	cclose.c \
 	cserverclose.c \
 	dbllinklist.h \
-	cmdif.h
+	cmdif.h \
+	compat/strndup.c
 librelp_la_CPPFLAGS = $(AM_CLFAGS) $(PTHREADS_CFLAGS) $(GNUTLS_CFLAGS) $(OPENSSL_CFLAGS) $(WARN_CFLAGS)
 librelp_la_LIBADD = $(rt_libs) $(GNUTLS_LIBS) $(OPENSSL_LIBS)
 # info on version-info:

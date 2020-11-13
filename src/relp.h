@@ -235,4 +235,14 @@ void LIBRELP_ATTR_FORMAT(printf, 4, 5) relpEngineCallOnGenericErr(relpEngine_t *
 	const char *eobj, relpRetVal ecode, const char *fmt, ...);
 const char * _relpEngine_strerror_r(const int errnum, char *buf, const size_t buflen);
 
+/* here we add some stuff from the compatibility layer. A separate include
+ * would be cleaner, but would potentially require changes all over the
+ * place. So doing it here is better. The respective replacement
+ * functions should usually be found under ./compat -- rgerhards, 2015-05-20
+ * - Function copied from rsyslog -- alorbach, 2020-11-13
+ */
+#ifndef HAVE_STRNDUP
+char * strndup(const char *s, size_t n);
+#endif
+
 #endif /* #ifndef RELP_H_INCLUDED */
