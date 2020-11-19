@@ -1,5 +1,14 @@
 ----------------------------------------------------------------------
 Version 1.9.0 - 2020-??-??
+- openssl bugfix: preprocessor check for tlsconfigcmd code
+  tls config commands no is compiled for OpenSSL 1.0.2.
+  closes: https://github.com/rsyslog/librelp/issues/221
+- solaris compatibility fix: add strndup compatibility code
+  On some platforms, strndup() is not present. However, it was used
+  in "tlsconfigcmd" command processing. This bug was unlikely to
+  trigger as the platforms in question had either non-appropriate
+  openssl library versions or were affected by the openssl version
+  check bug (see above).
 ----------------------------------------------------------------------
 Version 1.8.0 - 2020-09-29
 - gnutls "bugfix": handle receives who break connection on close
