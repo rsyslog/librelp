@@ -29,7 +29,7 @@ function actual_test() {
 				exit 77
 			else
 				# Try "handshake failed" first
-				check_output --check-only "handshake failed" $TESTDIR/$errorlog
+				check_output --check-only "handshake fail" $TESTDIR/$errorlog
 				ret=$?
 				if [ $ret != 0 ]; then
 					check_output "wrong version number" $TESTDIR/$errorlog

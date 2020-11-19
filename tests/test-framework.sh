@@ -129,7 +129,7 @@ check_output() {
 	grep $3 "$EXPECTED" $FILE_TO_CHECK > /dev/null
 	if [ $? -ne 0 ]; then
 		if [ "$check_only" == "yes" ]; then
-			printf 'check_output did not yet succeed in %s (check_only set)\n', $FILE_TO_CHECK
+			printf 'check_output did not yet succeed for "%s" in "%s" (check_only set)\n', "$EXPECTED", "$FILE_TO_CHECK"
 			return 1
 		fi
 		printf "\nFAIL: expected message not found. Expected:\n"

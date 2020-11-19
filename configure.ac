@@ -123,7 +123,7 @@ AC_CHECK_MEMBERS([struct sockaddr.sa_len],,,[$sa_includes])
 AC_FUNC_SELECT_ARGTYPES
 AC_FUNC_STRERROR_R
 AC_TYPE_SIGNAL
-AC_CHECK_FUNCS([strerror_r strdup epoll_create epoll_create1])
+AC_CHECK_FUNCS([strerror_r strdup strndup epoll_create epoll_create1])
 
 # enable TLS (may not be possible on platforms with too-old GnuTLS)
 AC_ARG_ENABLE(tls,
