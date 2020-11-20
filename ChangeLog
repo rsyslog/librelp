@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------
-Version 1.9.0 - 2020-??-??
+Version 1.9.0 - 2020-11-24
 - openssl bugfix: preprocessor check for tlsconfigcmd code
   tls config commands no is compiled for OpenSSL 1.0.2.
   closes: https://github.com/rsyslog/librelp/issues/221
