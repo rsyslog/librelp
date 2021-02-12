@@ -1228,6 +1228,7 @@ relpTcpTLSSetPrio_ossl(relpTcp_t *const pThis)
 		pristringBuf[sizeof(pristringBuf)-1] = '\0';
 		pristring = pristringBuf;
 	} else {
+		/* We use custom CipherString if used sets it by SslConfCmd */
 		pristring = pThis->pristring;
 	}
 
@@ -1662,6 +1663,7 @@ relpTcpSetSslConfCmd_ossl(relpTcp_t *const pThis, char *tlsConfigCmd)
 					pszCmd = strndup(pCurrentPos, pNextPos-pCurrentPos);
 					pCurrentPos = pNextPos+1;
 					pNextPos = index(pCurrentPos, '\n');
+					pNextPos = (pNextPos == NULL ? index(pCurrentPos, ';') : pNextPos);
 					pszValue = (pNextPos == NULL ?
 							strdup(pCurrentPos) :
 							strndup(pCurrentPos, pNextPos - pCurrentPos));
@@ -1673,6 +1675,12 @@ relpTcpSetSslConfCmd_ossl(relpTcp_t *const pThis, char *tlsConfigCmd)
 						pThis->pEngine->dbgprint((char*)"relpTcpSetSslConfCmd_ossl: "
 							"Successfully added Command '%s':'%s'\n",
 							pszCmd, pszValue);
+						if(!strcmp(pszCmd, "CipherString")) {
+							relpTcpSetGnuTLSPriString(pThis,pszValue);
+							pThis->pEngine->dbgprint((char*)"relpTcpSetSslConfCmd_ossl: "
+								"Copy Custom CipherString '%s' to GnuTLSPriString\n",
+								pszValue);
+						}
 					}
 					else {
 						snprintf(errmsg, sizeof(errmsg),
@@ -1729,16 +1737,24 @@ relpTcpAcceptConnReqInitTLS_ossl(relpTcp_t *const pThis, relpSrv_t *const pSrv)
 
 	// Set SSL_MODE_AUTO_RETRY to SSL obj
 	SSL_set_mode(pThis->ssl, SSL_MODE_AUTO_RETRY);
-
+	
+	// Copy Properties from Server TCP obj over
 	pThis->authmode = pSrv->pTcp->authmode;
 	pThis->pUsr = pSrv->pUsr;
+	pThis->pristring = (pSrv->pTcp->pristring != NULL ? strdup(pSrv->pTcp->pristring) : NULL);
+	pThis->tlsConfigCmd = (pSrv->pTcp->tlsConfigCmd != NULL ? strdup(pSrv->pTcp->tlsConfigCmd) : NULL);
 
 	if(!isAnonAuth(pThis->pSrv->pTcp)) {
 		CHKRet(relpTcpSslInitCerts(pThis, pThis->pSrv->ownCertFile, pThis->pSrv->privKey));
 	} else
 		pThis->authmode = eRelpAuthMode_None;
 
+	/* Set TLS Options if configured */
+	CHKRet(relpTcpSetSslConfCmd_ossl(pThis, pThis->tlsConfigCmd));
+
+	/* Set TLS Priority Options */
 	CHKRet(relpTcpTLSSetPrio(pThis));
+
 	SSL_set_ex_data(pThis->ssl, 0, pThis);
 
 	if (pThis->authmode != eRelpAuthMode_None) {
@@ -1817,11 +1833,34 @@ relpTcpConnectTLSInit_ossl(relpTcp_t *const pThis)
 		CHKRet(relpTcpInitTLS(pThis));
 	}
 
-	/*set client state */
-	pThis->sslState = osslClient;
+	/*if we reach this point we are in tls mode */
+	pThis->pEngine->dbgprint((char*)"relpTcpConnectTLSInit: TLS Mode\n");
+
+	if(!(pThis->ssl = SSL_new(ctx))) {
+		relpTcpLastSSLErrorMsg(0, pThis, "relpTcpConnectTLSInit");
+		ABORT_FINALIZE(RELP_RET_IO_ERR);
+	}
+
+	// Set SSL_MODE_AUTO_RETRY to SSL obj
+	SSL_set_mode(pThis->ssl, SSL_MODE_AUTO_RETRY);
+
+	/* Load certificate data into SSL object */
+	if(!isAnonAuth(pThis)) {
+		pThis->pEngine->dbgprint((char*)"relpTcpConnectTLSInit: Init Client Certs \n");
+		CHKRet(relpTcpSslInitCerts(pThis, pThis->ownCertFile, pThis->privKeyFile));
+	} else
+		pThis->authmode = eRelpAuthMode_None;
 
 	/* Set TLS Options if configured */
 	CHKRet(relpTcpSetSslConfCmd_ossl(pThis, pThis->tlsConfigCmd));
+
+	/* Set TLS Priority Options */
+	CHKRet(relpTcpTLSSetPrio(pThis));
+
+	SSL_set_ex_data(pThis->ssl, 0, (void*)pThis);
+
+	/*set client state */
+	pThis->sslState = osslClient;
 
 	/* Create BIO from ptcp socket! */
 	conn = BIO_new_socket(pThis->sock, BIO_CLOSE /*BIO_NOCLOSE*/);
@@ -1833,25 +1872,6 @@ relpTcpConnectTLSInit_ossl(relpTcp_t *const pThis)
 
 /* TODO: still needed? Set to NON blocking ! */
 BIO_set_nbio( conn, 1 );
-
-	/*if we reach this point we are in tls mode */
-	pThis->pEngine->dbgprint((char*)"relpTcpConnectTLSInit: TLS Mode\n");
-	if(!(pThis->ssl = SSL_new(ctx))) {
-		relpTcpLastSSLErrorMsg(0, pThis, "relpTcpConnectTLSInit");
-		ABORT_FINALIZE(RELP_RET_IO_ERR);
-	}
-	// Set SSL_MODE_AUTO_RETRY to SSL obj
-	SSL_set_mode(pThis->ssl, SSL_MODE_AUTO_RETRY);
-
-	/* Load certificate data into SSL object */
-	if(!isAnonAuth(pThis)) {
-		pThis->pEngine->dbgprint((char*)"relpTcpConnectTLSInit: Init Client Certs \n");
-		CHKRet(relpTcpSslInitCerts(pThis, pThis->ownCertFile, pThis->privKeyFile));
-	} else
-		pThis->authmode = eRelpAuthMode_None;
-
-	CHKRet(relpTcpTLSSetPrio(pThis));
-	SSL_set_ex_data(pThis->ssl, 0, (void*)pThis);
 
 	SSL_set_bio(pThis->ssl, conn, conn);
 	SSL_set_connect_state(pThis->ssl); /*sets ssl to work in client mode.*/

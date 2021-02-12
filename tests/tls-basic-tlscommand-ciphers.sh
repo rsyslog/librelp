@@ -10,18 +10,18 @@ function actual_test() {
 			-y ${srcdir}/tls-certs/cert.pem -z ${srcdir}/tls-certs/key.pem \
 			-P 'testbench.rsyslog.com' \
 			--errorfile $TESTDIR/$errorlog \
-			-c "Protocol=ALL,-SSLv2,-SSLv3,-TLSv1,-TLSv1.2;CipherString=ECDHE-RSA-AES256-GCM-SHA384;Protocol=ALL,-SSLv2,-SSLv3,-TLSv1,-TLSv1.2,-TLSv1.3;MinProtocol=TLSv1.2;MaxProtocol=TLSv1.2"
+			-c "Protocol=ALL,-SSLv2,-SSLv3,-TLSv1,-TLSv1.1;CipherString=ECDHE-RSA-AES256-GCM-SHA384;MinProtocol=TLSv1.2;MaxProtocol=TLSv1.2;Ciphersuites=TLS_AES_256_GCM_SHA384"
 
 		echo 'Send Message...'
 		./send --tls-lib $TEST_TLS_LIB -t 127.0.0.1 -p $TESTPORT -m "testmessage" -T -a "name" \
 			-x ${srcdir}/tls-certs/ca.pem -y ${srcdir}/tls-certs/cert.pem \
 			-z ${srcdir}/tls-certs/key.pem -P 'testbench.rsyslog.com' \
-			-c "Protocol=ALL,-SSLv2,-SSLv3,-TLSv1.1,-TLSv1.2;CipherString=DHE-RSA-AES256-SHA;Protocol=ALL,-SSLv2,-SSLv3,-TLSv1.1,-TLSv1.2,-TLSv1.3;MinProtocol=TLSv1.1;MaxProtocol=TLSv1.1" \
+			-c "CipherString=ECDHE-RSA-AES128-GCM-SHA256;Ciphersuites=TLS_AES_128_GCM_SHA256" \
 			--errorfile $TESTDIR/$errorlog \
 			$OPT_VERBOSE
 
 		stop_receiver
-	
+
 		if test -f $TESTDIR/$errorlog; then
 			check_output --check-only "OpenSSL Version too old" $TESTDIR/$errorlog
 			ret=$?
