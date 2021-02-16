@@ -26,6 +26,7 @@ TLS_TESTS=  \
 	tls-basic-fingerprint.sh \
 	tls-basic-wildcard.sh \
 	tls-basic-tlscommand.sh \
+	tls-basic-tlscommand-ciphers.sh \
 	tls-basic-certchain.sh \
 	tls-basic-certvalid-mixed.sh \
 	tls-receiver-abort.sh \
