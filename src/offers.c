@@ -218,7 +218,7 @@ relpOfferValueAdd(unsigned char *pszVal, int intVal, relpOffer_t *pOffer)
 		snprintf((char*)pThis->szVal, sizeof(pThis->szVal), "%d", intVal);
 		pThis->intVal = intVal;
 	} else {
-		strncpy((char*)pThis->szVal, (char*)pszVal, sizeof(pThis->szVal));
+		strncpy((char*)pThis->szVal, (char*)pszVal, sizeof(pThis->szVal) - 1);
 		/* check if the string actually is an integer... */
 		Val = 0;
 		i = 0;
