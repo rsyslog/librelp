@@ -50,6 +50,6 @@ librelp_la_CPPFLAGS = $(AM_CLFAGS) $(PTHREADS_CFLAGS) $(GNUTLS_CFLAGS) $(OPENSSL
 librelp_la_LIBADD = $(rt_libs) $(GNUTLS_LIBS) $(OPENSSL_LIBS)
 # info on version-info:
 # http://www.gnu.org/software/libtool/manual/html_node/Updating-version-info.html
-librelp_la_LDFLAGS = -version-info 5:0:5 -export-symbols-regex '^relp[^_]*$$'
+librelp_la_LDFLAGS = -version-info 5:1:5 -export-symbols-regex '^relp[^_]*$$'
 
 include_HEADERS = librelp.h

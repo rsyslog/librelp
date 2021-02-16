@@ -1,4 +1,21 @@
 ----------------------------------------------------------------------
+Version 1.10.0 - 2021-02-16
+- TLS handling bugfix
+  When the client tried to conntect to the server, custom
+  cipherstrings (Set by tlscommands feature) were not used. This
+  could lead to the negotiation of different and potentially weaker
+  ciphers. Other custom tlscommands settings like Protocol where not
+  affected. We do not overwrite the custom ciphers anymore if they are
+  set by tlscommands. Another problem only related to the relp
+  receiver (server) was, that the custom tlscommands/priority string
+  where not applied on the accepted client connections. This could
+  lead to the same problem as the default ciphers were used.
+  Besides the main problem, the following changes were applied:
+  - Add new testcase for setting custom tls ciphers in tlscommand.
+  - Add support to use semicolon (;) as tlscommand seperator (See new testcase)
+  - Fix GCC9 "destination size" warning in offers.c
+  closes: https://github.com/rsyslog/librelp/issues/224
+----------------------------------------------------------------------
 Version 1.9.0 - 2020-11-24
 - openssl bugfix: preprocessor check for tlsconfigcmd code
   tls config commands no is compiled for OpenSSL 1.0.2.
