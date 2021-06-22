@@ -369,7 +369,8 @@ relpEngineSetTLSLib(relpEngine_t *const pThis, NOTLS_UNUSED const int tls_lib)
 	#endif
 
 finalize_it:
-	pThis->dbgprint((char*)"relpEngineSetTLSLib, lib now %d, ret %d\n", pThis->tls_lib, iRet);
+	if (pThis)
+		pThis->dbgprint((char*)"relpEngineSetTLSLib, lib now %d, ret %d\n", pThis->tls_lib, iRet);
 	LEAVE_RELPFUNC;
 }
 
