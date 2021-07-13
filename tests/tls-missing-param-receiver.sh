@@ -5,7 +5,7 @@ echo 'Start Receiver...'
 
 function actual_test() {
 	# NOT USING startup_receiver!
-	./receive --tls-lib $TEST_TLS_LIB -p $TESTPORT -T -a "name" \
+	./receive -l $TEST_TLS_LIB -p $TESTPORT -T -a "name" \
 		-y ${srcdir}/tls-certs/cert.pem -P "rsyslog" \
 		2> $OUTFILE
 

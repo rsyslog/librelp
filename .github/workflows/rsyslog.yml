@@ -111,6 +111,8 @@ jobs:
           autoreconf -fvi
           ./configure \
                 --disable-default-tests \
+                --disable-imfile-tests \
+                --disable-fmhttp \
                 --enable-imdiag \
                 --enable-omstdout \
                 --enable-relp \
