@@ -24,7 +24,11 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <unistd.h>
-#include <getopt.h>
+#if defined(_AIX)
+#	include  <unistd.h>
+#else
+#	include <getopt.h>
+#endif
 #include <string.h>
 #include <limits.h>
 #include <errno.h>
@@ -239,6 +243,9 @@ int main(int argc, char *argv[]) {
 	const char *tlslib = NULL;
 	const char* outfile_name = NULL;
 
+#if defined(_AIX)
+	while((c = getopt(argc, argv, "a:c:Ae:F:l:m:No:O:P:p:TvW:x:y:z:")) != EOF) {
+#else
 	static struct option long_options[] =
 	{
 		{"ca", required_argument, 0, 'x'},
@@ -257,9 +264,8 @@ int main(int argc, char *argv[]) {
 		{0, 0, 0, 0}
 	};
 
-
-	while((c = getopt_long(argc, argv, "a:c:Ae:F:l:m:o:O:P:p:TvW:x:y:z:",
-		long_options, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "a:c:Ae:F:l:m:No:O:P:p:TvW:x:y:z:", long_options, &option_index)) != -1) {
+#endif
 		switch(c) {
 		case 'a':
 			authMode = optarg;

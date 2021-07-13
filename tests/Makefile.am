@@ -1,5 +1,5 @@
 TEST_EXTENSIONS=.sh
-check_PROGRAMS=receive send chkseq have_tlslib
+check_PROGRAMS=receive send chkseq have_tlslib msleep
 
 receive_SOURCES=receive.c
 receive_LDADD=../src/.libs/librelp.la
@@ -8,6 +8,8 @@ receive_CFLAGS=$(AM_CFLAGS) -I${top_srcdir}/src $(WARN_CFLAGS)
 send_SOURCES=send.c
 send_LDADD=../src/.libs/librelp.la
 send_CFLAGS=$(AM_CFLAGS) -I${top_srcdir}/src $(WARN_CFLAGS)
+
+msleep_SOURCES = msleep.c
 
 chkseq_SOURCES=chkseq.c
 have_tlslib_SOURCES=have_tlslib.c

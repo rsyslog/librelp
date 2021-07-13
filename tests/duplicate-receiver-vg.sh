@@ -9,6 +9,8 @@ listen port cannot be bound to.
 EOF
 exit 77
 . ${srcdir:=$(pwd)}/test-framework.sh
+check_command_available valgrind
+
 if [ "$VALGRIND" == "NO" ] ; then
    echo "valgrind tests are not permitted by environment config"
    exit 77

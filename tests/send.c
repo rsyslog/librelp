@@ -24,7 +24,11 @@
 #include <stddef.h>
 #include <stdarg.h>
 #include <unistd.h>
-#include <getopt.h>
+#if defined(_AIX)
+#	include  <unistd.h>
+#else
+#	include <getopt.h>
+#endif
 #include <string.h>
 #include <sys/types.h>
 #include <signal.h>
@@ -255,11 +259,14 @@ int main(int argc, char *argv[]) {
 	under_ci = getenv("UNDER_CI");
 	dbgFile = stdout;
 
-	#define KILL_ON_MSG	256
-	#define KILL_SIGNAL	257
-	#define KILL_PID	258
-	#define DBGFILE		259
-	#define CONNECT_RETRIES	260
+	#define KILL_ON_MSG	'K'
+	#define KILL_SIGNAL	'S'
+	#define KILL_PID	'I'
+	#define DBGFILE		'D'
+	#define CONNECT_RETRIES	'R'
+#if defined(_AIX)
+	while((c = getopt(argc, argv, "a:c:e:d:D:I:K:l:m:n:NP:p:R:S:Tt:vx:y:z:")) != EOF) {
+#else
 	static struct option long_options[] =
 	{
 		{"ca", required_argument, 0, 'x'},
@@ -280,7 +287,8 @@ int main(int argc, char *argv[]) {
 		{0, 0, 0, 0}
 	};
 
-	while((c = getopt_long(argc, argv, "a:c:e:d:l:m:n:P:p:Tt:vx:y:z:", long_options, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "a:c:e:d:D:I:K:l:m:n:NP:p:R:S:Tt:vx:y:z:", long_options, &option_index)) != -1) {
+#endif
 		switch(c) {
 		case 'a':
 			authMode = optarg;

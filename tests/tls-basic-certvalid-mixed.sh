@@ -12,11 +12,11 @@ if ! ./have_tlslib "openssl"; then
 	exit;
 fi
 
-startup_receiver --tls-lib openssl -T -a "certvalid" -e "${TESTDIR}/${errorlog}" \
+startup_receiver -l openssl -T -a "certvalid" -e "${TESTDIR}/${errorlog}" \
 		-x ${srcdir}/tls-certs/ca.pem -y ${srcdir}/tls-certs/cert.pem -z ${srcdir}/tls-certs/key.pem
 
 echo 'Send Message...'
-./send --tls-lib gnutls -t 127.0.0.1 -p $TESTPORT -m "testmessage" -T -a "certvalid" -e "${TESTDIR}/${errorlog}" \
+./send -l gnutls -t 127.0.0.1 -p $TESTPORT -m "testmessage" -T -a "certvalid" -e "${TESTDIR}/${errorlog}" \
 	-x ${srcdir}/tls-certs/ca.pem -y ${srcdir}/tls-certs/cert.pem -z ${srcdir}/tls-certs/key.pem $OPT_VERBOSE 1>>${OUTFILE} 2>&1
 
 stop_receiver
