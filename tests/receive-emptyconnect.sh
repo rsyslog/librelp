@@ -5,8 +5,9 @@
 # written 2018-11-20 by Rainer Gerhards, released under ASL 2.0
 . ${srcdir:=$(pwd)}/test-framework.sh
 export errorlog="error.$LIBRELP_DYN.log"
+check_command_available timeout
 
-startup_receiver --errorfile $TESTDIR/$errorlog
+startup_receiver -e $TESTDIR/$errorlog
 timeout 10s $PYTHON ${srcdir}/dummyclient.py
 sleep 1
 stop_receiver

@@ -49,7 +49,7 @@ check_command_available() {
 wait_process_startup_via_pidfile() {
 	i=0
 	while test ! -f $1 ; do
-		sleep .100
+		./msleep 100
 		(( i++ ))
 		if test $i -gt $TB_TIMEOUT_STARTUP
 		then
@@ -68,7 +68,7 @@ startup_receiver_valgrind() {
 		exit 77
 	fi
 	printf 'Starting Receiver...\n'
-	libtool --mode=execute $valgrind ./receive $TLSLIB -p $TESTPORT --outfile $OUTFILE.2 -F $RECEIVE_PIDFILE $OPT_VERBOSE $* &
+	libtool --mode=execute $valgrind ./receive $TLSLIB -p $TESTPORT -O $OUTFILE.2 -F $RECEIVE_PIDFILE $OPT_VERBOSE $* &
 	export RECEIVE_PID=$!
 	printf "got $RECEIVE_PID $RECEIVE_PIDFILE\n"
 	wait_process_startup_via_pidfile $RECEIVE_PIDFILE
@@ -78,7 +78,7 @@ startup_receiver_valgrind() {
 # start receiver, add receiver command line parameters after function name
 startup_receiver() {
 	printf 'Starting Receiver...\n'
-	./receive $TLSLIB -p $TESTPORT -F $RECEIVE_PIDFILE --outfile $OUTFILE $OPT_VERBOSE $* &
+	./receive $TLSLIB -p $TESTPORT -F $RECEIVE_PIDFILE -O $OUTFILE $OPT_VERBOSE $* &
 	export RECEIVE_PID=$!
 	printf "got $RECEIVE_PID $RECEIVE_PIDFILE\n"
 	wait_process_startup_via_pidfile $RECEIVE_PIDFILE
@@ -153,7 +153,7 @@ wait_testport_available() {
 		if ! netstat -tp | grep -q $TESTPORT; then
 			break
 		fi
-		sleep 1
+		./msleep 1000
 	done
 }
 

@@ -8,8 +8,8 @@ export NUMMESSAGES=100000
 
 actual_test() {
 	startup_receiver
-	./send -t 127.0.0.1 -p $TESTPORT -n$NUMMESSAGES --no-exit-on-error \
-		--kill-on-msg 20000 --kill-pid $RECEIVE_PID $OPT_VERBOSE &
+	./send -t 127.0.0.1 -p $TESTPORT -n$NUMMESSAGES -N \
+		-K 20000 -I$RECEIVE_PID $OPT_VERBOSE &
 	SENDER_PID=$!
 
 	for i in {1..3};  do
