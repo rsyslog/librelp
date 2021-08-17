@@ -385,9 +385,9 @@ relpEngineSetTLSLibByName(relpEngine_t *const pThis, const char *const name)
 	}
 
 	if(!strcasecmp(name, "gnutls")) {
-		relpEngineSetTLSLib(pThis, RELP_USE_GNUTLS);
+		CHKRet(relpEngineSetTLSLib(pThis, RELP_USE_GNUTLS));
 	}else if(!strcasecmp(name, "openssl")) {
-		relpEngineSetTLSLib(pThis, RELP_USE_OPENSSL);
+		CHKRet(relpEngineSetTLSLib(pThis, RELP_USE_OPENSSL));
 	} else {
 		relpEngineCallOnGenericErr(pThis, "librelp", RELP_RET_PARAM_ERROR,
 				"invalid tls lib '%s' requested; this version of "
