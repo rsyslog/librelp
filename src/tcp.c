@@ -3044,18 +3044,22 @@ relpTcpRcv_gtls(relpTcp_t *const pThis, relpOctet_t *const pRcvBuf, ssize_t *con
 	RELPOBJ_assert(pThis, Tcp);
 
 	lenRcvd = gnutls_record_recv(pThis->session, pRcvBuf, *pLenBuf);
-	if(lenRcvd == GNUTLS_E_INTERRUPTED || lenRcvd == GNUTLS_E_AGAIN) {
-		pThis->pEngine->dbgprint((char*)"librelp: gnutls_record_recv must be retried %d\n", lenRcvd);
-		pThis->rtryOp = relpTCP_RETRY_recv;
+	if(lenRcvd > 0) {
+		*pLenBuf = lenRcvd;
+		pThis->pEngine->dbgprint((char*)"relpTcpRcv_gtls: gnutls_record_recv SUCCESS len %d\n", lenRcvd);
 	} else {
-		pThis->rtryOp = relpTCP_RETRY_none;
-		if(lenRcvd < 0) {
+		*pLenBuf = -1;
+		if(lenRcvd == GNUTLS_E_INTERRUPTED || lenRcvd == GNUTLS_E_AGAIN) {
+			pThis->pEngine->dbgprint((char*)"relpTcpRcv_gtls: gnutls_record_recv must be retried %d\n", lenRcvd);
+			pThis->rtryOp = relpTCP_RETRY_recv;
+		} else {
+			pThis->rtryOp = relpTCP_RETRY_none;
 			chkGnutlsCode(pThis, "TLS record reception failed", RELP_RET_IO_ERR, lenRcvd);
-			exit(1);
+			ABORT_FINALIZE(RELP_RET_IO_ERR);
 		}
 	}
-	*pLenBuf = (lenRcvd < 0) ? -1 : lenRcvd;
 
+finalize_it:
 	LEAVE_RELPFUNC;
 }
 #else
@@ -3076,7 +3080,7 @@ relpTcpRcv_ossl(relpTcp_t *const pThis, relpOctet_t *const pRcvBuf, ssize_t *con
 
 	lenRcvd = SSL_read(pThis->ssl, pRcvBuf, *pLenBuf);
 	if(lenRcvd > 0) {
-		pThis->pEngine->dbgprint((char*)"relpTcpRcv_ossl: SSL_read SUCCESS\n");
+		pThis->pEngine->dbgprint((char*)"relpTcpRcv_ossl: SSL_read SUCCESS len %d\n", lenRcvd);
 		*pLenBuf = lenRcvd;
 	} else {
 		*pLenBuf = -1;
