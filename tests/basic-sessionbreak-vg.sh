@@ -18,7 +18,7 @@ export NUMMESSAGES=100000
 export NUMLOOPS=2
 
 #export valgrind="valgrind --malloc-fill=ff --free-fill=fe --log-fd=1"
-export valgrind="valgrind --malloc-fill=ff --free-fill=fe --leak-check=full --log-fd=1 --error-exitcode=10 --gen-suppressions=all"
+export valgrind="valgrind --malloc-fill=ff --free-fill=fe --leak-check=full --log-fd=1 --error-exitcode=10 --gen-suppressions=all --suppressions=$srcdir/known_issues.supp"
 	
 startup_receiver_valgrind -N -e error.out.log -O $OUTFILE
 
