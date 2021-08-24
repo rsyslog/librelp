@@ -43,6 +43,7 @@ struct relpClt_s {
 	void *pUsr;		/**< user pointer (opaque data) */
 	int bEnableTLS;		/**< is TLS to be used? */
 	int bEnableTLSZip;	/**< is compression to be used together with TLS? */
+	int bAutoRetry;		/**< automatically try (once) to reestablish a broken session? */
 	int sizeWindow;		/**< size of our app-level communications window */
 	char *pristring;	/**< priority string for GnuTLS */
 	relpAuthMode_t authmode;

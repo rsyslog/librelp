@@ -121,6 +121,7 @@ relpCltConnect(relpClt_t *const pThis, int protFamily, unsigned char *port, unsi
 	CHKRet(relpSessConstruct(&pThis->pSess, pThis->pEngine, RELP_CLT_CONN, pThis, pThis->pUsr));
 	CHKRet(relpSessSetTimeout(pThis->pSess, pThis->timeout));
 	CHKRet(relpSessSetConnTimeout(pThis->pSess, pThis->connTimeout));
+	CHKRet(relpSessSetAutoRetry(pThis->pSess, pThis->bAutoRetry));
 	CHKRet(relpSessSetWindowSize(pThis->pSess, pThis->sizeWindow));
 	CHKRet(relpSessSetClientIP(pThis->pSess, pThis->clientIP));
 	if(pThis->bEnableTLS) {
@@ -165,6 +166,19 @@ relpCltReconnect(relpClt_t *const pThis)
 	CHKRet(relpSessTryReestablish(pThis->pSess));
 
 finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+
+/** Enable / Disable AutoRetry Mode for this client. Value 0 means disabled, value 1
+ * means enabled.
+ */
+relpRetVal PART_OF_API
+relpCltSetAutoRetry(relpClt_t *const pThis, int AutoRetry)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Clt);
+	pThis->bAutoRetry = (AutoRetry == 0 ? 0 : 1);
 	LEAVE_RELPFUNC;
 }
 

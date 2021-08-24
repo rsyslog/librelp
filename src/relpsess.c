@@ -980,6 +980,14 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 
+relpRetVal
+relpSessSetAutoRetry(relpSess_t *const pThis, int AutoRetry)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Sess);
+	pThis->bAutoRetry = (AutoRetry == 0 ? 0 : 1);
+	LEAVE_RELPFUNC;
+}
 
 relpRetVal
 relpSessSetWindowSize(relpSess_t *const pThis, int sizeWindow)

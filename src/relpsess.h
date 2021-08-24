@@ -149,6 +149,7 @@ relpRetVal relpSessTryReestablish(relpSess_t *pThis);
 relpRetVal relpSessSetProtocolVersion(relpSess_t *pThis, int protocolVersion);
 relpRetVal relpSessSetTimeout(relpSess_t *pThis, unsigned timeout);
 relpRetVal relpSessSetConnTimeout(relpSess_t *pThis, int connTimeout);
+relpRetVal relpSessSetAutoRetry(relpSess_t *pThis, int AutoRetry);
 relpRetVal relpSessSetWindowSize(relpSess_t *pThis, int sizeWindow);
 relpRetVal relpSessSetClientIP(relpSess_t *pThis, unsigned char *ip);
 relpRetVal relpSessEnableTLS(relpSess_t *pThis);
