@@ -1,4 +1,11 @@
 ----------------------------------------------------------------------
+Version 1.11.0 - 2021-??-??
+- gnutls drvr bugfix: library called exit() under some circumstances
+  When relpTcpRcv ran into an error, it could call exit() and thus
+  terminate the calling process. This was a regression from commit
+  6555545c4ebe9afe9259b15c176fd81eeecc93f4.
+  closes: https://github.com/rsyslog/librelp/issues/230
+----------------------------------------------------------------------
 Version 1.10.0 - 2021-02-16
 - TLS handling bugfix
   When the client tried to conntect to the server, custom
