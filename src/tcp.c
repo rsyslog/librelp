@@ -167,6 +167,8 @@ callOnAuthErr(relpTcp_t *const pThis, const char *authdata, const char *emsg, re
 static int called_openssl_global_init = 0;
 /* Main OpenSSL CTX pointer */
 static SSL_CTX *ctx = NULL;
+static pthread_mutex_t mutSsl;
+
 /*--------------------------------------MT OpenSSL helpers ------------------------------------------*/
 static MUTEX_TYPE *mutex_buf = NULL;
 
@@ -1405,8 +1407,6 @@ relpTcpInitTLS(relpTcp_t *const pThis)
 			pThis->pEngine->dbgprint((char*)"relpTcpInitTLS: Successfully initialized default "
 					"CA certificate storage\n");
 	}
-
-	called_openssl_global_init = 1;
 finalize_it:
 	LEAVE_RELPFUNC;
 }
@@ -1828,9 +1828,18 @@ relpTcpConnectTLSInit_ossl(relpTcp_t *const pThis)
 		ABORT_FINALIZE(RELP_RET_IO_ERR);
 	}
 
-	if(!called_openssl_global_init) {
+	if(called_openssl_global_init == 0) {
+		MUTEX_SETUP(mutSsl);
+		MUTEX_LOCK(mutSsl);
 		/* Init OpenSSL lib */
 		CHKRet(relpTcpInitTLS(pThis));
+		called_openssl_global_init = 1;
+		MUTEX_UNLOCK(mutSsl);
+	} else {
+		MUTEX_LOCK(mutSsl);
+		/*Increment OpenSSL Usage by 1*/
+		called_openssl_global_init++;
+		MUTEX_UNLOCK(mutSsl);
 	}
 
 	/*if we reach this point we are in tls mode */
@@ -1911,8 +1920,18 @@ relpTcpLstnInitTLS_ossl(relpTcp_t *const pThis)
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
 
-	if(!called_openssl_global_init) {
+	if(called_openssl_global_init == 0) {
+		MUTEX_SETUP(mutSsl);
+		MUTEX_LOCK(mutSsl);
+		/* Init OpenSSL lib */
 		CHKRet(relpTcpInitTLS(pThis));
+		called_openssl_global_init = 1;
+		MUTEX_UNLOCK(mutSsl);
+	} else {
+		MUTEX_LOCK(mutSsl);
+		/*Increment OpenSSL Usage by 1*/
+		called_openssl_global_init++;
+		MUTEX_UNLOCK(mutSsl);
 	}
 
 	/* Set TLS Options if configured */
@@ -1928,12 +1947,25 @@ static void
 relpTcpExitTLS_ossl(void)
 {
 	if(called_openssl_global_init == 1) {
-		if (ctx != NULL)
+		MUTEX_LOCK(mutSsl);
+		if (ctx != NULL) {
 			SSL_CTX_free(ctx);
+			ctx = NULL;
+		}
 		ENGINE_cleanup();
 		ERR_free_strings();
 		EVP_cleanup();
 		CRYPTO_cleanup_all_ex_data();
+		/* Reset global init state*/
+		called_openssl_global_init = 0;
+
+		MUTEX_UNLOCK(mutSsl);
+		pthread_mutex_destroy(&mutSsl);
+	} else if (called_openssl_global_init > 0) {
+		MUTEX_LOCK(mutSsl);
+		/* OpenSSL library still in use */
+		called_openssl_global_init--;
+		MUTEX_UNLOCK(mutSsl);
 	}
 }
 
