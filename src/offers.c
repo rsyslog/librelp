@@ -216,6 +216,7 @@ relpOfferValueAdd(unsigned char *pszVal, int intVal, relpOffer_t *pOffer)
 	/* check which value we need to use */
 	if(pszVal == NULL) {
 		snprintf((char*)pThis->szVal, sizeof(pThis->szVal), "%d", intVal);
+		pThis->szVal[RELP_MAX_OFFER_FEATUREVALUE] = '\0';
 		pThis->intVal = intVal;
 	} else {
 		strncpy((char*)pThis->szVal, (char*)pszVal, sizeof(pThis->szVal) - 1);
@@ -264,6 +265,7 @@ relpOfferAdd(relpOffer_t **ppThis, unsigned char *pszName, relpOffers_t *pOffers
 
 	CHKRet(relpOfferConstruct(&pThis, pOffers->pEngine));
 	strncpy((char*)pThis->szName, (char*)pszName, sizeof(pThis->szName));
+	pThis->szName[RELP_MAX_OFFER_FEATURENAME] = '\0';
 	pThis->pNext = pOffers->pRoot;
 	pOffers->pRoot = pThis;
 
