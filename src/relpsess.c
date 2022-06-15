@@ -168,13 +168,17 @@ relpSessDestruct(relpSess_t **ppThis)
 	assert(ppThis != NULL);
 	pThis = *ppThis;
 	RELPOBJ_assert(pThis, Sess);
+pThis->pEngine->dbgprint((char*)"relpSessDestruct 1\n");
 
 	/* pTcp may be NULL if we run into the destructor due to an error that occured
 	 * during construction.
 	 */
 	if(pThis->pTcp != NULL) {
 		if(pThis->pSrv != NULL) {
-			relpSessSrvDoDisconnect(pThis);
+			/* we are at the server side of the connection */
+			if(   pThis->sessState != eRelpSessState_BROKEN) {
+				relpSessSrvDoDisconnect(pThis);
+			}
 		} else {
 			/* we are at the client side of the connection */
 			if(   pThis->sessState != eRelpSessState_DISCONNECTED
@@ -183,11 +187,15 @@ relpSessDestruct(relpSess_t **ppThis)
 			}
 		}
 	}
+pThis->pEngine->dbgprint((char*)"relpSessDestruct 2\n");
 
 	if(pThis->pSendq != NULL)
 		relpSendqDestruct(&pThis->pSendq);
+pThis->pEngine->dbgprint((char*)"relpSessDestruct 3\n");
 	if(pThis->pTcp != NULL)
 		relpTcpDestruct(&pThis->pTcp);
+pThis->pEngine->dbgprint((char*)"relpSessDestruct 4\n");
+
 
 	/* unacked list */
 	for(pUnacked = pThis->pUnackedLstRoot ; pUnacked != NULL ; ) {
@@ -196,6 +204,7 @@ relpSessDestruct(relpSess_t **ppThis)
 		relpSendbufDestruct(&pUnackedToDel->pSendbuf);
 		free(pUnackedToDel);
 	}
+pThis->pEngine->dbgprint((char*)"relpSessDestruct 5\n");
 
 	if(pThis->pCurrRcvFrame != NULL)
 		relpFrameDestruct(&pThis->pCurrRcvFrame);
@@ -259,15 +268,20 @@ finalize_it:
 relpRetVal
 relpSessRcvData(relpSess_t *const pThis)
 {
-	relpOctet_t rcvBuf[RELP_RCV_BUF_SIZE+1];
+	// relpOctet_t rcvBuf[RELP_RCV_BUF_SIZE+1];
+	relpOctet_t* pRcvBuf = NULL;
 	ssize_t lenBuf;
 	ssize_t i;
 
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
 
+	if((pRcvBuf = malloc( (RELP_RCV_BUF_SIZE+1) * sizeof(relpOctet_t))) == NULL)
+		ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+
 	lenBuf = RELP_RCV_BUF_SIZE;
-	CHKRet(relpTcpRcv(pThis->pTcp, rcvBuf, &lenBuf));
+	pRcvBuf[lenBuf] = '\0';
+	CHKRet(relpTcpRcv(pThis->pTcp, pRcvBuf, &lenBuf));
 
 	if(lenBuf == 0) {
 		callOnErr(pThis, (char*) "server closed relp session, session broken", RELP_RET_SESSION_BROKEN);
@@ -285,11 +299,14 @@ relpSessRcvData(relpSess_t *const pThis)
 				errno, (void*)pThis);
 			pThis->sessState = eRelpSessState_BROKEN;
 			ABORT_FINALIZE(RELP_RET_SESSION_BROKEN);
+		} else {
+			pThis->pEngine->dbgprint((char*)"relp session %p read did not return any DATA, RETRY later\n",
+				(void*)pThis);
 		}
 	} else {
 		/* Terminate buffer and output received data to debug*/
-		rcvBuf[lenBuf] = '\0';
-		pThis->pEngine->dbgprint((char*)"relp session read %d octets, buf '%s'\n", (int) lenBuf, rcvBuf);
+		pRcvBuf[lenBuf] = '\0';
+		pThis->pEngine->dbgprint((char*)"relp session read %d octets, buf '%s'\n", (int) lenBuf, pRcvBuf);
 
 		/* we have regular data, which we now can process */
 		for(i = 0 ; i < lenBuf ; ++i) {
@@ -298,11 +315,13 @@ relpSessRcvData(relpSess_t *const pThis)
 					"breaking session %p\n", (void*) pThis);
 				ABORT_FINALIZE(RELP_RET_SESSION_BROKEN);
 			}
-			CHKRet(relpFrameProcessOctetRcvd(&pThis->pCurrRcvFrame, rcvBuf[i], pThis));
+			CHKRet(relpFrameProcessOctetRcvd(&pThis->pCurrRcvFrame, pRcvBuf[i], pThis));
 		}
 	}
 
 finalize_it:
+	if (pRcvBuf != NULL)
+		free(pRcvBuf);
 	LEAVE_RELPFUNC;
 }
 
@@ -384,7 +403,6 @@ relpSessSrvSendHint(relpSess_t *const pThis, unsigned char *pHint, size_t lenHin
 	/* now send it */
 	pThis->pEngine->dbgprint((char*)"hint-frame to send: '%s'\n", pSendbuf->pData + (9 - pSendbuf->lenTxnr));
 	CHKRet(relpSendbufSend(pSendbuf, pThis->pTcp));
-
 finalize_it:
 	if(pSendbuf != NULL)
 		relpSendbufDestruct(&pSendbuf);
