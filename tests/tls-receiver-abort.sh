@@ -4,12 +4,12 @@
 # of messages
 . ${srcdir:=$(pwd)}/test-framework.sh
 check_command_available timeout
-export NUMMESSAGES=100000
+export NUMMESSAGES=10000
 
 actual_test() {
 	startup_receiver
 	./send -t 127.0.0.1 -p $TESTPORT -n$NUMMESSAGES -N \
-		-K 20000 -I$RECEIVE_PID $OPT_VERBOSE &
+		-K 2000 -I$RECEIVE_PID $OPT_VERBOSE &
 	SENDER_PID=$!
 
 	for i in {1..3};  do

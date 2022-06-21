@@ -3,7 +3,7 @@
 # a more relastic test which actually sends a bit larger number
 # of messages
 . ${srcdir:=$(pwd)}/test-framework.sh
-NUMMESSAGES=50000
+NUMMESSAGES=10000
 
 function actual_test() {
 	startup_receiver -l $TEST_TLS_LIB -T -a "name" -x ${srcdir}/tls-certs/ca.pem \
