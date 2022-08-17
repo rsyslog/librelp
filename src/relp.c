@@ -259,11 +259,13 @@ relpEngineConstruct(relpEngine_t **ppThis)
 	}
 
 	RELP_CORE_CONSTRUCTOR(pThis, Engine);
-	#if !defined(ENABLE_TLS) && defined(ENABLE_TLS_OPENSSL)
-		/* if we only have openssl, it's only sensible to use it by default ;-) */
-		pThis->tls_lib = RELP_USE_OPENSSL;
-	#else	/* otherwise, use GnuTLS for max compatibility */
-		pThis->tls_lib = RELP_USE_GNUTLS;
+	#if !defined(ENABLE_TLS)
+		#if defined(ENABLE_TLS_OPENSSL)
+			/* if we only have openssl, it's only sensible to use it by default ;-) */
+			pThis->tls_lib = RELP_USE_OPENSSL;
+		#else	/* otherwise, use GnuTLS for max compatibility */
+			pThis->tls_lib = RELP_USE_GNUTLS;
+		#endif
 	#endif
 	pThis->protocolVersion = RELP_CURR_PROTOCOL_VERSION;
 	pthread_mutex_init(&pThis->mutSrvLst, NULL);
