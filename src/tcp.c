@@ -3836,11 +3836,13 @@ relpTcpGetRtryDirection(NOTLS_UNUSED relpTcp_t *const pThis)
 {
 	int r = 0;
 	#if  defined(WITH_TLS)
-	if(pThis->pEngine->tls_lib == 0) {
-		r = relpTcpGetRtryDirection_gtls(pThis);
-	} else {
-		r = relpTcpGetRtryDirection_ossl(pThis);
-	}
+		if (pThis->bTLSActive == 1) {
+			if(pThis->pEngine->tls_lib == 0) {
+				r = relpTcpGetRtryDirection_gtls(pThis);
+			} else {
+				r = relpTcpGetRtryDirection_ossl(pThis);
+			}
+		}
 	#endif /* #ifdef  WITH_TLS*/
 	return r;
 }
