@@ -198,7 +198,7 @@ relpFrameProcessOctetRcvd(relpFrame_t **const ppThis,
 								"librelp", RELP_RET_DATA_TOO_LONG,
 								"frame too long, size %zu, configured max %zu -"
 								"frame will still be accepted and session "
-								"continues. Note that this can be casued by an "
+								"continues. Note that this can be caused by an "
 								"attack on your system.",
 								pThis->lenData, pSess->maxDataSize);
 						} else {
