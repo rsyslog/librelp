@@ -3181,7 +3181,14 @@ relpTcpRcv(relpTcp_t *const pThis, relpOctet_t *const pRcvBuf, ssize_t *const pL
 			if(errno == EAGAIN) {
 				// Set mode to Retry
 				pThis->rtryOp = relpTCP_RETRY_recv;
-			} else {
+			} else if(errno == ECONNRESET) {
+				pThis->pEngine->dbgprint((char*)"relpTcpRcv: read failed with errno ECONNRESET!\n");
+#if defined(_AIX)
+			} else if(errno == 0) {
+				// Set mode to Retry if errno is 0, this actually happens on AIX 10.x
+				pThis->rtryOp = relpTCP_RETRY_recv;
+#endif
+                        } else {
 				pThis->pEngine->dbgprint((char*)"relpTcpRcv: read failed errno=%d\n", errno);
 			}
 		}
