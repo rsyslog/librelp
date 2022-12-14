@@ -3217,7 +3217,7 @@ relpTcpRcv(relpTcp_t *const pThis, relpOctet_t *const pRcvBuf, ssize_t *const pL
 			} else if(errno == ECONNRESET) {
 				pThis->pEngine->dbgprint((char*)"relpTcpRcv: read failed with errno ECONNRESET!\n");
 #if defined(_AIX)
-			} else if(errno == 0) {
+			} else if(errno == 0 || errno == EINTR || errno == EINPROGRESS) {
 				// Set mode to Retry if errno is 0, this actually happens on AIX 10.x
 				pThis->rtryOp = relpTCP_RETRY_recv;
 #endif
@@ -3382,6 +3382,7 @@ relpTcpSend(relpTcp_t *const pThis, relpOctet_t *const pBuf, ssize_t *const pLen
 		if(written == -1) {
 			switch(errno_save) {
 				case EAGAIN:
+				case 0:
 				case EINTR:
 					/* this is fine, just retry... */
 					written = 0;
@@ -3693,10 +3694,10 @@ relpTcpConnect(relpTcp_t *const pThis,
 	}
 	if(connect(pThis->sock, res->ai_addr, res->ai_addrlen) == -1) {
 #if defined(_AIX)
-		if(errno == 0) {
-			// Workarround for missing correct errno status
-			errno = EINPROGRESS;
-		}
+            if(errno == 0 || errno == EINTR) {
+                // Workarround for missing correct errno status
+                errno = EINPROGRESS;
+            }
 #endif
 		if(errno != EINPROGRESS) {
 			char errStr[1200];
