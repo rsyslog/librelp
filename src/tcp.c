@@ -66,6 +66,9 @@
 #	include <openssl/ssl.h>
 #	include <openssl/x509v3.h>
 #	include <openssl/err.h>
+#	if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
+#		include <openssl/bioerr.h>
+#	endif
 #	include <openssl/engine.h>
 /* OpenSSL API differences */
 #	if OPENSSL_VERSION_NUMBER >= 0x10100000L
@@ -269,9 +272,16 @@ int opensslh_THREAD_cleanup(void)
  * alorbach, 2018-06-11
  */
 
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
+long BIO_debug_callback_ex(BIO *bio, int cmd, const char LIBRELP_ATTR_UNUSED *argp,
+			   size_t LIBRELP_ATTR_UNUSED len, int argi, long LIBRELP_ATTR_UNUSED argl,
+			   int ret, size_t LIBRELP_ATTR_UNUSED *processed)
+#else
 long BIO_debug_callback(BIO *bio, int cmd, const char LIBRELP_ATTR_UNUSED *argp,
 			int argi, long LIBRELP_ATTR_UNUSED argl, long ret)
+#endif
 {
+	long ret2 = ret; // Helper value to avoid printf compile errors long<>int
 	long r = 1;
 
 	relpTcp_t* pThis = (relpTcp_t*) (void *) BIO_get_callback_arg(bio);
@@ -340,27 +350,27 @@ long BIO_debug_callback(BIO *bio, int cmd, const char LIBRELP_ATTR_UNUSED *argp,
 	case BIO_CB_RETURN | BIO_CB_READ:
 		pThis->pEngine->dbgprint((char*)"openssl debugmsg: BIO[%p]: read return %ld\n",
 			(void *)bio,
-			ret);
+			ret2);
 		break;
 	case BIO_CB_RETURN | BIO_CB_WRITE:
 		pThis->pEngine->dbgprint((char*)"openssl debugmsg: BIO[%p]: write return %ld\n",
 			(void *)bio,
-			ret);
+			ret2);
 		break;
 	case BIO_CB_RETURN | BIO_CB_GETS:
 		pThis->pEngine->dbgprint((char*)"openssl debugmsg: BIO[%p]: gets return %ld\n",
 			(void *)bio,
-			ret);
+			ret2);
 		break;
 	case BIO_CB_RETURN | BIO_CB_PUTS:
 		pThis->pEngine->dbgprint((char*)"openssl debugmsg: BIO[%p]: puts return %ld\n",
 			(void *)bio,
-			ret);
+			ret2);
 		break;
 	case BIO_CB_RETURN | BIO_CB_CTRL:
 		pThis->pEngine->dbgprint((char*)"openssl debugmsg: BIO[%p]: ctrl return %ld\n",
 			(void *)bio,
-			ret);
+			ret2);
 		break;
 	default:
 		pThis->pEngine->dbgprint((char*)"openssl debugmsg: BIO[%p]: bio callback - unknown type (%d)\n",
@@ -1343,9 +1353,19 @@ relpTcpInitTLS(relpTcp_t *const pThis)
 
 	/* Load readable error strings */
 	SSL_load_error_strings();
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
+	/*
+	* ERR_load_*(), ERR_func_error_string(), ERR_get_error_line(), ERR_get_error_line_data(), ERR_get_state()
+	* OpenSSL now loads error strings automatically so these functions are not needed.
+	* SEE FOR MORE:
+	*	https://www.openssl.org/docs/manmaster/man7/migration_guide.html
+	*
+	*/
+#else
+	/* Load error strings into mem*/
 	ERR_load_BIO_strings();
 	ERR_load_crypto_strings();
-
+#endif
 	/* Create main CTX Object */
 	ctx = SSL_CTX_new(SSLv23_method());
 
@@ -1774,7 +1794,11 @@ relpTcpAcceptConnReqInitTLS_ossl(relpTcp_t *const pThis, relpSrv_t *const pSrv)
 	pThis->pEngine->dbgprint((char*)"relpTcpAcceptConnReqInitTLS_ossl: Init client BIO[%p] done\n", (void *)client);
 
 	/* Set debug Callback for client BIO as well! */
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
+	BIO_set_callback_ex(client, BIO_debug_callback_ex);
+#else
 	BIO_set_callback(client, BIO_debug_callback);
+#endif
 	BIO_set_callback_arg(client, (char *)pThis);
 
 /* TODO: still needed? Set to NON blocking ! */
@@ -1876,7 +1900,11 @@ relpTcpConnectTLSInit_ossl(relpTcp_t *const pThis)
 	pThis->pEngine->dbgprint((char*)"relpTcpConnectTLSInit: Init conn BIO[%p] done\n", (void *)conn);
 
 	/* Set debug Callback for client BIO as well! */
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
+	BIO_set_callback_ex(conn, BIO_debug_callback_ex);
+#else
 	BIO_set_callback(conn, BIO_debug_callback);
+#endif
 	BIO_set_callback_arg(conn, (char *)pThis);
 
 /* TODO: still needed? Set to NON blocking ! */
