@@ -5,11 +5,11 @@
 . ${srcdir:=$(pwd)}/test-framework.sh
 # export OPT_VERBOSE=-v # uncomment for debugging 
 export errorlog="error.$LIBRELP_DYN.log"
-export NUMMESSAGES=100000
+export NUMMESSAGES=10000
 check_command_available timeout
 
 startup_receiver -e ${TESTDIR}/${errorlog}
-./send -t 127.0.0.1 -p $TESTPORT -n$NUMMESSAGES -N -K 20000 -I $RECEIVE_PID $OPT_VERBOSE &
+./send -t 127.0.0.1 -p $TESTPORT -n$NUMMESSAGES -N -K 2000 -I $RECEIVE_PID $OPT_VERBOSE &
 SENDER_PID=$!
 
 for i in {1..3};  do

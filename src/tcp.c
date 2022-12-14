@@ -791,35 +791,40 @@ relpTcpDestruct(relpTcp_t **ppThis)
 	ENTER_RELPFUNC;
 	assert(ppThis != NULL);
 	pThis = *ppThis;
-	RELPOBJ_assert(pThis, Tcp);
+	/* AVOID freeing pThis AGAIN! */
+	if (pThis != NULL) {
+		RELPOBJ_assert(pThis, Tcp);
+		// Only DEBUG if pThis  is available
+		pThis->pEngine->dbgprint((char*)"relpTcpDestruct for %p\n", (void *) pThis);
 
-	if(pThis->sock != -1) {
-		shutdown(pThis->sock, SHUT_RDWR);
-		close(pThis->sock);
-		pThis->sock = -1;
-	}
-
-	if(pThis->socks != NULL) {
-		/* if we have some sockets at this stage, we need to close them */
-		for(int i = 1 ; i <= pThis->socks[0] ; ++i) {
-			shutdown(pThis->socks[i], SHUT_RDWR);
-			close(pThis->socks[i]);
+		if(pThis->sock != -1) {
+			shutdown(pThis->sock, SHUT_RDWR);
+			close(pThis->sock);
+			pThis->sock = -1;
 		}
-		free(pThis->socks);
+
+		if(pThis->socks != NULL) {
+			/* if we have some sockets at this stage, we need to close them */
+			for(int i = 1 ; i <= pThis->socks[0] ; ++i) {
+				shutdown(pThis->socks[i], SHUT_RDWR);
+				close(pThis->socks[i]);
+			}
+			free(pThis->socks);
+		}
+		relpTcpDestructTLS(pThis);
+
+		free(pThis->pRemHostIP);
+		free(pThis->pRemHostName);
+		free(pThis->pristring);
+		free(pThis->caCertFile);
+		free(pThis->ownCertFile);
+		free(pThis->privKeyFile);
+		free(pThis->tlsConfigCmd);
+
+		/* done with de-init work, now free tcp object itself */
+		free(pThis);
+		*ppThis = NULL;
 	}
-	relpTcpDestructTLS(pThis);
-
-	free(pThis->pRemHostIP);
-	free(pThis->pRemHostName);
-	free(pThis->pristring);
-	free(pThis->caCertFile);
-	free(pThis->ownCertFile);
-	free(pThis->privKeyFile);
-	free(pThis->tlsConfigCmd);
-
-	/* done with de-init work, now free tcp object itself */
-	free(pThis);
-	*ppThis = NULL;
 
 	LEAVE_RELPFUNC;
 }
@@ -3209,15 +3214,21 @@ relpTcpRcv(relpTcp_t *const pThis, relpOctet_t *const pRcvBuf, ssize_t *const pL
 			if(errno == EAGAIN) {
 				// Set mode to Retry
 				pThis->rtryOp = relpTCP_RETRY_recv;
+			} else if(errno == ECONNRESET) {
+				pThis->pEngine->dbgprint((char*)"relpTcpRcv: read failed with errno ECONNRESET!\n");
+#if defined(_AIX)
+			} else if(errno == 0) {
+				// Set mode to Retry if errno is 0, this actually happens on AIX 10.x
+				pThis->rtryOp = relpTCP_RETRY_recv;
+#endif
 			} else {
-				pThis->pEngine->dbgprint((char*)"relpTcpRcv: read failed errno=%d\n", errno);
+				pThis->pEngine->dbgprint((char*)"relpTcpRcv: read failed errno='%d'\n", errno);
 			}
 		}
-
 	}
 
-	pThis->pEngine->dbgprint((char*)"relpTcpRcv return. relptcp [%p], iRet %d, lenRcvd %d, pLenBuf %zd\n",
-		(void *) pThis, iRet, lenRcvd, *pLenBuf);
+	pThis->pEngine->dbgprint((char*)"relpTcpRcv return. relptcp [%p], iRet %d, max %d, lenRcvd %d, pLenBuf %zd\n",
+		(void *) pThis, iRet, RELP_RCV_BUF_SIZE, lenRcvd, *pLenBuf);
 	LEAVE_RELPFUNC;
 }
 
@@ -3363,7 +3374,7 @@ relpTcpSend(relpTcp_t *const pThis, relpOctet_t *const pBuf, ssize_t *const pLen
 			CHKRet(relpTcpSend_ossl(pThis, pBuf, pLenBuf));
 		}
 	} else {
-		pThis->pEngine->dbgprint((char*)"relpTcpSend: send data: %.*s\n", (int) *pLenBuf, pBuf);
+		pThis->pEngine->dbgprint((char*)"relpTcpSend: send data: '%.*s'\n", (int) *pLenBuf, pBuf);
 		written = send(pThis->sock, pBuf, *pLenBuf, 0);
 		const int errno_save = errno;
 		pThis->pEngine->dbgprint((char*)"relpTcpSend: sock %d, lenbuf %zd, send returned %d [errno %d]\n",
@@ -3541,9 +3552,10 @@ static relpRetVal LIBRELP_ATTR_NONNULL()
 relpTcpConnectTLSInit(NOTLS_UNUSED relpTcp_t *const pThis)
 {
 	ENTER_RELPFUNC;
-pThis->pEngine->dbgprint((char*)"relpTcpConnectTLSInit: lib: %d\n", pThis->pEngine->tls_lib);
 	#if  defined(WITH_TLS)
 	if(pThis->bEnableTLS) {
+		// Only DEBUG this if TLS enabled!
+		pThis->pEngine->dbgprint((char*)"relpTcpConnectTLSInit: lib: %d\n", pThis->pEngine->tls_lib);
 		if(pThis->pEngine->tls_lib == 0) {
 			CHKRet(relpTcpConnectTLSInit_gtls(pThis));
 		} else {
@@ -3680,6 +3692,12 @@ relpTcpConnect(relpTcp_t *const pThis,
 		ABORT_FINALIZE(RELP_RET_IO_ERR);
 	}
 	if(connect(pThis->sock, res->ai_addr, res->ai_addrlen) == -1) {
+#if defined(_AIX)
+		if(errno == 0) {
+			// Workarround for missing correct errno status
+			errno = EINPROGRESS;
+		}
+#endif
 		if(errno != EINPROGRESS) {
 			char errStr[1200];
 			_relpEngine_strerror_r(errno, errStr, sizeof(errStr));

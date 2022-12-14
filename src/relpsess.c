@@ -174,7 +174,10 @@ relpSessDestruct(relpSess_t **ppThis)
 	 */
 	if(pThis->pTcp != NULL) {
 		if(pThis->pSrv != NULL) {
-			relpSessSrvDoDisconnect(pThis);
+			/* we are at the server side of the connection */
+			if(   pThis->sessState != eRelpSessState_BROKEN) {
+				relpSessSrvDoDisconnect(pThis);
+			}
 		} else {
 			/* we are at the client side of the connection */
 			if(   pThis->sessState != eRelpSessState_DISCONNECTED
@@ -267,6 +270,7 @@ relpSessRcvData(relpSess_t *const pThis)
 	RELPOBJ_assert(pThis, Sess);
 
 	lenBuf = RELP_RCV_BUF_SIZE;
+	rcvBuf[lenBuf] = '\0';
 	CHKRet(relpTcpRcv(pThis->pTcp, rcvBuf, &lenBuf));
 
 	if(lenBuf == 0) {
@@ -285,6 +289,9 @@ relpSessRcvData(relpSess_t *const pThis)
 				errno, (void*)pThis);
 			pThis->sessState = eRelpSessState_BROKEN;
 			ABORT_FINALIZE(RELP_RET_SESSION_BROKEN);
+		} else {
+			pThis->pEngine->dbgprint((char*)"relp session %p read did not return any DATA, RETRY later\n",
+				(void*)pThis);
 		}
 	} else {
 		/* Terminate buffer and output received data to debug*/
@@ -384,7 +391,6 @@ relpSessSrvSendHint(relpSess_t *const pThis, unsigned char *pHint, size_t lenHin
 	/* now send it */
 	pThis->pEngine->dbgprint((char*)"hint-frame to send: '%s'\n", pSendbuf->pData + (9 - pSendbuf->lenTxnr));
 	CHKRet(relpSendbufSend(pSendbuf, pThis->pTcp));
-
 finalize_it:
 	if(pSendbuf != NULL)
 		relpSendbufDestruct(&pSendbuf);

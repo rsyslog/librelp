@@ -8,8 +8,8 @@ TB_TIMEOUT_STARTUP=400  # 40 seconds - Solaris sometimes needs this...
 export LIBRELP_DYN="$(tr -dc 'a-zA-Z0-9' < /dev/urandom | head --bytes 4)"
 export valgrind="valgrind --malloc-fill=ff --free-fill=fe --log-fd=1"
 # **** use the line below for very hard to find leaks! *****
-#export valgrind="valgrind --malloc-fill=ff --free-fill=fe --log-fd=1 --leak-check=full --show-leak-kinds=all"
-#export OPT_VERBOSE=-v # uncomment for debugging 
+# export valgrind="valgrind --malloc-fill=ff --free-fill=fe --log-fd=1 --leak-check=full --show-leak-kinds=all"
+# export OPT_VERBOSE=-v # uncomment for debugging 
 source set-envvars
 
 ######################################################################
