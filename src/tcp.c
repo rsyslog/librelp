@@ -3382,7 +3382,9 @@ relpTcpSend(relpTcp_t *const pThis, relpOctet_t *const pBuf, ssize_t *const pLen
 		if(written == -1) {
 			switch(errno_save) {
 				case EAGAIN:
+#if defined(_AIX)
 				case 0:
+#endif
 				case EINTR:
 					/* this is fine, just retry... */
 					written = 0;
