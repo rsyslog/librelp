@@ -1,4 +1,4 @@
-# Copyright 2020 Rainer Gerhards and Others
+# Copyright 2020-2022 Rainer Gerhards and Others
 #
 # https://github.com/rsyslog/rsyslog-pkg-ubuntu
 #
@@ -18,18 +18,18 @@
 #
 # https://help.github.com/en/github/managing-subscriptions-and-notifications-on-github/configuring-notifications#github-actions-notification-options
 # https://github.com/settings/notifications
-# https://software.opensuse.org//download.html?project=home%3Argerhards&package=rsyslog
+# https://software.opensuse.org/download.html?project=home%3Argerhards&package=rsyslog
 
 
 ---
-name: check fedora 30
+name: check centos 7
 
 on:
   pull_request:
 
 jobs:
   check_run:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
     timeout-minutes: 50
 
     steps:
@@ -47,8 +47,8 @@ jobs:
           export CI_MAKE_OPT='-j20'
           export CI_MAKE_CHECK_OPT='-j8'
           export CI_CHECK_CMD='check'
-          export DEV_CONTAINER='rsyslog/rsyslog_dev_base_fedora:30'
-          # export PROJ_CONFIGURE_OPTIONS_EXTRA="--enable-debug"
+          export DEV_CONTAINER='rsyslog/rsyslog_dev_base_centos:7'
+          export PROJ_CONFIGURE_OPTIONS_EXTRA="--enable-debug"
           devtools/devcontainer.sh --rm devtools/run-ci.sh
 
       - name: show error logs (if we errored)
