@@ -3699,12 +3699,12 @@ relpTcpConnect(relpTcp_t *const pThis,
 	if(connect(pThis->sock, res->ai_addr, res->ai_addrlen) == -1) {
 #if defined(_AIX)
 		// AIX Workarround handling other ERRNO codes
-		if(	errno == 0 ||
-			errno == EINTR) {
-			errno = EINPROGRESS;
-		}
+		if(	errno != 0 &&
+			errno != EINTR &&
+			errno != EINPROGRESS) {
+#else
+		if(	errno != EINPROGRESS) {
 #endif
-		if(errno != EINPROGRESS) {
 			char errStr[1200];
 			_relpEngine_strerror_r(errno, errStr, sizeof(errStr));
 			snprintf(errmsg, sizeof(errmsg), "error connecting: '%s'", errStr);

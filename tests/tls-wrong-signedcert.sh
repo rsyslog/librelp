@@ -1,7 +1,7 @@
 #!/bin/bash
 . ${srcdir:=$(pwd)}/test-framework.sh
 export errorlog="error.$LIBRELP_DYN.log"
-export TLSLIB="--tls-lib openssl"
+export TLSLIB="-l openssl"
 startup_receiver -T -a "name" -x ${srcdir}/tls-certs/ossl-ca.pem -y ${srcdir}/tls-certs/ossl-server-cert.pem -z ${srcdir}/tls-certs/ossl-server-key.pem -P 'client.testbench.rsyslog.com' -e $TESTDIR/$errorlog
 
 echo 'Send Message...'

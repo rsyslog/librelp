@@ -1,7 +1,7 @@
 #!/bin/bash
 . ${srcdir:=$(pwd)}/test-framework.sh
 export errorlog="error.$LIBRELP_DYN.log"
-export TLSLIB="--tls-lib openssl"
+export TLSLIB="-l openssl"
 startup_receiver -T -a "name" -x ${srcdir}/tls-certs/ca.pem \
 	-y ${srcdir}/tls-certs/cert.pem -z ${srcdir}/tls-certs/key.pem \
 	-P "wrong name" -e $TESTDIR/$errorlog
