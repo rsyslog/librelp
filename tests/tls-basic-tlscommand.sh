@@ -1,19 +1,20 @@
 #!/bin/bash
 . ${srcdir:=$(pwd)}/test-framework.sh
 export errorlog="error.$LIBRELP_DYN.log"
+export TLSLIB="-l openssl"
 # export OPT_VERBOSE=-v # uncomment for debugging 
 
 function actual_test() {
 	# Test only supported for OpenSSL
 	if [ "$TEST_TLS_LIB" == "openssl" ]; then
-		startup_receiver --tls-lib $TEST_TLS_LIB -T -a "name" -x ${srcdir}/tls-certs/ca.pem \
+		startup_receiver -T -a "name" -x ${srcdir}/tls-certs/ca.pem \
 			-y ${srcdir}/tls-certs/cert.pem -z ${srcdir}/tls-certs/key.pem \
 			-P 'testbench.rsyslog.com' \
 			-e $TESTDIR/$errorlog \
 			-c "Protocol=ALL,-SSLv2,-SSLv3,-TLSv1,-TLSv1.2;CipherString=ECDHE-RSA-AES256-GCM-SHA384;Protocol=ALL,-SSLv2,-SSLv3,-TLSv1,-TLSv1.2,-TLSv1.3;MinProtocol=TLSv1.2;MaxProtocol=TLSv1.2"
 
 		echo 'Send Message...'
-		./send --tls-lib $TEST_TLS_LIB -t 127.0.0.1 -p $TESTPORT -m "testmessage" -T -a "name" \
+		./send $TLSLIB -t 127.0.0.1 -p $TESTPORT -m "testmessage" -T -a "name" \
 			-x ${srcdir}/tls-certs/ca.pem -y ${srcdir}/tls-certs/cert.pem \
 			-z ${srcdir}/tls-certs/key.pem -P 'testbench.rsyslog.com' \
 			-c "Protocol=ALL,-SSLv2,-SSLv3,-TLSv1.1,-TLSv1.2;CipherString=DHE-RSA-AES256-SHA;Protocol=ALL,-SSLv2,-SSLv3,-TLSv1.1,-TLSv1.2,-TLSv1.3;MinProtocol=TLSv1.1;MaxProtocol=TLSv1.1" \
