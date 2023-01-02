@@ -44,6 +44,10 @@ Version 1.11.0 - 2021-??-??
   - See for more:
     https://www.openssl.org/docs/manmaster/man7/migration_guide.html
   closes: https://github.com/rsyslog/librelp/issues/246
+- bugfix: compatiblity problem with openssl 1.1
+  There were undefined reference to CRYPTO_set_id_callback if system
+  use openssl 1.1, which lead to load and/or other erros.
+  Thanks to Alexander Eremin for the patch.
 - bugfix: Forward return code from relpEngineSetTLSLib to relpEngineSetTLSLibName
   Previous situation: In case librelp is compiled without openssl
   support but openssl is requested from the user side, then librelp
@@ -53,6 +57,8 @@ Version 1.11.0 - 2021-??-??
   In case pThis == NULL condition is true at line
   https://github.com/rsyslog/librelp/blob/master/src/relp.c#L345
   pThis->dbgprint(...) would cause unexpected behavior.
+  Thanks to Attila Lakatos for the patch.
+- bugfix: warnings reported by coverity scan
   Thanks to Attila Lakatos for the patch.
 - testbench: Added compatiblity to run on AIX
   - removed long options from receive send utilities (Not supported on AIX).
