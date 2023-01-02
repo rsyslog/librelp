@@ -1,5 +1,17 @@
 ----------------------------------------------------------------------
 Version 1.11.0 - 2021-??-??
+- code cleanup
+  During the initial librelp implementation it was thought about an
+  auto-retry feature (whatever that means). Variable bAutoRetry was
+  created to control that behaviour. It's default was 0 (inactive).
+  Some code has been written to evaluate that variable and act
+  accordingly. However, no setter method for this variable was
+  created and it was also nowhere changed from the default value
+  of zero. As such, the code activated by it was never used.
+  This patch now removes both the variable and the few code lines
+  accessing it. This will have no effect, as the code was never
+  used.
+  closes: https://github.com/rsyslog/librelp/issues/223
 - testbench: Fix commands in some openssl tests
   Those commands were not correctly handeled on AIX, now they are.
 - AIX: Changed ERRNO handling after connect in tcp.c
