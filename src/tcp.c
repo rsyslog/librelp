@@ -1599,7 +1599,7 @@ relpTcpRtryHandshake_ossl(relpTcp_t *const pThis)
 				relpTcpLastSSLErrorMsg(res, pThis, "relpTcpRtryHandshake Server");
 				ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
 			} else {
-				snprintf(errmsg, sizeof(errmsg), 
+				snprintf(errmsg, sizeof(errmsg),
 				"relpTcpRtryHandshake_ossl: Server handshake failed with %d - Aborting handshake.",
 					resErr);
 				callOnErr(pThis, errmsg, RELP_RET_ERR_TLS_SETUP);
@@ -1628,7 +1628,7 @@ relpTcpRtryHandshake_ossl(relpTcp_t *const pThis)
 				relpTcpLastSSLErrorMsg(res, pThis, "relpTcpRtryHandshake Client");
 				ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP /*RS_RET_RETRY*/);
 			} else {
-				snprintf(errmsg, sizeof(errmsg), 
+				snprintf(errmsg, sizeof(errmsg),
 				"relpTcpRtryHandshake_ossl: Client handshake failed with %d - Aborting handshake.",
 					resErr);
 				callOnErr(pThis, errmsg, RELP_RET_ERR_TLS_SETUP);
@@ -1766,7 +1766,7 @@ relpTcpAcceptConnReqInitTLS_ossl(relpTcp_t *const pThis, relpSrv_t *const pSrv)
 
 	// Set SSL_MODE_AUTO_RETRY to SSL obj
 	SSL_set_mode(pThis->ssl, SSL_MODE_AUTO_RETRY);
-	
+
 	// Copy Properties from Server TCP obj over
 	pThis->authmode = pSrv->pTcp->authmode;
 	pThis->pUsr = pSrv->pUsr;
@@ -2475,6 +2475,7 @@ GenFingerprintStr(const char *pFingerprint,const int sizeFingerprint,
 		for(iSrc = 0; iSrc < sizeFingerprint ; ++iSrc, iDst += 3) {
 			sprintf(fpBuf+iDst, ":%2.2X", (unsigned char) pFingerprint[iSrc]);
 		}
+		fpBuf[sizeTotal] = '\0';
 	}else if(bufLen>=1){
 		if (pEngine!=NULL)
 			pEngine->dbgprint((char*)"warn: buffer overflow for %s signature\n",digestType);
