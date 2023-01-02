@@ -1,5 +1,65 @@
 ----------------------------------------------------------------------
 Version 1.11.0 - 2021-??-??
+- testbench: Fix commands in some openssl tests
+  Those commands were not correctly handeled on AIX, now they are.
+- AIX: Changed ERRNO handling after connect in tcp.c
+  see also: https://github.com/rsyslog/librelp/issues/250
+- AIX: Add handling for other ERRNO codes in tcp.c
+  For send(), recv() and connect() we need to handle different ERRNO
+  codes on AIX according to doc:
+    https://www.ibm.com/docs/en/aix/7.1?topic=r-recv-subroutine
+    https://www.ibm.com/docs/en/aix/7.1?topic=s-send-subroutine
+    https://www.ibm.com/docs/en/aix/7.1?topic=c-connect-subroutine
+- bugfix/TCP: relpTcpGetRtryDirection onyl needs to check direction if SSL is active.
+  closes: https://github.com/rsyslog/librelp/issues/240
+- AIX: in relpTcpRcv we need to set RETRY_recv if errno is 0
+  On AIX 10.x, when a recv call fails with len -1 and errno 0
+  we can still go into relpTCP_RETRY_recv mode. Testbench on
+  rsyslog side appears to be finally working with this fix.
+  On AIX 10.x, same problem as above appear to happen with
+  connect() as well not setting errno to EINPROGRESS on failure.
+  rsyslog ptcp driver does not check errno value at all, which is
+  why we did not have this problem on AIX with rsyslog.
+  Reduce test message count in receiver-abort.sh to 50000,
+  because otherwise the test can timeout on very slow machines.
+  Moved receive buffer in relpSessRcvData back to stack memory
+  closes: https://github.com/rsyslog/librelp/pull/239
+- openssl: fix openssl exit code avoid double free of ctx
+  When more than one librelp instance are used in the same process,
+  and the relpTcpExitTLS call was called a second time, the process
+  could freeze due a double free (See SSL_CTX_free call).
+  Thanks to David GOUARIN <david.gouarin@thalesgroup.com> for the
+  discovery and initial fix.
+  Also added an openssl instance counter to avoid freeing the SSL library
+  which could be still in use by another librelp instance
+  in the same process.
+  closes: https://github.com/rsyslog/librelp/issues/235
+- librelp hardening: Fix multiple minor issues causing debugging trouble
+  - avoid invalid dbgprint calls
+  - avoid double free in relpTcpDestruct (if called twice).
+  - add debug output into relpTcpRcv
+- OpenSSL: fix depreacted API issues for OpenSSL 3.x
+  - OpenSSL error strings are loaded automatically now
+  - Adapted Debug Callback for 3.x
+  - See for more:
+    https://www.openssl.org/docs/manmaster/man7/migration_guide.html
+  closes: https://github.com/rsyslog/librelp/issues/246
+- bugfix: Forward return code from relpEngineSetTLSLib to relpEngineSetTLSLibName
+  Previous situation: In case librelp is compiled without openssl
+  support but openssl is requested from the user side, then librelp
+  silently switches to the default tls driver(gnutls).
+  Thanks to Attila Lakatos for the patch.
+- bugfix: make relpEngineSetTLSLib debug safe
+  In case pThis == NULL condition is true at line
+  https://github.com/rsyslog/librelp/blob/master/src/relp.c#L345
+  pThis->dbgprint(...) would cause unexpected behavior.
+  Thanks to Attila Lakatos for the patch.
+- testbench: Added compatiblity to run on AIX
+  - removed long options from receive send utilities (Not supported on AIX).
+  - added checks for existing commands in some tests.
+  - added msleep utility from rsyslog (sleep, timeout etc. not supported on AIX).
+  - github workflow: Disabled some unrelated tests from rsyslog testbench
+  closes: https://github.com/rsyslog/librelp/issues/228
 - gnutls drvr bugfix: library called exit() under some circumstances
   When relpTcpRcv ran into an error, it could call exit() and thus
   terminate the calling process. This was a regression from commit
