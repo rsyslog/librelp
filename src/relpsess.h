@@ -105,7 +105,6 @@ struct relpSess_s {
 	struct relpSendq_s *pSendq; /**< our send queue */
 
 	/* properties needed for client operation */
-	int bAutoRetry;	/**< automatically try (once) to reestablish a broken session? */
 	int sizeWindow;	/**< size of our app-level communications window */
 	unsigned timeout; /**< timeout after which session is to be considered broken */
 	int connTimeout; /**< connection timeout */
