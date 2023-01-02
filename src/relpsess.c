@@ -682,11 +682,6 @@ relpSessSendCommand(relpSess_t *const pThis, unsigned char *pCmd, size_t lenCmd,
 	CHKRet(relpSessWaitState(pThis, eRelpSessState_READY_TO_SEND,
 		pThis->timeout));
 
-	/* re-try once if automatic retry mode is set */
-	if(pThis->bAutoRetry && pThis->sessState == eRelpSessState_BROKEN) {
-		CHKRet(relpSessTryReestablish(pThis));
-	}
-
 	/* then send our data */
 	if(pThis->sessState == eRelpSessState_BROKEN)
 		ABORT_FINALIZE(RELP_RET_SESSION_BROKEN);
