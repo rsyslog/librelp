@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------
-Version 1.11.0 - 2021-??-??
+Version 1.11.0 - 2023-01-10
 - code cleanup
   During the initial librelp implementation it was thought about an
   auto-retry feature (whatever that means). Variable bAutoRetry was
