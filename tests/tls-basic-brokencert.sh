@@ -9,5 +9,5 @@ echo 'Send Message...'
 ./send -t 127.0.0.1 -p $TESTPORT -m "testmessage" -T -a "name" -x ${srcdir}/tls-certs/ossl-ca.pem -y ${srcdir}/tls-certs/ossl-clientbrok-cert.pem -z ${srcdir}/tls-certs/ossl-clientbrok-key.pem -P 'server.testbench.rsyslog.com' -e error.out.log $OPT_VERBOSE 1>>${OUTFILE} 2>&1
 
 stop_receiver
-check_output "certificate validation failed, names inside certifcate are way to long" error.out.log
+check_output "certificate validation failed, names inside certificate are way to long" error.out.log
 terminate

@@ -2352,7 +2352,7 @@ relpTcpAddToCertNamesBuffer(relpTcp_t *const pThis,
 		"DNSname: %s; ", certName);
 	if(n < 0 || n >= (int) (buflen - currIdx)) {
 		callOnAuthErr(pThis, "", "certificate validation failed, names "
-			"inside certifcate are way too long (> 32KiB)",
+			"inside certificate are way too long (> 32KiB)",
 			RELP_RET_AUTH_CERT_INVL);
 		r = RELP_RET_PARAM_ERROR;
 	} else {
