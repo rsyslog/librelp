@@ -230,6 +230,12 @@ if test "$enable_debug" = "no"; then
         AC_DEFINE(NDEBUG, 1, [Defined if debug mode is disabled.])
 fi
 
+#Compiler does not inline any functions when not optimizing(-Og).
+#Hence, remove -Winline flag when DEBUG is enabled.
+#ifdef DEBUG
+WARN_CFLAGS="$(echo "$WARN_CFLAGS" | sed s/-Winline//g)"
+#endif
+
 # valgrind
 AC_ARG_ENABLE(valgrind,
         [AS_HELP_STRING([--enable-valgrind],[Enable valgrind tests@<:@default=yes@:>@])],
