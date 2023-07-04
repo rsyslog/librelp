@@ -1,5 +1,15 @@
 ----------------------------------------------------------------------
 Version 1.11.0 - 2021-??-??
+- bugfix: function inline errors in debug optimization (-Og)
+  Compiler does not inline any functions when using debug
+  optimization (-Og). Hence, remove -Winline flag when compiling with
+  debug optimization.
+  Thanks to Yash Shinde for the patch.
+- CI: upgrading to newer ubuntu version as required by github
+  we used older ubuntu versions as base for our containers, these
+  versions are no longer available in github actions. As such,
+  we upgraded. Has no effect on testbench as we execute everything
+  in container environment and container remains the same.
 - tcp: fix some compiler warnings with enable-tls-openssl
   When --enable-tls=no and --enable-tls-openssl=yes, the following
   compiler errors were reported.
