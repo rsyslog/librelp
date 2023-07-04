@@ -1,5 +1,9 @@
 ----------------------------------------------------------------------
 Version 1.11.0 - 2021-??-??
+- tcp: fix some compiler warnings with enable-tls-openssl
+  When --enable-tls=no and --enable-tls-openssl=yes, the following
+  compiler errors were reported.
+  Thanks to Patrick Williams for the patch.
 - code cleanup
   During the initial librelp implementation it was thought about an
   auto-retry feature (whatever that means). Variable bAutoRetry was
