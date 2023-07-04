@@ -132,12 +132,12 @@ callOnErr(const relpTcp_t *__restrict__ const pThis,
 static int LIBRELP_ATTR_NONNULL() relpTcpGetCN(char *const namebuf, const size_t lenNamebuf, const char *const szDN);
 #ifdef HAVE_GNUTLS_CERTIFICATE_SET_VERIFY_FUNCTION
 static int relpTcpVerifyCertificateCallback(gnutls_session_t session);
+static int relpTcpChkPeerName(relpTcp_t *const pThis, void* cert);
 #endif /* #ifdef HAVE_GNUTLS_CERTIFICATE_SET_VERIFY_FUNCTION */
 #if defined(HAVE_GNUTLS_CERTIFICATE_SET_VERIFY_FUNCTION) || defined(ENABLE_TLS_OPENSSL)
 static void relpTcpChkOnePeerName(relpTcp_t *const pThis, char *peername, int *pbFoundPositiveMatch);
 static int relpTcpAddToCertNamesBuffer(relpTcp_t *const pThis, char *const buf,
 	const size_t buflen, int *p_currIdx, const char *const certName);
-static int relpTcpChkPeerName(relpTcp_t *const pThis, void* cert);
 #endif /* defined(HAVE_GNUTLS_CERTIFICATE_SET_VERIFY_FUNCTION) || defined(ENABLE_TLS_OPENSSL) */
 
 
@@ -2820,11 +2820,6 @@ relpTcpLstnInitTLS_gtls(LIBRELP_ATTR_UNUSED relpTcp_t *const pThis)
 {
 	return RELP_RET_ERR_INTERNAL;
 }
-static int
-relpTcpChkPeerName_gtls(LIBRELP_ATTR_UNUSED relpTcp_t *const pThis, LIBRELP_ATTR_UNUSED void *vcert)
-{
-	return RELP_RET_ERR_INTERNAL;
-}
 #endif /* defined(ENABLE_TLS)*/
 
 
@@ -3579,6 +3574,7 @@ finalize_it:
 
 }
 
+#ifdef HAVE_GNUTLS_CERTIFICATE_SET_VERIFY_FUNCTION
 static int
 relpTcpChkPeerName(NOTLS_UNUSED relpTcp_t *const pThis, NOTLS_UNUSED void* cert)
 {
@@ -3592,6 +3588,7 @@ relpTcpChkPeerName(NOTLS_UNUSED relpTcp_t *const pThis, NOTLS_UNUSED void* cert)
 	#endif /* #ifdef  WITH_TLS*/
 	LEAVE_RELPFUNC;
 }
+#endif
 
 static relpRetVal LIBRELP_ATTR_NONNULL()
 relpTcpAcceptConnReqInitTLS(NOTLS_UNUSED relpTcp_t *const pThis, NOTLS_UNUSED relpSrv_t *const pSrv)
@@ -3761,7 +3758,7 @@ relpTcpGetRtryDirection_gtls(relpTcp_t *const pThis)
 	return gnutls_record_get_direction(pThis->session);
 }
 #else /* #ifdef ENABLE_TLS */
-relpRetVal LIBRELP_ATTR_NONNULL()
+static relpRetVal LIBRELP_ATTR_NONNULL()
 relpTcpGetRtryDirection_gtls(LIBRELP_ATTR_UNUSED relpTcp_t *const pThis)
 {
 	return RELP_RET_ERR_INTERNAL;
