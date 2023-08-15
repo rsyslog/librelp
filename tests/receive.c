@@ -68,7 +68,7 @@ doSleep(int iSeconds, const int iuSeconds)
 }
 
 static void
-hdlr_enable(int sig, void (*hdlr)())
+hdlr_enable(int sig, void (*hdlr)(const int))
 {
 	struct sigaction sigAct;
 	memset(&sigAct, 0, sizeof (sigAct));
