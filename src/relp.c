@@ -98,7 +98,7 @@ addToEpollSet(relpEngine_t *const pThis, epolld_type_t typ, void *ptr, int sock,
 	epolld_t *epd = NULL;
 	ENTER_RELPFUNC;
 
-	CHKmalloc(epd = calloc(sizeof(epolld_t), 1));
+	CHKmalloc(epd = calloc(1, sizeof(epolld_t)));
 	epd->typ = typ;
 	epd->ptr = ptr;
 	epd->sock = sock;
