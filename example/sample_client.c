@@ -34,7 +34,7 @@ dbgprintf(char *fmt, ...)
 	va_start(ap, fmt);
 	vsnprintf(pszWriteBuf, sizeof(pszWriteBuf), fmt, ap);
 	va_end(ap);
-	printf("send.c: %s", pszWriteBuf);
+	fprintf(stderr, "receive.c: %s", pszWriteBuf);
 }
 
 void print_usage()

@@ -35,7 +35,7 @@ dbgprintf(char *fmt, ...)
 	va_start(ap, fmt);
 	vsnprintf(pszWriteBuf, sizeof(pszWriteBuf), fmt, ap);
 	va_end(ap);
-	printf("receive.c: %s", pszWriteBuf);
+	fprintf(stderr, "receive.c: %s", pszWriteBuf);
 }
 
 static relpRetVal onSyslogRcv(unsigned char *pHostname, unsigned char *pIP, unsigned char *msg, size_t lenMsg) {
