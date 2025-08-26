@@ -33,6 +33,7 @@
 #include <limits.h>
 #include <errno.h>
 #include <signal.h>
+#include <sys/time.h>
 #include "librelp.h"
 
 #define TRY(f) { const int TRY_r = f; if(TRY_r != RELP_RET_OK) { \
