@@ -53,9 +53,9 @@ static relpRetVal onSyslogRcv(unsigned char *pHostname, unsigned char *pIP, unsi
 	return RELP_RET_OK;
 }
 
-void print_usage()
+static void print_usage(void)
 {
-	printf("Usage: receive PORTNUM\n");
+        printf("Usage: receive PORTNUM\n");
 }
 
 int main(int argc, char *argv[]) {
