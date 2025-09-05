@@ -1,0 +1,12 @@
+tmp.*
+*.orig
+tmptmp
+*.tmp
+*.sw?
+*.gcdo
+*.gcda
+*.gcno
+*.gcov
+*.o
+*.lo
+*.gz
