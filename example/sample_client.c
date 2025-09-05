@@ -36,7 +36,7 @@ dbgprintf(char *fmt, ...)
 	printf("send.c: %s", pszWriteBuf);
 }
 
-void print_usage()
+static void print_usage(void)
 {
 	printf("Usage: send SERVER PORTNUM MESSAGE\n");
 }
