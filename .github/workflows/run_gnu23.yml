@@ -20,7 +20,7 @@
 # https://github.com/settings/notifications
 #
 ---
-name: gcc-15
+name: gnu23
 
 on:
   pull_request:
@@ -37,9 +37,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
           sudo apt-get install -y \
-            gcc-15 g++-15 \
             build-essential \
             automake \
             autoconf-archive \
@@ -57,21 +55,23 @@ jobs:
 
       - name: Configure project
         run: |
-          export CC=gcc-15
-          export CFLAGS="-Werror"
+          export CC=gcc
+          # GCC 13 uses 'gnu2x' to enable the upcoming C23 standard
+          export CFLAGS="-Werror -std=gnu2x"
           autoreconf -fvi
           ./configure --enable-tls
           grep -q -- '-Werror' src/Makefile
+          grep -q -- '-std=gnu2x' src/Makefile
 
       - name: Build
         run: |
-          export CC=gcc-15
-          export CFLAGS="-Werror"
+          export CC=gcc
+          export CFLAGS="-Werror -std=gnu2x"
           make -j2
 
       - name: Run testbench
         run: |
-          export CC=gcc-15
-          export CFLAGS="-Werror"
+          export CC=gcc
+          export CFLAGS="-Werror -std=gnu2x"
           make -j2 check
           cat tests/test-suite.log
