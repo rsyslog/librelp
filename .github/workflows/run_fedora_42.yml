@@ -41,7 +41,7 @@ jobs:
           chmod -R go+rw .
           export RSYSLOG_CONTAINER_UID="" # use default
           #export RSYSLOG_STATSURL='http://build.rsyslog.com/testbench-failedtest.php'
-          export CFLAGS='-g'
+          export CFLAGS='-g -Werror'
           export CC='gcc'
           export USE_AUTO_DEBUG='off'
           export CI_MAKE_OPT='-j20'
