@@ -22,14 +22,14 @@
 
 
 ---
-name: check fedora 36
+name: check fedora 42
 
 on:
   pull_request:
 
 jobs:
   check_run:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     timeout-minutes: 50
 
     steps:
@@ -40,14 +40,14 @@ jobs:
         run: |
           chmod -R go+rw .
           export RSYSLOG_CONTAINER_UID="" # use default
-          export RSYSLOG_STATSURL='http://build.rsyslog.com/testbench-failedtest.php'
+          #export RSYSLOG_STATSURL='http://build.rsyslog.com/testbench-failedtest.php'
           export CFLAGS='-g'
           export CC='gcc'
           export USE_AUTO_DEBUG='off'
           export CI_MAKE_OPT='-j20'
           export CI_MAKE_CHECK_OPT='-j8'
           export CI_CHECK_CMD='check'
-          export DEV_CONTAINER='rsyslog/rsyslog_dev_base_fedora:36'
+          export DEV_CONTAINER='rsyslog/rsyslog_dev_base_fedora:42'
           # export PROJ_CONFIGURE_OPTIONS_EXTRA="--enable-debug"
           devtools/devcontainer.sh --rm devtools/run-ci.sh
 
