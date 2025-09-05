@@ -52,7 +52,6 @@ jobs:
             python3-docutils \
             libestr-dev \
             libfastjson-dev \
-            liblogging-stdlog-dev \
             libgnutls28-dev \
             lcov
 
