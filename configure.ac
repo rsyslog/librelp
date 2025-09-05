@@ -85,7 +85,7 @@ then
 			# -Wdeclaration-after-statement in gcc always generates a warning,
 			# even in c99 mode. So we need to unset it.
 			# rgerhards, 2018-05-09
-			WARN_CFLAGS="$(echo "$WARN_CFLAGS" | sed s/-Wno-error=/-W/g | sed s/-W.*declaration-after-statement//g)"
+                        WARN_CFLAGS="$(echo "$WARN_CFLAGS" | sed -e 's/-Wno-error=/-W/g' -e 's/ -Wdeclaration-after-statement//')"
 		], [
 			AM_CFLAGS="$CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
 			AC_MSG_WARN([missing AX_COMPILER_FLAGS macro, not using it])
