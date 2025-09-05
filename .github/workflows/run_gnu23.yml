@@ -29,7 +29,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-24.04
-    timeout-minutes: 50
+    timeout-minutes: 15
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -40,7 +40,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             gcc-14 \
-            g++-14 \
             build-essential \
             automake \
             autoconf-archive \
@@ -60,7 +59,7 @@ jobs:
         run: |
           export CC=gcc-14
           # GCC 14 supports C23 via the 'gnu23' dialect
-          export CFLAGS="-Werror -std=gnu23"
+          export CFLAGS="-std=gnu23"
           autoreconf -fvi
           ./configure --enable-tls
           grep -q -- '-Werror' src/Makefile
@@ -68,13 +67,9 @@ jobs:
 
       - name: Build
         run: |
-          export CC=gcc-14
-          export CFLAGS="-Werror -std=gnu23"
           make -j2
 
       - name: Run testbench
         run: |
-          export CC=gcc-14
-          export CFLAGS="-Werror -std=gnu23"
           make -j2 check
           cat tests/test-suite.log
