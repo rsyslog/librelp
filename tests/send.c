@@ -57,7 +57,7 @@ struct usrdata { /* used for testing user pointer pass-back */
 struct usrdata *userdata = NULL;
 
 static void
-hdlr_enable(int sig, void (*hdlr)(const int))
+hdlr_enable(int sig, void (*hdlr)())
 {
 	struct sigaction sigAct;
 	memset(&sigAct, 0, sizeof (sigAct));
