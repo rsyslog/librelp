@@ -1,6 +1,6 @@
 /* The RELP (reliable event logging protocol) core protocol library.
  *
- * Copyright 2008-2020 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2025 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
@@ -442,24 +442,47 @@ finalize_it:
 
 /* a dummy for callbacks not set by the caller */
 static relpRetVal relpSrvSyslogRcvDummy2(void LIBRELP_ATTR_UNUSED *pUsr,
-	unsigned char LIBRELP_ATTR_UNUSED *pHostName,
-	unsigned char LIBRELP_ATTR_UNUSED *pIP, unsigned char LIBRELP_ATTR_UNUSED *pMsg,
-	size_t LIBRELP_ATTR_UNUSED lenMsg)
+        unsigned char LIBRELP_ATTR_UNUSED *pHostName,
+        unsigned char LIBRELP_ATTR_UNUSED *pIP, unsigned char LIBRELP_ATTR_UNUSED *pMsg,
+        size_t LIBRELP_ATTR_UNUSED lenMsg)
 { return RELP_RET_NOT_IMPLEMENTED;
 }
+static relpRetVal relpSrvSyslogRcvDummy3(void LIBRELP_ATTR_UNUSED *pUsr,
+       unsigned char LIBRELP_ATTR_UNUSED *pHostName,
+       unsigned char LIBRELP_ATTR_UNUSED *pIP, unsigned char LIBRELP_ATTR_UNUSED *pPort,
+       unsigned char LIBRELP_ATTR_UNUSED *pMsg,
+       size_t LIBRELP_ATTR_UNUSED lenMsg)
+{ return RELP_RET_NOT_IMPLEMENTED; }
 /* set the syslog receive callback. If NULL is provided, it is set to the
  * not implemented dummy.
  */
 relpRetVal PART_OF_API
 relpEngineSetSyslogRcv2(relpEngine_t *const pThis, relpRetVal (*pCB)(void *, unsigned char*,
-	unsigned char*, unsigned char*, size_t))
+       unsigned char*, unsigned char*, size_t))
 {
-	ENTER_RELPFUNC;
-	RELPOBJ_assert(pThis, Engine);
+       ENTER_RELPFUNC;
+       RELPOBJ_assert(pThis, Engine);
 
-	pThis->onSyslogRcv = NULL;
-	pThis->onSyslogRcv2 = (pCB == NULL) ? relpSrvSyslogRcvDummy2 : pCB;
-	LEAVE_RELPFUNC;
+       pThis->onSyslogRcv = NULL;
+       pThis->onSyslogRcv3 = NULL;
+       pThis->onSyslogRcv2 = (pCB == NULL) ? relpSrvSyslogRcvDummy2 : pCB;
+       LEAVE_RELPFUNC;
+}
+
+/* set the syslog receive callback. If NULL is provided, it is set to the
+ * not implemented dummy.
+ */
+relpRetVal PART_OF_API
+relpEngineSetSyslogRcv3(relpEngine_t *const pThis, relpRetVal (*pCB)(void *, unsigned char*,
+       unsigned char*, unsigned char*, unsigned char*, size_t))
+{
+       ENTER_RELPFUNC;
+       RELPOBJ_assert(pThis, Engine);
+
+       pThis->onSyslogRcv = NULL;
+       pThis->onSyslogRcv2 = NULL;
+       pThis->onSyslogRcv3 = (pCB == NULL) ? relpSrvSyslogRcvDummy3 : pCB;
+       LEAVE_RELPFUNC;
 }
 
 /**
@@ -573,9 +596,10 @@ relpEngineSetSyslogRcv(relpEngine_t *const pThis, relpRetVal (*pCB)(unsigned cha
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Engine);
 
-	pThis->onSyslogRcv = (pCB == NULL) ? relpSrvSyslogRcvDummy : pCB;
-	pThis->onSyslogRcv2 = NULL;
-	LEAVE_RELPFUNC;
+       pThis->onSyslogRcv = (pCB == NULL) ? relpSrvSyslogRcvDummy : pCB;
+       pThis->onSyslogRcv2 = NULL;
+       pThis->onSyslogRcv3 = NULL;
+       LEAVE_RELPFUNC;
 }
 
 /* Deprecated, use relpEngineListnerConstruct() family of functions.

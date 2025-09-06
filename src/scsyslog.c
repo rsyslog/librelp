@@ -2,7 +2,7 @@
  *
  * This command is used to transfer syslog messages.
  *
- * Copyright 2008-2018 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2025 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
@@ -63,16 +63,20 @@ BEGINcommand(S, Syslog)
 	 * return code. I assume this should at least be optionally done.
 	 * Consider implementing this. rgerhards, 2018-04-17
 	 */
-	/* only highest version callback is called */
-	if(pSess->pEngine->onSyslogRcv2 != NULL) {
-		pSess->pEngine->onSyslogRcv2(pSess->pSrv->pUsr, pSess->pTcp->pRemHostName,
-					   	    pSess->pTcp->pRemHostIP, pFrame->pData, pFrame->lenData);
-	} else if(pSess->pEngine->onSyslogRcv != NULL) {
-		pSess->pEngine->onSyslogRcv(pSess->pTcp->pRemHostName, pSess->pTcp->pRemHostIP,
-						    pFrame->pData, pFrame->lenData);
-	} else {
-		pSess->pEngine->dbgprint((char*)"error: no syslog reception callback is set, nothing done\n");
-	}
+       /* only highest version callback is called */
+       if(pSess->pEngine->onSyslogRcv3 != NULL) {
+               pSess->pEngine->onSyslogRcv3(pSess->pSrv->pUsr, pSess->pTcp->pRemHostName,
+                                               pSess->pTcp->pRemHostIP, pSess->pTcp->pRemHostPort,
+                                               pFrame->pData, pFrame->lenData);
+       } else if(pSess->pEngine->onSyslogRcv2 != NULL) {
+               pSess->pEngine->onSyslogRcv2(pSess->pSrv->pUsr, pSess->pTcp->pRemHostName,
+                                               pSess->pTcp->pRemHostIP, pFrame->pData, pFrame->lenData);
+       } else if(pSess->pEngine->onSyslogRcv != NULL) {
+               pSess->pEngine->onSyslogRcv(pSess->pTcp->pRemHostName, pSess->pTcp->pRemHostIP,
+                                               pFrame->pData, pFrame->lenData);
+       } else {
+               pSess->pEngine->dbgprint((char*)"error: no syslog reception callback is set, nothing done\n");
+       }
 
 	/* send response */
 	iRet = relpSessSendResponse(pSess, pFrame->txnr, (unsigned char*) "200 OK", 6);

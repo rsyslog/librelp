@@ -3,7 +3,7 @@
  * This file is meant to be included by applications using the relp library.
  * For relp library files themselves, include "relp.h".
  *
- * Copyright 2008-2018 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2025 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
@@ -207,9 +207,11 @@ relpRetVal relpEngineRun(relpEngine_t *pThis);
 relpRetVal relpEngineCltDestruct(relpEngine_t *pThis, relpClt_t **ppClt);
 relpRetVal relpEngineCltConstruct(relpEngine_t *pThis, relpClt_t **ppClt);
 relpRetVal relpEngineSetSyslogRcv(relpEngine_t *pThis,
-				  relpRetVal (*pCB)(unsigned char*, unsigned char*, unsigned char*, size_t));
+                                  relpRetVal (*pCB)(unsigned char*, unsigned char*, unsigned char*, size_t));
 relpRetVal relpEngineSetSyslogRcv2(relpEngine_t *pThis,
-				  relpRetVal (*pCB)(void*, unsigned char*, unsigned char*, unsigned char*, size_t));
+                                  relpRetVal (*pCB)(void*, unsigned char*, unsigned char*, unsigned char*, size_t));
+relpRetVal relpEngineSetSyslogRcv3(relpEngine_t *pThis,
+                                  relpRetVal (*pCB)(void*, unsigned char*, unsigned char*, unsigned char*, unsigned char*, size_t));
 relpRetVal relpEngineSetEnableCmd(relpEngine_t *pThis, unsigned char *pszCmd, relpCmdEnaState_t stateCmd);
 relpRetVal relpEngineSetDnsLookupMode(relpEngine_t *pThis, int iMode);
 relpRetVal relpEngineSetOnAuthErr(relpEngine_t *pThis,
