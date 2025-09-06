@@ -1,6 +1,6 @@
 /* The mapping for relp over TCP.
  *
- * Copyright 2008-2018 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2025 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
@@ -110,6 +110,7 @@ typedef struct relpTcp_s {
 	relpClt_t *pClt;	   /**< ptr to our client; only valid if pSrv == NULL */
 	unsigned char *pRemHostIP; /**< IP address of remote peer (currently used in server mode, only) */
 	unsigned char *pRemHostName; /**< host name of remote peer (currently used in server mode, only) */
+	unsigned char *pRemHostPort; /**< port of remote peer (currently used in server mode, only) */
 	int sock;	/**< the socket we use for regular, single-socket, operations */
 	int *socks;	/**< the socket(s) we use for listeners, element 0 has nbr of socks */
 	int iSessMax;	/**< maximum number of sessions permitted */
