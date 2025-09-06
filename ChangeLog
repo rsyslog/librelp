@@ -1,5 +1,25 @@
 ----------------------------------------------------------------------
-Version 1.11.0 - 2021-??-??
+Version 1.11.0 - 2025-09-08
+- API: add ability to communicate source port back to caller
+  This is handled via a new "on connection" callback
+- tcp: tcp: avoid deprecated ENGINE_cleanup
+  ENGINE_cleanup is deprecated as of OpenSSL 1.1.0, and may not be available
+  with 3.0 and OPENSSL_NO_ENGINE.
+  Thanks to Yaakov Selkowitz for the patch.
+- relp: fix build against `gcc-14` (`-Werror=calloc-transposed-args`)
+  `gcc-14` added a new `-Wcalloc-transposed-args` warning. It
+  detected minor infelicity in `calloc()` API usage
+  Fixes
+    ../../git/src/relp.c: In function 'addToEpollSet':
+    ../../git/src/relp.c:101:39: error: 'calloc' sizes specified with 'sizeof' in the earlier argument and not in the later argument [-Werror=calloc-transposed-args]
+      101 |         CHKmalloc(epd = calloc(sizeof(epolld_t), 1));
+  Thanks to Khem Raj for the patch.
+- tests: Include missing sys/time.h
+  This is found when building for musl C library systems where sys/time.h
+  is not included indirectly and select() and timeval structs are used
+  Thanks to Khem Raj for the patch.
+- bugfix: code adapted to C23 (as used in gcc 15 by default)
+  Thanks to Khem Raj for the patch.
 - bugfix: function inline errors in debug optimization (-Og)
   Compiler does not inline any functions when using debug
   optimization (-Og). Hence, remove -Winline flag when compiling with

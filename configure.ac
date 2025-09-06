@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([librelp], [1.10.0], [rgerhards@adiscon.com])
+AC_INIT([librelp], [1.11.0], [rgerhards@adiscon.com])
 
 # change to the one below if Travis has a timeout
 #AM_INIT_AUTOMAKE([subdir-objects serial-tests])
