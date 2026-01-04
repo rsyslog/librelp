@@ -42,6 +42,7 @@
 
 static FILE *errFile = NULL;
 static FILE *outFile = NULL;
+static FILE *sessFile = NULL;
 static char *pidFileName = NULL;
 
 static int immediate_exit = 0; /* if set to 1, force-exit as soon as possible */
@@ -200,6 +201,48 @@ onAuthErr(LIBRELP_ATTR_UNUSED void *pUsr, char *authinfo,
 }
 
 static void
+onSessOpen(void *pUsr, LIBRELP_ATTR_UNUSED const relpSess_t *pSess)
+{
+	if(sessFile == NULL) {
+		return;
+	}
+	if(pUsr != NULL && pUsr != userdata) {
+		fprintf(sessFile, "receive: session opened with unexpected pUsr %p\n", pUsr);
+	} else {
+		fprintf(sessFile, "receive: session opened\n");
+	}
+	fflush(sessFile);
+}
+
+static void
+onSessClose(void *pUsr, LIBRELP_ATTR_UNUSED const relpSess_t *pSess, relpRetVal reason)
+{
+	if(sessFile == NULL) {
+		return;
+	}
+	if(pUsr != NULL && pUsr != userdata) {
+		fprintf(sessFile, "receive: session closed reason=%d unexpected pUsr %p\n", reason, pUsr);
+	} else {
+		fprintf(sessFile, "receive: session closed reason=%d\n", reason);
+	}
+	fflush(sessFile);
+}
+
+static void
+onSessOpenFail(void *pUsr, LIBRELP_ATTR_UNUSED const relpSess_t *pSess, relpRetVal reason)
+{
+	if(sessFile == NULL) {
+		return;
+	}
+	if(pUsr != NULL && pUsr != userdata) {
+		fprintf(sessFile, "receive: session open failed reason=%d unexpected pUsr %p\n", reason, pUsr);
+	} else {
+		fprintf(sessFile, "receive: session open failed reason=%d\n", reason);
+	}
+	fflush(sessFile);
+}
+
+static void
 exit_hdlr(void)
 {
 	fprintf(stderr, "receive: EXIT HDLR\n");
@@ -212,6 +255,9 @@ exit_hdlr(void)
 	}
 	if(outFile != NULL) {
 		fclose(outFile);
+	}
+	if(sessFile != NULL) {
+		fclose(sessFile);
 	}
 	if(pidFileName != NULL) {
 		unlink(pidFileName);
@@ -245,7 +291,7 @@ int main(int argc, char *argv[]) {
 	const char* outfile_name = NULL;
 
 #if defined(_AIX)
-	while((c = getopt(argc, argv, "a:c:Ae:F:l:m:No:O:P:p:TvW:x:y:z:")) != EOF) {
+	while((c = getopt(argc, argv, "a:c:Ae:F:l:m:No:O:P:p:TvW:C:x:y:z:")) != EOF) {
 #else
 	static struct option long_options[] =
 	{
@@ -256,6 +302,7 @@ int main(int argc, char *argv[]) {
 		{"authmode", required_argument, 0, 'a'},
 		{"pidfile", required_argument, 0, 'F'},
 		{"errorfile", required_argument, 0, 'e'},
+		{"sessfile", required_argument, 0, 'C'},
 		{"outfile", required_argument, 0, 'O'},
 		{"append-outfile", no_argument, 0, 'A'},
 		{"tls-lib", required_argument, 0, 'l'},
@@ -265,7 +312,7 @@ int main(int argc, char *argv[]) {
 		{0, 0, 0, 0}
 	};
 
-	while((c = getopt_long(argc, argv, "a:c:Ae:F:l:m:No:O:P:p:TvW:x:y:z:", long_options, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "a:c:Ae:F:l:m:No:O:P:p:TvW:C:x:y:z:", long_options, &option_index)) != -1) {
 #endif
 		switch(c) {
 		case 'a':
@@ -276,6 +323,13 @@ int main(int argc, char *argv[]) {
 			break;
 		case 'c':
 			tlsConfigCmd = optarg;
+			break;
+		case 'C':
+			if((sessFile = fopen((char*) optarg, "w")) == NULL) {
+				perror(optarg);
+				fprintf(stderr, "receive: error opening session callback file\n");
+				exit(1);
+			}
 			break;
 		case 'e':
 			if((errFile = fopen((char*) optarg, "w")) == NULL) {
@@ -417,6 +471,9 @@ int main(int argc, char *argv[]) {
 	TRY(relpEngineSetOnErr(pRelpEngine, onErr));
 	TRY(relpEngineSetOnGenericErr(pRelpEngine, onGenericErr));
 	TRY(relpEngineSetOnAuthErr(pRelpEngine, onAuthErr));
+	TRY(relpEngineSetOnSessOpen(pRelpEngine, onSessOpen));
+	TRY(relpEngineSetOnSessClose(pRelpEngine, onSessClose));
+	TRY(relpEngineSetOnSessOpenFail(pRelpEngine, onSessOpenFail));
 
 	if(tlslib != NULL) {
 		TRY(relpEngineSetTLSLibByName(pRelpEngine, tlslib));

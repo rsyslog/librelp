@@ -220,11 +220,12 @@ finalize_it:
  * rgerhards, 2008-03-17
  */
 static relpRetVal
-relpEngineDelSess(relpEngine_t *const pThis, relpEngSessLst_t *pSessLstEntry)
+relpEngineDelSess(relpEngine_t *const pThis, relpEngSessLst_t *pSessLstEntry, relpRetVal reason)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Engine);
 	assert(pSessLstEntry != NULL);
+	relpSess_t *const pSess = pSessLstEntry->pSess;
 
 #	if defined(HAVE_EPOLL_CREATE1) || defined(HAVE_EPOLL_CREATE)
 	delSessFromEpoll(pThis, pSessLstEntry);
@@ -233,6 +234,10 @@ relpEngineDelSess(relpEngine_t *const pThis, relpEngSessLst_t *pSessLstEntry)
 	DLL_Del(pSessLstEntry, pThis->pSessLstRoot, pThis->pSessLstLast);
 	--pThis->lenSessLst;
 	pthread_mutex_unlock(&pThis->mutSessLst);
+
+	if(pThis->onSessClose != NULL) {
+		pThis->onSessClose(pSess->pUsr, pSess, reason);
+	}
 
 	relpSessDestruct(&pSessLstEntry->pSess);
 	free(pSessLstEntry);
@@ -296,8 +301,7 @@ relpEngineDestruct(relpEngine_t **ppThis)
 	/* now destruct all currently existing sessions */
 	for(pSessL = pThis->pSessLstRoot ; pSessL != NULL ; pSessL = pSessLNxt) {
 		pSessLNxt = pSessL->pNext;
-		relpSessDestruct(&pSessL->pSess);
-		free(pSessL);
+		relpEngineDelSess(pThis, pSessL, RELP_RET_SESSION_CLOSED);
 	}
 
 	/* and now all existing servers... */
@@ -559,6 +563,35 @@ relpEngineSetOnGenericErr(relpEngine_t *const pThis, void (*pCB)(char *objinfo, 
 	LEAVE_RELPFUNC;
 }
 
+relpRetVal PART_OF_API
+relpEngineSetOnSessOpen(relpEngine_t *const pThis, void (*pCB)(void*pUsr, const relpSess_t *pSess) )
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Engine);
+	pThis->onSessOpen = pCB;
+	LEAVE_RELPFUNC;
+}
+
+relpRetVal PART_OF_API
+relpEngineSetOnSessClose(relpEngine_t *const pThis,
+		void (*pCB)(void*pUsr, const relpSess_t *pSess, relpRetVal reason) )
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Engine);
+	pThis->onSessClose = pCB;
+	LEAVE_RELPFUNC;
+}
+
+relpRetVal PART_OF_API
+relpEngineSetOnSessOpenFail(relpEngine_t *const pThis,
+		void (*pCB)(void*pUsr, const relpSess_t *pSess, relpRetVal reason) )
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Engine);
+	pThis->onSessOpenFail = pCB;
+	LEAVE_RELPFUNC;
+}
+
 /* Deprecated, use relpEngineListnerConstruct() family of functions.
  * See there for further information.
  */
@@ -665,7 +698,7 @@ doRecv(relpEngine_t *const pThis, relpEngSessLst_t *pSessEtry, int sock)
 	if(localRet != RELP_RET_OK) {
 		pThis->dbgprint((char*)"relp session %d iRet %d, tearing it down\n",
 				sock, localRet);
-		relpEngineDelSess(pThis, pSessEtry);
+		relpEngineDelSess(pThis, pSessEtry, localRet);
 	}
 	return localRet;
 }
@@ -684,7 +717,7 @@ doSend(relpEngine_t *const pThis, relpEngSessLst_t *pSessEtry, int sock)
 	if(localRet != RELP_RET_OK) {
 		pThis->dbgprint((char*)"relp session %d iRet %d during send, tearing it down\n",
 				sock, localRet);
-		relpEngineDelSess(pThis, pSessEtry);
+		relpEngineDelSess(pThis, pSessEtry, localRet);
 	}
 }
 
@@ -801,7 +834,7 @@ handleSessIO(relpEngine_t *const pThis, epolld_t *epd)
 				if(localRet != RELP_RET_OK) {
 					pThis->dbgprint((char*)"relp session %d handshake iRet %d, tearing it down\n",
 							epd->sock, localRet);
-					relpEngineDelSess(pThis, pSessEtry);
+				    relpEngineDelSess(pThis, pSessEtry, localRet);
 				}
 #			else
 					pThis->dbgprint((char*)"librelp error: handshake retry requested in "
@@ -1001,7 +1034,7 @@ engineEventLoopRun(relpEngine_t *const pThis)
 								pThis->dbgprint((char*)"relp session %d handshake "
 										"iRet %d, tearing it down\n",
 										sock, localRet);
-								relpEngineDelSess(pThis, pSessEtry);
+							    relpEngineDelSess(pThis, pSessEtry, localRet);
 							}
 #						else
 							pThis->dbgprint((char*)"librelp error: handshake retry "

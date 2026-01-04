@@ -158,6 +158,9 @@ BEGINcommand(S, Init)
 	CHKRet(relpSessSendResponse(pSess, pFrame->txnr, pszSrvOffers, lenSrvOffers));
 
 	pSess->bServerConnOpen = 1;
+	if(pSess->pEngine->onSessOpen != NULL) {
+		pSess->pEngine->onSessOpen(pSess->pUsr, pSess);
+	}
 
 finalize_it:
 	if(pszSrvOffers != NULL)
@@ -168,6 +171,9 @@ finalize_it:
 		relpOffersDestruct(&pSrvOffers);
 	
 	if(iRet != RELP_RET_OK) {
+		if(pSess->pEngine->onSessOpenFail != NULL) {
+			pSess->pEngine->onSessOpenFail(pSess->pUsr, pSess, iRet);
+		}
 		if(iRet == RELP_RET_RQD_FEAT_MISSING) {
 			strncpy(szErrMsg, "500 required command not supported by client", sizeof(szErrMsg));
 			lenErrMsg = 44;

@@ -220,6 +220,62 @@ relpRetVal relpEngineSetOnErr(relpEngine_t *pThis,
 				void (*pCB)(void*pUsr, char *objinfo, char*errmsg, relpRetVal errcode) );
 relpRetVal relpEngineSetOnGenericErr(relpEngine_t *pThis,
 				void (*pCB)(char *objinfo, char*errmsg, relpRetVal errcode) );
+/**
+ * Set a session-open callback.
+ *
+ * Callback signature:
+ *   void cb(void *pUsr, const relpSess_t *pSess)
+ *
+ * The callback is invoked after a server-side RELP session successfully
+ * completes the open handshake and is ready for traffic. The callback runs
+ * on the relpEngineRun() thread. The relpSess_t pointer is only valid for the
+ * duration of the callback and must not be retained.
+ *
+ * Callback parameters:
+ *
+ * pUsr  - user pointer from relpSrvSetUsrPtr()
+ * pSess - session being opened (read-only, ephemeral)
+ */
+relpRetVal relpEngineSetOnSessOpen(relpEngine_t *pThis,
+				void (*pCB)(void*pUsr, const relpSess_t *pSess) );
+/**
+ * Set a session-close callback.
+ *
+ * Callback signature:
+ *   void cb(void *pUsr, const relpSess_t *pSess, relpRetVal reason)
+ *
+ * The callback fires when a session is removed from the engine, regardless
+ * of the close cause (protocol close, I/O error, or engine shutdown). The
+ * reason parameter contains the relpRetVal that triggered teardown; engine
+ * shutdown uses RELP_RET_SESSION_CLOSED. The callback runs on the
+ * relpEngineRun() thread and pSess is valid only during the callback.
+ *
+ * Callback parameters:
+ *
+ * pUsr   - user pointer from relpSrvSetUsrPtr()
+ * pSess  - session being closed (read-only, ephemeral)
+ * reason - relpRetVal that caused teardown
+ */
+relpRetVal relpEngineSetOnSessClose(relpEngine_t *pThis,
+				void (*pCB)(void*pUsr, const relpSess_t *pSess, relpRetVal reason) );
+/**
+ * Set a session-open-failed callback.
+ *
+ * Callback signature:
+ *   void cb(void *pUsr, const relpSess_t *pSess, relpRetVal reason)
+ *
+ * The callback fires when the server-side open handshake fails. It is
+ * invoked before the error response is sent. The callback runs on the
+ * relpEngineRun() thread and pSess is valid only during the callback.
+ *
+ * Callback parameters:
+ *
+ * pUsr   - user pointer from relpSrvSetUsrPtr()
+ * pSess  - session that failed to open (read-only, ephemeral)
+ * reason - relpRetVal describing the failure
+ */
+relpRetVal relpEngineSetOnSessOpenFail(relpEngine_t *pThis,
+				void (*pCB)(void*pUsr, const relpSess_t *pSess, relpRetVal reason) );
 
 /* exposed server property set functions */
 relpRetVal relpSrvSetLstnPort(relpSrv_t *pThis, unsigned char *pLstnPort);
