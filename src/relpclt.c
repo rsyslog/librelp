@@ -112,7 +112,7 @@ relpCltDestruct(relpClt_t **ppThis)
  * remote servers parameters must already have been set.
  * rgerhards, 2008-03-19
  */
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpCltConnect(relpClt_t *const pThis, int protFamily, unsigned char *port, unsigned char *host)
 {
 	ENTER_RELPFUNC;
@@ -155,7 +155,7 @@ finalize_it:
  * remote host) can not be changed.
  * rgerhards, 2008-03-23
  */
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpCltReconnect(relpClt_t *const pThis)
 {
 	ENTER_RELPFUNC;
@@ -172,7 +172,7 @@ finalize_it:
 /** Set the relp window size for this client. Value 0 means
  * that the default value is to be used.
  */
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpCltSetWindowSize(relpClt_t *const pThis, int sizeWindow)
 {
 	ENTER_RELPFUNC;
@@ -186,7 +186,7 @@ finalize_it:
 }
 
 /** Set the timeout value for this client.  */
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpCltSetTimeout(relpClt_t *const pThis, unsigned timeout)
 {
 	ENTER_RELPFUNC;
@@ -196,7 +196,7 @@ relpCltSetTimeout(relpClt_t *const pThis, unsigned timeout)
 }
 
 /** Set the timeout value for this client socket connection.  */
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpCltSetConnTimeout(relpClt_t *const pThis, int connTimeout)
 {
 	ENTER_RELPFUNC;
@@ -213,7 +213,7 @@ finalize_it:
 
 /** Set the local IP address to be used when acting as a client.
  */
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpCltSetClientIP(relpClt_t *const pThis, unsigned char *ipAddr)
 {
 	ENTER_RELPFUNC;
@@ -224,7 +224,7 @@ relpCltSetClientIP(relpClt_t *const pThis, unsigned char *ipAddr)
 	LEAVE_RELPFUNC;
 }
 
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpCltAddPermittedPeer(relpClt_t *const pThis, char *peer)
 {
 	char **newName;
@@ -248,7 +248,7 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpCltSetUsrPtr(relpClt_t *const pThis, void *pUsr)
 {
 	ENTER_RELPFUNC;
@@ -258,7 +258,7 @@ relpCltSetUsrPtr(relpClt_t *const pThis, void *pUsr)
 }
 
 /* Note: mode==NULL is valid and means "no change" */
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpCltSetAuthMode(relpClt_t *const pThis, char *mode)
 {
 	ENTER_RELPFUNC;
@@ -282,7 +282,7 @@ finalize_it:
 /* set the GnuTLS priority string. Providing NULL does re-set
  * any previously set string. -- rgerhards, 2013-06-12
  */
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpCltSetGnuTLSPriString(relpClt_t *const pThis, char *pristr)
 {
 	ENTER_RELPFUNC;
@@ -297,7 +297,7 @@ relpCltSetGnuTLSPriString(relpClt_t *const pThis, char *pristr)
 finalize_it:
 	LEAVE_RELPFUNC;
 }
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpCltSetCACert(relpClt_t *const pThis, char *file)
 {
 	ENTER_RELPFUNC;
@@ -312,7 +312,7 @@ relpCltSetCACert(relpClt_t *const pThis, char *file)
 finalize_it:
 	LEAVE_RELPFUNC;
 }
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpCltSetOwnCert(relpClt_t *const pThis, char *file)
 {
 	ENTER_RELPFUNC;
@@ -327,7 +327,7 @@ relpCltSetOwnCert(relpClt_t *const pThis, char *file)
 finalize_it:
 	LEAVE_RELPFUNC;
 }
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpCltSetPrivKey(relpClt_t *const pThis, char *file)
 {
 	ENTER_RELPFUNC;
@@ -342,7 +342,7 @@ relpCltSetPrivKey(relpClt_t *const pThis, char *file)
 finalize_it:
 	LEAVE_RELPFUNC;
 }
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpCltSetTlsConfigCmd(relpClt_t *const pThis, char *cfgcmd)
 {
 	ENTER_RELPFUNC;
@@ -359,7 +359,7 @@ finalize_it:
 
 }
 /* Enable TLS mode. */
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpCltEnableTLS(relpClt_t *const pThis)
 {
 	ENTER_RELPFUNC;
@@ -368,7 +368,7 @@ relpCltEnableTLS(relpClt_t *const pThis)
 	LEAVE_RELPFUNC;
 }
 
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpCltEnableTLSZip(relpClt_t *const pThis)
 {
 	ENTER_RELPFUNC;
@@ -382,13 +382,13 @@ relpCltEnableTLSZip(relpClt_t *const pThis)
  * The function is intentionally void as it must operate in a way that
  * does not interfere with normal operations.
  */
-void PART_OF_API
+PART_OF_API void
 relpCltHintBurstBegin(relpClt_t *const pThis)
 {
 	relpTcpHintBurstBegin(pThis->pSess->pTcp);
 }
 /* this is the counterpart to relpCltHintBurstBegin -- see there for doc */
-void PART_OF_API
+PART_OF_API void
 relpCltHintBurstEnd(relpClt_t *const pThis)
 {
 	relpTcpHintBurstEnd(pThis->pSess->pTcp);
@@ -399,7 +399,7 @@ relpCltHintBurstEnd(relpClt_t *const pThis)
  * must free it if it is no longer needed.
  * rgerhards, 2008-03-20
  */
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpCltSendSyslog(relpClt_t *const pThis, unsigned char *const pMsg, const size_t lenMsg)
 {
 
