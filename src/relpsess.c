@@ -89,6 +89,13 @@ callOnErr(const relpSess_t *__restrict__ const pThis,
 	}
 }
 
+static int
+relpSessCltCanGracefullyDisconnect(const relpSess_t *const pThis)
+{
+	return pThis->sessState == eRelpSessState_READY_TO_SEND
+	    || pThis->sessState == eRelpSessState_WINDOW_FULL;
+}
+
 
 /* helper to free permittedPeer structure */
 static inline void
@@ -180,8 +187,7 @@ relpSessDestruct(relpSess_t **ppThis)
 			}
 		} else {
 			/* we are at the client side of the connection */
-			if(   pThis->sessState != eRelpSessState_DISCONNECTED
-			   && pThis->sessState != eRelpSessState_BROKEN) {
+			if(relpSessCltCanGracefullyDisconnect(pThis)) {
 				relpSessCltDoDisconnect(pThis);
 			}
 		}
@@ -613,14 +619,14 @@ relpSessWaitState(relpSess_t *const pThis, const relpSessState_t stateExpected, 
 		clock_gettime(CLOCK_REALTIME, &tCurr);
 	}
 
-finalize_it:
+	finalize_it:
 	pThis->pEngine->dbgprint((char*)"relpSessWaitState returns %d\n", iRet);
-	if(	iRet == RELP_RET_TIMED_OUT ||
-		iRet == RELP_RET_SESSION_BROKEN ||
-		relpEngineShouldStop(pThis->pEngine)) {
+	if(iRet == RELP_RET_TIMED_OUT || relpEngineShouldStop(pThis->pEngine)) {
 		/* the session is broken! */
 		callOnErr(pThis, (char*) "error waiting on required session state, session broken",
 			RELP_RET_SESSION_BROKEN);
+		pThis->sessState = eRelpSessState_BROKEN;
+	} else if(iRet == RELP_RET_SESSION_BROKEN) {
 		pThis->sessState = eRelpSessState_BROKEN;
 	}
 

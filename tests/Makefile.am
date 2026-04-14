@@ -106,6 +106,7 @@ TESTS=  selftest_receive_watchdog.sh \
 	oversize-msg-accept-errmsg.sh \
 	truncate-oversize-msg.sh \
 	send-noconnect.sh \
+	send-dummyserver-no-waitstate-errmsg.sh \
 	receive-emptyconnect.sh
 if ENABLE_TLS_GENERIC
 TESTS+=$(TLS_TESTS)
