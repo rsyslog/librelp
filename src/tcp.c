@@ -1891,6 +1891,15 @@ relpTcpConnectTLSInit_ossl(relpTcp_t *const pThis)
 	/*if we reach this point we are in tls mode */
 	pThis->pEngine->dbgprint((char*)"relpTcpConnectTLSInit: TLS Mode\n");
 
+	/* set before relpTcpSetSslConfCmd_ossl: tlsConfigCmd may contain
+	 * flag-restricted commands that require SSL_CONF_FLAG_CLIENT */
+	pThis->sslState = osslClient;
+
+	/* SSL_CONF_cmd targets the SSL_CTX; SSL_new() snapshots the SSL_CTX's
+	 * group list at construction time, so this must run before SSL_new()
+	 * or the SSL object keeps the default groups set by SSL_CTX_new() */
+	CHKRet(relpTcpSetSslConfCmd_ossl(pThis, pThis->tlsConfigCmd));
+
 	if(!(pThis->ssl = SSL_new(ctx))) {
 		relpTcpLastSSLErrorMsg(0, pThis, "relpTcpConnectTLSInit");
 		ABORT_FINALIZE(RELP_RET_IO_ERR);
@@ -1906,16 +1915,10 @@ relpTcpConnectTLSInit_ossl(relpTcp_t *const pThis)
 	} else
 		pThis->authmode = eRelpAuthMode_None;
 
-	/* Set TLS Options if configured */
-	CHKRet(relpTcpSetSslConfCmd_ossl(pThis, pThis->tlsConfigCmd));
-
 	/* Set TLS Priority Options */
 	CHKRet(relpTcpTLSSetPrio(pThis));
 
 	SSL_set_ex_data(pThis->ssl, 0, (void*)pThis);
-
-	/*set client state */
-	pThis->sslState = osslClient;
 
 	/* Create BIO from ptcp socket! */
 	conn = BIO_new_socket(pThis->sock, BIO_CLOSE /*BIO_NOCLOSE*/);
