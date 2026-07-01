@@ -801,6 +801,8 @@ relpTcpDestruct(relpTcp_t **ppThis)
 		// Only DEBUG if pThis  is available
 		pThis->pEngine->dbgprint((char*)"relpTcpDestruct for %p\n", (void *) pThis);
 
+		relpTcpDestructTLS(pThis);
+
 		if(pThis->sock != -1) {
 			shutdown(pThis->sock, SHUT_RDWR);
 			close(pThis->sock);
@@ -815,7 +817,6 @@ relpTcpDestruct(relpTcp_t **ppThis)
 			}
 			free(pThis->socks);
 		}
-		relpTcpDestructTLS(pThis);
 
 		free(pThis->pRemHostIP);
 		free(pThis->pRemHostName);
@@ -1812,7 +1813,7 @@ relpTcpAcceptConnReqInitTLS_ossl(relpTcp_t *const pThis, relpSrv_t *const pSrv)
 	pThis->sslState = osslServer;
 
 	/* Create BIO from ptcp socket! */
-	client = BIO_new_socket(pThis->sock, BIO_CLOSE /*BIO_NOCLOSE*/);
+	client = BIO_new_socket(pThis->sock, BIO_NOCLOSE);
 	pThis->pEngine->dbgprint((char*)"relpTcpAcceptConnReqInitTLS_ossl: Init client BIO[%p] done\n", (void *)client);
 
 	/* Set debug Callback for client BIO as well! */
@@ -1918,7 +1919,7 @@ relpTcpConnectTLSInit_ossl(relpTcp_t *const pThis)
 	pThis->sslState = osslClient;
 
 	/* Create BIO from ptcp socket! */
-	conn = BIO_new_socket(pThis->sock, BIO_CLOSE /*BIO_NOCLOSE*/);
+	conn = BIO_new_socket(pThis->sock, BIO_NOCLOSE);
 	pThis->pEngine->dbgprint((char*)"relpTcpConnectTLSInit: Init conn BIO[%p] done\n", (void *)conn);
 
 	/* Set debug Callback for client BIO as well! */
@@ -1933,6 +1934,7 @@ relpTcpConnectTLSInit_ossl(relpTcp_t *const pThis)
 BIO_set_nbio( conn, 1 );
 
 	SSL_set_bio(pThis->ssl, conn, conn);
+	conn = NULL;
 	SSL_set_connect_state(pThis->ssl); /*sets ssl to work in client mode.*/
 
 	/* Perform the TLS handshake */
