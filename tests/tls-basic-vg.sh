@@ -5,6 +5,7 @@ if [ "$VALGRIND" == "NO" ] ; then
    echo "valgrind tests are not permitted by environment config"
    exit 77
 fi
+export valgrind="$valgrind --leak-check=full --show-leak-kinds=definite --errors-for-leak-kinds=definite --error-exitcode=10"
 if [ $(uname) = "SunOS" ] ; then
    echo "This test currently does not work on all flavors of Solaris."
    exit 77

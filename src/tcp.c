@@ -1458,7 +1458,7 @@ finalize_it:
 static relpRetVal
 relpTcpChkPeerAuth(relpTcp_t *const pThis)
 {
-	X509* certpeer;
+	X509 *certpeer = NULL;
 	int r;
 	ENTER_RELPFUNC;
 
@@ -1502,6 +1502,8 @@ relpTcpChkPeerAuth(relpTcp_t *const pThis)
 	}
 
 finalize_it:
+	if(certpeer != NULL)
+		X509_free(certpeer);
 	LEAVE_RELPFUNC;
 }
 
