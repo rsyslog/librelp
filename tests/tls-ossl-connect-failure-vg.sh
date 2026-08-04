@@ -19,7 +19,7 @@ startup_receiver -T -a "name" -x ${srcdir}/tls-certs/ossl-ca.pem \
 	-y ${srcdir}/tls-certs/ossl-server-cert.pem -z ${srcdir}/tls-certs/ossl-server-key.pem \
 	-P "client.testbench.rsyslog.com" -e $TESTDIR/$errorlog
 
-libtool --mode=execute $valgrind ./send $TLSLIB -t 127.0.0.1 -p $TESTPORT \
+${srcdir}/../libtool --mode=execute $valgrind ./send $TLSLIB -t 127.0.0.1 -p $TESTPORT \
 	-m "testmessage" -T -a "name" -x ${srcdir}/tls-certs/ca.pem \
 	-y ${srcdir}/tls-certs/cert.pem -z ${srcdir}/tls-certs/key.pem \
 	-P "server.testbench.rsyslog.com" -e $TESTDIR/$errorlog $OPT_VERBOSE
