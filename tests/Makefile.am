@@ -76,7 +76,8 @@ TLS_TESTS=  \
 	tls-missing-param-sender.sh \
 	tls-missing-param-receiver.sh
 TLS_VALGRIND_TESTS= \
-	tls-basic-vg.sh
+	tls-basic-vg.sh \
+	tls-ossl-connect-failure-vg.sh
 
 # static tests specific to GnuTLS
 GTLS_STATIC_TESTS= \
