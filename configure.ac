@@ -12,28 +12,27 @@ m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 AC_CONFIG_SRCDIR([src/relp.c])
 AC_CONFIG_HEADER([config.h])
 AC_CONFIG_MACRO_DIR([m4])
-AC_CANONICAL_HOST
 
 echo HOST: ${host}
-case "${host}" in
-  *-*-linux*)
+case "${host}:$(uname -s)" in
+  *-*-linux*:*|*:Linux)
     AC_DEFINE([OS_LINUX], [1], [Indicator for a Linux OS])
     os_type="linux"
   ;;
-  *-*-*darwin*|*-*-dragonfly*|*-*-freebsd*|*-*-netbsd*|*-*-openbsd*)
+  *-*-*darwin*:*|*-*-dragonfly*:*|*-*-freebsd*:*|*-*-netbsd*:*|*-*-openbsd:*|*:DragonFly|*:FreeBSD|*:NetBSD|*:OpenBSD)
     AC_DEFINE([OS_BSD], [1], [Indicator for a BSD OS])
     os_type="bsd"
   ;;
-  *-apple-*)
+  *-apple-*:*|*:Darwin)
     AC_DEFINE([OS_APPLE], [1], [Indicator for APPLE OS])
     os_type="apple"
   ;;
-  *-*-kfreebsd*)
+  *-*-kfreebsd:* )
     # kernel is FreeBSD, but userspace is glibc - i.e. like linux
     # do not DEFINE OS_BSD
     os_type="bsd"
   ;;
-  *-*-solaris*)
+  *-*-solaris*:*|*:SunOS)
     os_type="solaris"
     AC_DEFINE([OS_SOLARIS], [1], [Indicator for a Solaris OS])
     AC_DEFINE([_POSIX_PTHREAD_SEMANTICS], [1], [Use POSIX pthread semantics])
@@ -47,7 +46,7 @@ case "${host}" in
     LIBUUID_LIBS=${LIBUUID_LIBS:=-luuid}
     AC_SUBST(SOL_LIBS)
   ;;
-  *-*-aix*)
+  *-*-aix*:*|*:AIX)
     os_type="aix"
     AC_DEFINE([OS_AIX], [1], [Indicator for a AIX OS])
     AM_CFLAGS="$CFLAGS -D_LINUX_SOURCE_COMPAT"
