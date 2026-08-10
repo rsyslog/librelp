@@ -1,0 +1,18 @@
+src/tcp.c
+  h_95716f3de0caf5 700,787-794,800-805,812-813,816-820,822,827-829,2013-2017
+tests/tls-gtls-lifecycle.c
+  h_95716f3de0caf5 195
+tests/tls-ossl-fd-reuse.c
+  h_95716f3de0caf5 151-160
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "a5c63b9b7718e44c85a83abcb786de415a3a92ef",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
