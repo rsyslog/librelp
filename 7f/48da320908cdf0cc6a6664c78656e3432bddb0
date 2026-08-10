@@ -1,0 +1,18 @@
+configure.ac
+  h_95716f3de0caf5 73
+tests/Makefile.am
+  h_95716f3de0caf5 5-6,9,12,54-55,76-78,91
+tests/tls-ossl-fd-reuse.c
+  h_95716f3de0caf5 94-99
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "7f48da320908cdf0cc6a6664c78656e3432bddb0",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
