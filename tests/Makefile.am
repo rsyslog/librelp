@@ -12,11 +12,19 @@ endif
 endif
 
 if ENABLE_TLS
-check_PROGRAMS+=tcp_accept_fd_reuse
+check_PROGRAMS+=tcp_accept_fd_reuse tls_gtls_lifecycle
 tcp_accept_fd_reuse_SOURCES=tcp-accept-fd-reuse.c
 tcp_accept_fd_reuse_LDADD=../src/.libs/librelp.a $(GNUTLS_LIBS) $(OPENSSL_LIBS)
 tcp_accept_fd_reuse_LDFLAGS=-Wl,--wrap=accept -Wl,--wrap=close
 tcp_accept_fd_reuse_CFLAGS=$(AM_CFLAGS) -I${top_srcdir}/src $(WARN_CFLAGS)
+tls_gtls_lifecycle_SOURCES=tls-gtls-lifecycle.c
+tls_gtls_lifecycle_LDADD=../src/.libs/librelp.a $(GNUTLS_LIBS) $(OPENSSL_LIBS)
+tls_gtls_lifecycle_LDFLAGS=-Wl,--wrap=gnutls_bye -Wl,--wrap=gnutls_deinit \
+	-Wl,--wrap=gnutls_certificate_free_credentials \
+	-Wl,--wrap=gnutls_anon_free_client_credentials \
+	-Wl,--wrap=gnutls_anon_free_server_credentials \
+	-Wl,--wrap=gnutls_dh_params_deinit
+tls_gtls_lifecycle_CFLAGS=$(AM_CFLAGS) -I${top_srcdir}/src $(WARN_CFLAGS)
 endif
 
 receive_SOURCES=receive.c
@@ -57,7 +65,8 @@ TLS_VALGRIND_TESTS= \
 
 # tests specific to GnuTLS
 GTLS_TESTS= \
-	tcp-accept-fd-reuse.sh
+	tcp-accept-fd-reuse.sh \
+	tls-gtls-lifecycle.sh
 
 # test specific to openssl
 OSSL_TESTS= \
@@ -115,6 +124,7 @@ EXTRA_DIST=$(TESTS) \
 	send.c \
 	tls-ossl-fd-reuse.c \
 	tcp-accept-fd-reuse.c \
+	tls-gtls-lifecycle.c \
 	tls-certs/ca.pem \
 	tls-certs/cert.pem \
 	tls-certs/key.pem \

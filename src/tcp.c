@@ -703,22 +703,35 @@ relpTcpDestructTLS_gtls(relpTcp_t *pThis)
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
 
-	sslRet = gnutls_bye(pThis->session, GNUTLS_SHUT_WR);
-	while(sslRet == GNUTLS_E_INTERRUPTED || sslRet == GNUTLS_E_AGAIN) {
-		sslRet = gnutls_bye(pThis->session, GNUTLS_SHUT_WR);
+	if(pThis->session != NULL) {
+		if(pThis->bTLSActive && pThis->sock != -1) {
+			/* Do not retry EAGAIN: teardown must not block on a nonblocking socket. */
+			do {
+				sslRet = gnutls_bye(pThis->session, GNUTLS_SHUT_WR);
+			} while(sslRet == GNUTLS_E_INTERRUPTED);
+		}
+		gnutls_deinit(pThis->session);
+		pThis->session = NULL;
 	}
-	gnutls_deinit(pThis->session);
 	if (pThis->xcred != NULL) {
 		gnutls_certificate_free_credentials(pThis->xcred);
+		pThis->xcred = NULL;
 	}
+	if(pThis->anoncred != NULL) {
+		gnutls_anon_free_client_credentials(pThis->anoncred);
+		pThis->anoncred = NULL;
+	}
+	if(pThis->anoncredSrv != NULL) {
+		gnutls_anon_free_server_credentials(pThis->anoncredSrv);
+		pThis->anoncredSrv = NULL;
+	}
+	if(pThis->dh_params != NULL) {
+		gnutls_dh_params_deinit(pThis->dh_params);
+		pThis->dh_params = NULL;
+	}
+	pThis->bTLSActive = 0;
 
 	LEAVE_RELPFUNC;
-}
-#else
-static relpRetVal LIBRELP_ATTR_NONNULL()
-relpTcpDestructTLS_gtls(LIBRELP_ATTR_UNUSED relpTcp_t *pThis)
-{
-	return RELP_RET_ERR_INTERNAL;
 }
 #endif  /* defined(ENABLE_TLS) */
 #if defined(ENABLE_TLS_OPENSSL)
@@ -765,31 +778,38 @@ relpTcpDestructTLS_ossl(relpTcp_t *pThis)
 
 	LEAVE_RELPFUNC;
 }
-#else
-static relpRetVal LIBRELP_ATTR_NONNULL()
-relpTcpDestructTLS_ossl(LIBRELP_ATTR_UNUSED relpTcp_t *pThis)
-{
-	return RELP_RET_ERR_INTERNAL;
-}
 #endif /* defined(ENABLE_TLS_OPENSSL) */
 /* TLS-part of RELP tcp instance destruction - brought to its own function
  * to make things easier.
  */
 static relpRetVal LIBRELP_ATTR_NONNULL()
-relpTcpDestructTLS(NOTLS_UNUSED relpTcp_t *pThis)
+relpTcpDestructTLSBeforeSocketClose(NOTLS_UNUSED relpTcp_t *pThis)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
-	#if  defined(WITH_TLS)
-		if(pThis->bTLSActive) {
-			if(pThis->pEngine->tls_lib == 0) {
-				relpTcpDestructTLS_gtls(pThis);
-			} else {
-				relpTcpDestructTLS_ossl(pThis);
-			}
-			relpTcpFreePermittedPeers(pThis);
+	#if defined(ENABLE_TLS)
+		if(pThis->pEngine->tls_lib == 0) {
+			relpTcpDestructTLS_gtls(pThis);
 		}
-	#endif /* #ifdef  WITH_TLS */
+	#else
+		(void) pThis;
+	#endif
+	LEAVE_RELPFUNC;
+}
+
+static relpRetVal LIBRELP_ATTR_NONNULL()
+relpTcpDestructTLSAfterSocketClose(NOTLS_UNUSED relpTcp_t *pThis)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Tcp);
+	#if defined(ENABLE_TLS_OPENSSL)
+		if(pThis->pEngine->tls_lib != 0 && pThis->bTLSActive) {
+			relpTcpDestructTLS_ossl(pThis);
+		}
+	#endif
+	#if defined(WITH_TLS)
+		relpTcpFreePermittedPeers(pThis);
+	#endif
 	LEAVE_RELPFUNC;
 }
 
@@ -808,6 +828,9 @@ relpTcpDestruct(relpTcp_t **ppThis)
 		// Only DEBUG if pThis  is available
 		pThis->pEngine->dbgprint((char*)"relpTcpDestruct for %p\n", (void *) pThis);
 
+		/* GnuTLS needs a live transport to send close_notify. */
+		relpTcpDestructTLSBeforeSocketClose(pThis);
+
 		if(pThis->sock != -1) {
 			shutdown(pThis->sock, SHUT_RDWR);
 			close(pThis->sock);
@@ -822,7 +845,7 @@ relpTcpDestruct(relpTcp_t **ppThis)
 			}
 			free(pThis->socks);
 		}
-		relpTcpDestructTLS(pThis);
+		relpTcpDestructTLSAfterSocketClose(pThis);
 
 		free(pThis->pRemHostIP);
 		free(pThis->pRemHostName);
