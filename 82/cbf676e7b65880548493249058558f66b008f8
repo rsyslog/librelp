@@ -1,0 +1,20 @@
+src/tcp.c
+  h_95716f3de0caf5 706-714,718-730,732,779,783-785,787-805,824-826,841
+tests/Makefile.am
+  h_95716f3de0caf5 5,10-17,58-59,110
+tests/tls-gtls-lifecycle.c
+  h_95716f3de0caf5 1-172
+tests/tls-gtls-lifecycle.sh
+  h_95716f3de0caf5 1-2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "82cbf676e7b65880548493249058558f66b008f8",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
