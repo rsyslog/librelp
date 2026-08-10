@@ -697,14 +697,14 @@ finalize_it:
 
 #if defined(ENABLE_TLS)
 static relpRetVal LIBRELP_ATTR_NONNULL()
-relpTcpDestructTLS_gtls(relpTcp_t *pThis)
+relpTcpDestructTLS_gtls(relpTcp_t *pThis, const int sendCloseNotify)
 {
 	int sslRet;
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
 
 	if(pThis->session != NULL) {
-		if(pThis->bTLSActive && pThis->sock != -1) {
+		if(sendCloseNotify && pThis->bTLSActive && pThis->sock != -1) {
 			/* Do not retry EAGAIN: teardown must not block on a nonblocking socket. */
 			do {
 				sslRet = gnutls_bye(pThis->session, GNUTLS_SHUT_WR);
@@ -783,16 +783,18 @@ relpTcpDestructTLS_ossl(relpTcp_t *pThis)
  * to make things easier.
  */
 static relpRetVal LIBRELP_ATTR_NONNULL()
-relpTcpDestructTLSBeforeSocketClose(NOTLS_UNUSED relpTcp_t *pThis)
+relpTcpDestructTLSBeforeSocketClose(NOTLS_UNUSED relpTcp_t *pThis,
+	const int sendCloseNotify)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
 	#if defined(ENABLE_TLS)
 		if(pThis->pEngine->tls_lib == 0) {
-			relpTcpDestructTLS_gtls(pThis);
+			relpTcpDestructTLS_gtls(pThis, sendCloseNotify);
 		}
 	#else
 		(void) pThis;
+		(void) sendCloseNotify;
 	#endif
 	LEAVE_RELPFUNC;
 }
@@ -813,9 +815,8 @@ relpTcpDestructTLSAfterSocketClose(NOTLS_UNUSED relpTcp_t *pThis)
 	LEAVE_RELPFUNC;
 }
 
-/** Destruct a RELP tcp instance */
-relpRetVal
-relpTcpDestruct(relpTcp_t **ppThis)
+static relpRetVal
+relpTcpDestructInternal(relpTcp_t **ppThis, const int sendCloseNotify)
 {
 	relpTcp_t *pThis;
 
@@ -829,7 +830,7 @@ relpTcpDestruct(relpTcp_t **ppThis)
 		pThis->pEngine->dbgprint((char*)"relpTcpDestruct for %p\n", (void *) pThis);
 
 		/* GnuTLS needs a live transport to send close_notify. */
-		relpTcpDestructTLSBeforeSocketClose(pThis);
+		relpTcpDestructTLSBeforeSocketClose(pThis, sendCloseNotify);
 
 		if(pThis->sock != -1) {
 			shutdown(pThis->sock, SHUT_RDWR);
@@ -862,6 +863,13 @@ relpTcpDestruct(relpTcp_t **ppThis)
 	}
 
 	LEAVE_RELPFUNC;
+}
+
+/** Destruct a RELP tcp instance */
+relpRetVal
+relpTcpDestruct(relpTcp_t **ppThis)
+{
+	return relpTcpDestructInternal(ppThis, 1);
 }
 
 #ifdef ENABLE_TLS
@@ -910,7 +918,7 @@ relpTcpAbortDestruct(relpTcp_t **ppThis)
 		}
 	}
 
-	iRet = relpTcpDestruct(ppThis);
+	iRet = relpTcpDestructInternal(ppThis, 0);
 
 	LEAVE_RELPFUNC;
 }

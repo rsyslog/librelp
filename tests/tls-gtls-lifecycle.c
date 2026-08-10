@@ -18,12 +18,21 @@
 
 static int watched_fd = -1;
 static int fd_open_during_bye;
+static unsigned int bye_calls;
 static unsigned int bye_count;
 static unsigned int deinit_count;
 static unsigned int cert_free_count;
 static unsigned int anon_client_free_count;
 static unsigned int anon_server_free_count;
 static unsigned int dh_free_count;
+
+enum bye_mode {
+	bye_success,
+	bye_interrupted_once,
+	bye_again
+};
+
+static enum bye_mode bye_mode;
 
 int __wrap_gnutls_bye(gnutls_session_t session, gnutls_close_request_t how);
 void __real_gnutls_deinit(gnutls_session_t session);
@@ -42,7 +51,12 @@ __wrap_gnutls_bye(gnutls_session_t session __attribute__((unused)),
 	gnutls_close_request_t how __attribute__((unused)))
 {
 	++bye_count;
+	++bye_calls;
 	fd_open_during_bye = fcntl(watched_fd, F_GETFD) != -1;
+	if(bye_mode == bye_interrupted_once && bye_calls == 1)
+		return GNUTLS_E_INTERRUPTED;
+	if(bye_mode == bye_again)
+		return GNUTLS_E_AGAIN;
 	return GNUTLS_E_SUCCESS;
 }
 
@@ -102,6 +116,8 @@ main(void)
 {
 	relpEngine_t *engine = NULL;
 	relpTcp_t *tcp = NULL;
+	int again_connection[2] = {-1, -1};
+	int abort_connection[2] = {-1, -1};
 	int connection[2] = {-1, -1};
 	int rc = EXIT_FAILURE;
 
@@ -118,16 +134,56 @@ main(void)
 	connection[0] = -1;
 	tcp->bTLSActive = 1;
 	watched_fd = tcp->sock;
+	bye_mode = bye_interrupted_once;
+	bye_calls = 0;
 	if(relpTcpDestruct(&tcp) != RELP_RET_OK) {
 		fprintf(stderr, "failed to destruct active GnuTLS session\n");
 		goto done;
 	}
-	if(bye_count != 1 || !fd_open_during_bye || deinit_count != 1) {
+	if(bye_count != 2 || bye_calls != 2 || !fd_open_during_bye || deinit_count != 1) {
 		fprintf(stderr, "active session teardown order is incorrect\n");
 		goto done;
 	}
 
+	if(construct_tcp(engine, &tcp) != 0
+	   || socketpair(AF_UNIX, SOCK_STREAM, 0, abort_connection) != 0) {
+		fprintf(stderr, "failed to construct abort GnuTLS test objects\n");
+		goto done;
+	}
+	tcp->sock = abort_connection[0];
+	abort_connection[0] = -1;
+	tcp->bTLSActive = 1;
+	if(relpTcpAbortDestruct(&tcp) != RELP_RET_OK) {
+		fprintf(stderr, "failed to abort-destruct active GnuTLS session\n");
+		goto done;
+	}
+	if(bye_count != 2 || deinit_count != 2) {
+		fprintf(stderr, "abort teardown sent close_notify\n");
+		goto done;
+	}
+
+	if(construct_tcp(engine, &tcp) != 0
+	   || socketpair(AF_UNIX, SOCK_STREAM, 0, again_connection) != 0) {
+		fprintf(stderr, "failed to construct EAGAIN GnuTLS test objects\n");
+		goto done;
+	}
+	tcp->sock = again_connection[0];
+	again_connection[0] = -1;
+	tcp->bTLSActive = 1;
+	watched_fd = tcp->sock;
+	bye_mode = bye_again;
+	bye_calls = 0;
+	if(relpTcpDestruct(&tcp) != RELP_RET_OK) {
+		fprintf(stderr, "failed to destruct EAGAIN GnuTLS session\n");
+		goto done;
+	}
+	if(bye_count != 3 || bye_calls != 1 || deinit_count != 3) {
+		fprintf(stderr, "EAGAIN teardown was retried\n");
+		goto done;
+	}
+
 	watched_fd = -1;
+	bye_mode = bye_success;
 	if(construct_tcp(engine, &tcp) != 0
 	   || gnutls_certificate_allocate_credentials(&tcp->xcred) != GNUTLS_E_SUCCESS
 	   || gnutls_anon_allocate_client_credentials(&tcp->anoncred) != GNUTLS_E_SUCCESS
@@ -140,7 +196,7 @@ main(void)
 		fprintf(stderr, "failed to destruct partial GnuTLS session\n");
 		goto done;
 	}
-	if(bye_count != 1 || deinit_count != 2 || cert_free_count != 1
+	if(bye_count != 3 || deinit_count != 4 || cert_free_count != 1
 	   || anon_client_free_count != 1 || anon_server_free_count != 1 || dh_free_count != 1) {
 		fprintf(stderr, "partial GnuTLS resources were not released\n");
 		goto done;
@@ -158,6 +214,14 @@ done:
 		(void) close(connection[0]);
 	if(connection[1] >= 0)
 		(void) close(connection[1]);
+	if(abort_connection[0] >= 0)
+		(void) close(abort_connection[0]);
+	if(abort_connection[1] >= 0)
+		(void) close(abort_connection[1]);
+	if(again_connection[0] >= 0)
+		(void) close(again_connection[0]);
+	if(again_connection[1] >= 0)
+		(void) close(again_connection[1]);
 	return rc;
 }
 

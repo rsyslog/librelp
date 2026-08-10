@@ -12,19 +12,21 @@ endif
 endif
 
 if ENABLE_TLS
+if BUILD_STATIC
 check_PROGRAMS+=tcp_accept_fd_reuse tls_gtls_lifecycle
 tcp_accept_fd_reuse_SOURCES=tcp-accept-fd-reuse.c
-tcp_accept_fd_reuse_LDADD=../src/.libs/librelp.a $(GNUTLS_LIBS) $(OPENSSL_LIBS)
+tcp_accept_fd_reuse_LDADD=../src/.libs/librelp.a $(GNUTLS_LIBS) $(OPENSSL_LIBS) $(rt_libs) $(socket_libs) $(pthread_libs)
 tcp_accept_fd_reuse_LDFLAGS=-Wl,--wrap=accept -Wl,--wrap=close
 tcp_accept_fd_reuse_CFLAGS=$(AM_CFLAGS) -I${top_srcdir}/src $(WARN_CFLAGS)
 tls_gtls_lifecycle_SOURCES=tls-gtls-lifecycle.c
-tls_gtls_lifecycle_LDADD=../src/.libs/librelp.a $(GNUTLS_LIBS) $(OPENSSL_LIBS)
+tls_gtls_lifecycle_LDADD=../src/.libs/librelp.a $(GNUTLS_LIBS) $(OPENSSL_LIBS) $(rt_libs) $(socket_libs) $(pthread_libs)
 tls_gtls_lifecycle_LDFLAGS=-Wl,--wrap=gnutls_bye -Wl,--wrap=gnutls_deinit \
 	-Wl,--wrap=gnutls_certificate_free_credentials \
 	-Wl,--wrap=gnutls_anon_free_client_credentials \
 	-Wl,--wrap=gnutls_anon_free_server_credentials \
 	-Wl,--wrap=gnutls_dh_params_deinit
 tls_gtls_lifecycle_CFLAGS=$(AM_CFLAGS) -I${top_srcdir}/src $(WARN_CFLAGS)
+endif
 endif
 
 receive_SOURCES=receive.c
@@ -63,8 +65,8 @@ TLS_TESTS=  \
 TLS_VALGRIND_TESTS= \
 	tls-basic-vg.sh
 
-# tests specific to GnuTLS
-GTLS_TESTS= \
+# static tests specific to GnuTLS
+GTLS_STATIC_TESTS= \
 	tcp-accept-fd-reuse.sh \
 	tls-gtls-lifecycle.sh
 
@@ -93,7 +95,9 @@ if ENABLE_TLS_GENERIC
 TESTS+=$(TLS_TESTS)
 endif
 if ENABLE_TLS
-TESTS+=$(GTLS_TESTS)
+if BUILD_STATIC
+TESTS+=$(GTLS_STATIC_TESTS)
+endif
 endif
 if ENABLE_TLS_OPENSSL
 TESTS+=$(OSSL_TESTS)
@@ -111,7 +115,7 @@ endif # HAVE_VALGRIND
 
 EXTRA_DIST=$(TESTS) \
 	$(TLS_TESTS) \
-	$(GTLS_TESTS) \
+	$(GTLS_STATIC_TESTS) \
 	$(OSSL_TESTS) \
 	$(OSSL_STATIC_TESTS) \
 	$(TLS_VALGRIND_TESTS) \
