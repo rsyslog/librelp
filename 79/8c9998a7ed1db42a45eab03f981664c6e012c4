@@ -1,0 +1,22 @@
+src/tcp.c
+  h_95716f3de0caf5 725-731,1822,1928
+src/tcp.h
+  h_95716f3de0caf5 100-101
+tests/Makefile.am
+  h_95716f3de0caf5 4-10,51-52,92
+tests/tls-ossl-fd-reuse.c
+  h_95716f3de0caf5 1-172
+tests/tls-ossl-fd-reuse.sh
+  h_95716f3de0caf5 1-2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "798c9998a7ed1db42a45eab03f981664c6e012c4",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
