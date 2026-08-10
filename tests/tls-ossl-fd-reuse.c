@@ -148,6 +148,16 @@ main(void)
 		goto done;
 	}
 
+	if(relpTcpConstruct(&tcp, engine, RELP_CLT_CONN, NULL) != RELP_RET_OK) {
+		fprintf(stderr, "failed to construct partial OpenSSL test object\n");
+		goto done;
+	}
+	tcp->ssl = SSL_new(ssl_ctx);
+	if(tcp->ssl == NULL || relpTcpDestruct(&tcp) != RELP_RET_OK) {
+		fprintf(stderr, "failed to destruct partial OpenSSL session\n");
+		goto done;
+	}
+
 	printf("replacement descriptor remained open after SSL destruction\n");
 	rc = EXIT_SUCCESS;
 

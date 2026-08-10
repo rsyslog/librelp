@@ -192,6 +192,7 @@ main(void)
 		fprintf(stderr, "failed to construct partial GnuTLS test objects\n");
 		goto done;
 	}
+	tcp->bTLSActive = 1;
 	if(relpTcpDestruct(&tcp) != RELP_RET_OK) {
 		fprintf(stderr, "failed to destruct partial GnuTLS session\n");
 		goto done;

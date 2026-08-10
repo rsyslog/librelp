@@ -697,19 +697,12 @@ finalize_it:
 
 #if defined(ENABLE_TLS)
 static relpRetVal LIBRELP_ATTR_NONNULL()
-relpTcpDestructTLS_gtls(relpTcp_t *pThis, const int sendCloseNotify)
+relpTcpDestructTLS_gtls(relpTcp_t *pThis)
 {
-	int sslRet;
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
 
 	if(pThis->session != NULL) {
-		if(sendCloseNotify && pThis->bTLSActive && pThis->sock != -1) {
-			/* Do not retry EAGAIN: teardown must not block on a nonblocking socket. */
-			do {
-				sslRet = gnutls_bye(pThis->session, GNUTLS_SHUT_WR);
-			} while(sslRet == GNUTLS_E_INTERRUPTED);
-		}
 		gnutls_deinit(pThis->session);
 		pThis->session = NULL;
 	}
@@ -791,12 +784,24 @@ relpTcpDestructTLSBeforeSocketClose(NOTLS_UNUSED relpTcp_t *pThis,
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
 	#if defined(ENABLE_TLS)
-		if(pThis->pEngine->tls_lib == 0) {
-			relpTcpDestructTLS_gtls(pThis, sendCloseNotify);
+		if(pThis->pEngine->tls_lib == 0 && sendCloseNotify && pThis->bTLSActive
+		   && pThis->session != NULL && pThis->sock != -1) {
+			int sslRet;
+
+			/* Do not retry EAGAIN: teardown must not block on a nonblocking socket. */
+			do {
+				sslRet = gnutls_bye(pThis->session, GNUTLS_SHUT_WR);
+			} while(sslRet == GNUTLS_E_INTERRUPTED);
 		}
 	#else
 		(void) pThis;
 		(void) sendCloseNotify;
+	#endif
+	#if defined(ENABLE_TLS_OPENSSL)
+		/* A partial SSL object can own a BIO that still refers to this socket. */
+		if(pThis->pEngine->tls_lib != 0 && pThis->ssl != NULL && !pThis->bTLSActive) {
+			relpTcpDestructTLS_ossl(pThis);
+		}
 	#endif
 	LEAVE_RELPFUNC;
 }
@@ -804,15 +809,24 @@ relpTcpDestructTLSBeforeSocketClose(NOTLS_UNUSED relpTcp_t *pThis,
 static relpRetVal LIBRELP_ATTR_NONNULL()
 relpTcpDestructTLSAfterSocketClose(NOTLS_UNUSED relpTcp_t *pThis)
 {
+	const int hadTLSActive = pThis->bTLSActive;
+
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
+	#if defined(ENABLE_TLS)
+		if(pThis->pEngine->tls_lib == 0 && pThis->bTLSActive) {
+			relpTcpDestructTLS_gtls(pThis);
+		}
+	#endif
 	#if defined(ENABLE_TLS_OPENSSL)
-		if(pThis->pEngine->tls_lib != 0 && pThis->ssl != NULL) {
+		if(pThis->pEngine->tls_lib != 0 && pThis->ssl != NULL && pThis->bTLSActive) {
 			relpTcpDestructTLS_ossl(pThis);
 		}
 	#endif
 	#if defined(WITH_TLS)
-		relpTcpFreePermittedPeers(pThis);
+		if(hadTLSActive) {
+			relpTcpFreePermittedPeers(pThis);
+		}
 	#endif
 	LEAVE_RELPFUNC;
 }
@@ -1996,7 +2010,11 @@ finalize_it:
 	pThis->pEngine->dbgprint((char*)"relpTcpConnectTLSInit: END iRet = %d, pThis=[%p], pNsd->rtryOp=%d\n",
 		iRet, (void *) pThis, pThis->rtryOp);
 	if(iRet != RELP_RET_OK)	{
-		if (conn != NULL) {
+		if(pThis->ssl != NULL) {
+			/* SSL owns conn after SSL_set_bio(). */
+			SSL_free(pThis->ssl);
+			pThis->ssl = NULL;
+		} else if(conn != NULL) {
 			BIO_free(conn);
 		}
 	}
