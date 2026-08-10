@@ -70,6 +70,7 @@ then AM_CFLAGS="$CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpoint
 fi
 
 AC_PROG_LIBTOOL
+AM_CONDITIONAL([BUILD_STATIC], [test "x$enable_static" != "xno"])
 
 PKG_PROG_PKG_CONFIG
 

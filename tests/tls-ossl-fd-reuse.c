@@ -91,7 +91,12 @@ main(void)
 		goto done;
 	}
 
-	ssl_ctx = SSL_CTX_new(TLS_method());
+	if(!SSL_library_init()) {
+		fprintf(stderr, "failed to initialize OpenSSL\n");
+		goto done;
+	}
+
+	ssl_ctx = SSL_CTX_new(SSLv23_method());
 	ssl = ssl_ctx == NULL ? NULL : SSL_new(ssl_ctx);
 	if(ssl == NULL) {
 		fprintf(stderr, "failed to construct OpenSSL test objects\n");

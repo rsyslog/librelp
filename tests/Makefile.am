@@ -2,10 +2,13 @@ TEST_EXTENSIONS=.sh
 check_PROGRAMS=receive send chkseq have_tlslib msleep
 
 if ENABLE_TLS_OPENSSL
+if BUILD_STATIC
+# This white-box test needs internal symbols that are not exported by librelp.
 check_PROGRAMS+=tls_ossl_fd_reuse
 tls_ossl_fd_reuse_SOURCES=tls-ossl-fd-reuse.c
-tls_ossl_fd_reuse_LDADD=../src/.libs/librelp.a $(GNUTLS_LIBS) $(OPENSSL_LIBS)
+tls_ossl_fd_reuse_LDADD=../src/.libs/librelp.a $(GNUTLS_LIBS) $(OPENSSL_LIBS) $(SOL_LIBS)
 tls_ossl_fd_reuse_CFLAGS=$(AM_CFLAGS) -I${top_srcdir}/src $(WARN_CFLAGS)
+endif
 endif
 
 receive_SOURCES=receive.c
@@ -48,7 +51,8 @@ TLS_VALGRIND_TESTS= \
 OSSL_TESTS= \
 	tls-wrong-permittedPeer.sh \
 	tls-wrong-authname.sh \
-	tls-wrong-signedcert.sh \
+	tls-wrong-signedcert.sh
+OSSL_STATIC_TESTS= \
 	tls-ossl-fd-reuse.sh
 # reenable tests when stable
 #	tls-basic-brokencert.sh
@@ -69,6 +73,9 @@ TESTS+=$(TLS_TESTS)
 endif
 if ENABLE_TLS_OPENSSL
 TESTS+=$(OSSL_TESTS)
+if BUILD_STATIC
+TESTS+=$(OSSL_STATIC_TESTS)
+endif
 endif
 
 if HAVE_VALGRIND
@@ -81,6 +88,7 @@ endif # HAVE_VALGRIND
 EXTRA_DIST=$(TESTS) \
 	$(TLS_TESTS) \
 	$(OSSL_TESTS) \
+	$(OSSL_STATIC_TESTS) \
 	$(TLS_VALGRIND_TESTS) \
 	$(VALGRIND_TESTS) \
 	set-envvars.in \
