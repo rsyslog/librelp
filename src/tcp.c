@@ -722,6 +722,13 @@ relpTcpDestructTLS_gtls(LIBRELP_ATTR_UNUSED relpTcp_t *pThis)
 }
 #endif  /* defined(ENABLE_TLS) */
 #if defined(ENABLE_TLS_OPENSSL)
+BIO *
+relpTcpNewSocketBio_ossl(const int sock)
+{
+	/* relpTcp_t owns sock and closes it in relpTcpDestruct(). */
+	return BIO_new_socket(sock, BIO_NOCLOSE);
+}
+
 static relpRetVal LIBRELP_ATTR_NONNULL()
 relpTcpDestructTLS_ossl(relpTcp_t *pThis)
 {
@@ -1812,7 +1819,7 @@ relpTcpAcceptConnReqInitTLS_ossl(relpTcp_t *const pThis, relpSrv_t *const pSrv)
 	pThis->sslState = osslServer;
 
 	/* Create BIO from ptcp socket! */
-	client = BIO_new_socket(pThis->sock, BIO_CLOSE /*BIO_NOCLOSE*/);
+	client = relpTcpNewSocketBio_ossl(pThis->sock);
 	pThis->pEngine->dbgprint((char*)"relpTcpAcceptConnReqInitTLS_ossl: Init client BIO[%p] done\n", (void *)client);
 
 	/* Set debug Callback for client BIO as well! */
@@ -1918,7 +1925,7 @@ relpTcpConnectTLSInit_ossl(relpTcp_t *const pThis)
 	pThis->sslState = osslClient;
 
 	/* Create BIO from ptcp socket! */
-	conn = BIO_new_socket(pThis->sock, BIO_CLOSE /*BIO_NOCLOSE*/);
+	conn = relpTcpNewSocketBio_ossl(pThis->sock);
 	pThis->pEngine->dbgprint((char*)"relpTcpConnectTLSInit: Init conn BIO[%p] done\n", (void *)conn);
 
 	/* Set debug Callback for client BIO as well! */

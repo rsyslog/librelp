@@ -1,6 +1,13 @@
 TEST_EXTENSIONS=.sh
 check_PROGRAMS=receive send chkseq have_tlslib msleep
 
+if ENABLE_TLS_OPENSSL
+check_PROGRAMS+=tls_ossl_fd_reuse
+tls_ossl_fd_reuse_SOURCES=tls-ossl-fd-reuse.c
+tls_ossl_fd_reuse_LDADD=../src/.libs/librelp.a $(GNUTLS_LIBS) $(OPENSSL_LIBS)
+tls_ossl_fd_reuse_CFLAGS=$(AM_CFLAGS) -I${top_srcdir}/src $(WARN_CFLAGS)
+endif
+
 receive_SOURCES=receive.c
 receive_LDADD=../src/.libs/librelp.la
 receive_CFLAGS=$(AM_CFLAGS) -I${top_srcdir}/src $(WARN_CFLAGS)
@@ -41,7 +48,8 @@ TLS_VALGRIND_TESTS= \
 OSSL_TESTS= \
 	tls-wrong-permittedPeer.sh \
 	tls-wrong-authname.sh \
-	tls-wrong-signedcert.sh
+	tls-wrong-signedcert.sh \
+	tls-ossl-fd-reuse.sh
 # reenable tests when stable
 #	tls-basic-brokencert.sh
 
@@ -81,6 +89,7 @@ EXTRA_DIST=$(TESTS) \
 	test-framework.sh \
 	receive.c \
 	send.c \
+	tls-ossl-fd-reuse.c \
 	tls-certs/ca.pem \
 	tls-certs/cert.pem \
 	tls-certs/key.pem \
@@ -95,4 +104,3 @@ EXTRA_DIST=$(TESTS) \
 	tls-certs/ossl-server-cert.pem \
 	tls-certs/ossl-server-key.pem \
 	tls-certs/ossl-server-certchain.pem
-

@@ -97,6 +97,8 @@ typedef enum {
 	osslServer = 0,		/**< Server SSL Object */
 	osslClient = 1		/**< Client SSL Object */
 } osslSslState_t;
+
+BIO *relpTcpNewSocketBio_ossl(int sock);
 #endif
 
 /* the RELPTCP object
