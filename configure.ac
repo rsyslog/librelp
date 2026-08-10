@@ -14,25 +14,25 @@ AC_CONFIG_HEADER([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
 echo HOST: ${host}
-case "${host}:$(uname -s)" in
-  *-*-linux*:*|*:Linux)
+case "${host}" in
+  *-*-linux*)
     AC_DEFINE([OS_LINUX], [1], [Indicator for a Linux OS])
     os_type="linux"
   ;;
-  *-*-*darwin*:*|*-*-dragonfly*:*|*-*-freebsd*:*|*-*-netbsd*:*|*-*-openbsd:*|*:DragonFly|*:FreeBSD|*:NetBSD|*:OpenBSD)
+  *-*-*darwin*|*-*-dragonfly*|*-*-freebsd*|*-*-netbsd*|*-*-openbsd*)
     AC_DEFINE([OS_BSD], [1], [Indicator for a BSD OS])
     os_type="bsd"
   ;;
-  *-apple-*:*|*:Darwin)
+  *-apple-*)
     AC_DEFINE([OS_APPLE], [1], [Indicator for APPLE OS])
     os_type="apple"
   ;;
-  *-*-kfreebsd:* )
+  *-*-kfreebsd*)
     # kernel is FreeBSD, but userspace is glibc - i.e. like linux
     # do not DEFINE OS_BSD
     os_type="bsd"
   ;;
-  *-*-solaris*:*|*:SunOS)
+  *-*-solaris*)
     os_type="solaris"
     AC_DEFINE([OS_SOLARIS], [1], [Indicator for a Solaris OS])
     AC_DEFINE([_POSIX_PTHREAD_SEMANTICS], [1], [Use POSIX pthread semantics])
@@ -46,7 +46,7 @@ case "${host}:$(uname -s)" in
     LIBUUID_LIBS=${LIBUUID_LIBS:=-luuid}
     AC_SUBST(SOL_LIBS)
   ;;
-  *-*-aix*:*|*:AIX)
+  *-*-aix*)
     os_type="aix"
     AC_DEFINE([OS_AIX], [1], [Indicator for a AIX OS])
     AM_CFLAGS="$CFLAGS -D_LINUX_SOURCE_COMPAT"
@@ -57,6 +57,7 @@ AM_CONDITIONAL(OS_APPLE, test x$os_type == xapple)
 AM_CONDITIONAL(xOS_LINUX, test x$os_type == xlinux)
 AM_CONDITIONAL(OS_LINUX, test x$os_type == xlinux)
 AM_CONDITIONAL(OS_SOLARIS, test x$os_type == xsolaris)
+AM_CONDITIONAL(OS_SOLARIS_WRAP, test "$(uname -s)" = "SunOS")
 AM_CONDITIONAL(OS_AIX, test "x$os_type" = "xaix")
 
 AM_PATH_PYTHON(,, [:])
