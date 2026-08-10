@@ -1,0 +1,14 @@
+configure.ac
+  h_95716f3de0caf5 15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "5303c8a9ebcbf5fa5988783fdfa45ae9494e4e0d",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
