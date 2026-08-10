@@ -55,7 +55,7 @@ __wrap_gnutls_bye(gnutls_session_t session __attribute__((unused)),
 	fd_open_during_bye = fcntl(watched_fd, F_GETFD) != -1;
 	if(bye_mode == bye_interrupted_once && bye_calls == 1)
 		return GNUTLS_E_INTERRUPTED;
-	if(bye_mode == bye_again)
+	if(bye_mode == bye_again && bye_calls == 1)
 		return GNUTLS_E_AGAIN;
 	return GNUTLS_E_SUCCESS;
 }

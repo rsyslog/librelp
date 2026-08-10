@@ -749,26 +749,28 @@ relpTcpDestructTLS_ossl(relpTcp_t *pThis)
 	RELPOBJ_assert(pThis, Tcp);
 
 	if(pThis->ssl != NULL) {
-		pThis->pEngine->dbgprint((char*)"relpTcpDestruct_ossl: try "
-			"shutdown #1 for [%p]\n", (void *) pThis->ssl);
-		const int sslRet = SSL_shutdown(pThis->ssl);
-		if (sslRet <= 0) {
-			const int sslErr = SSL_get_error(pThis->ssl, sslRet);
-			pThis->pEngine->dbgprint((char*)"relpTcpDestruct_ossl: shutdown failed with err = %d, "
-				"forcing ssl shutdown!\n", sslErr);
+		if(pThis->bTLSActive) {
+			pThis->pEngine->dbgprint((char*)"relpTcpDestruct_ossl: try "
+				"shutdown #1 for [%p]\n", (void *) pThis->ssl);
+			const int sslRet = SSL_shutdown(pThis->ssl);
+			if (sslRet <= 0) {
+				const int sslErr = SSL_get_error(pThis->ssl, sslRet);
+				pThis->pEngine->dbgprint((char*)"relpTcpDestruct_ossl: shutdown failed with err = %d, "
+					"forcing ssl shutdown!\n", sslErr);
 
-			/* ignore those SSL Errors on shutdown */
-			if(	sslErr != SSL_ERROR_SYSCALL &&
-					sslErr != SSL_ERROR_ZERO_RETURN &&
-					sslErr != SSL_ERROR_WANT_READ &&
-					sslErr != SSL_ERROR_WANT_WRITE) {
-				/* Output Warning only */
-				relpTcpLastSSLErrorMsg(sslRet, pThis, "relpTcpDestruct_ossl");
+				/* ignore those SSL Errors on shutdown */
+				if(	sslErr != SSL_ERROR_SYSCALL &&
+						sslErr != SSL_ERROR_ZERO_RETURN &&
+						sslErr != SSL_ERROR_WANT_READ &&
+						sslErr != SSL_ERROR_WANT_WRITE) {
+					/* Output Warning only */
+					relpTcpLastSSLErrorMsg(sslRet, pThis, "relpTcpDestruct_ossl");
+				}
+
+				pThis->pEngine->dbgprint((char*)"relpTcpDestruct_ossl: session closed (un)successfully \n");
+			} else {
+				pThis->pEngine->dbgprint((char*)"relpTcpDestruct_ossl: session closed successfully \n");
 			}
-
-			pThis->pEngine->dbgprint((char*)"relpTcpDestruct_ossl: session closed (un)successfully \n");
-		} else {
-			pThis->pEngine->dbgprint((char*)"relpTcpDestruct_ossl: session closed successfully \n");
 		}
 
 		pThis->bTLSActive = 0;
@@ -805,7 +807,7 @@ relpTcpDestructTLSAfterSocketClose(NOTLS_UNUSED relpTcp_t *pThis)
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
 	#if defined(ENABLE_TLS_OPENSSL)
-		if(pThis->pEngine->tls_lib != 0 && pThis->bTLSActive) {
+		if(pThis->pEngine->tls_lib != 0 && pThis->ssl != NULL) {
 			relpTcpDestructTLS_ossl(pThis);
 		}
 	#endif
