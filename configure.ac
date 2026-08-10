@@ -116,6 +116,14 @@ LIBS=$save_LIBS
 
 AC_SUBST(socket_libs)
 
+save_LIBS=$LIBS
+LIBS=
+AC_SEARCH_LIBS(pthread_create, [pthread pthreads])
+pthread_libs=$LIBS
+LIBS=$save_LIBS
+
+AC_SUBST(pthread_libs)
+
 # Checks for header files.
 AC_HEADER_STDC
 AC_CHECK_HEADERS([sys/epoll.h])
@@ -280,4 +288,3 @@ echo "GNUTLS enabled:                  $enable_tls"
 echo "GNUTLS authentication supported: $have_gnutls_certificate_set_verify_function"
 echo "OPENSSL enabled:                 $enable_tls_openssl"
 echo "generic TLS tests enabled:       $enable_tls_generic"
-

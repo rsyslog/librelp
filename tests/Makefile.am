@@ -6,7 +6,7 @@ if BUILD_STATIC
 # This white-box test needs internal symbols that are not exported by librelp.
 check_PROGRAMS+=tls_ossl_fd_reuse
 tls_ossl_fd_reuse_SOURCES=tls-ossl-fd-reuse.c
-tls_ossl_fd_reuse_LDADD=../src/.libs/librelp.a $(GNUTLS_LIBS) $(OPENSSL_LIBS) $(rt_libs) $(socket_libs)
+tls_ossl_fd_reuse_LDADD=../src/.libs/librelp.a $(GNUTLS_LIBS) $(OPENSSL_LIBS) $(rt_libs) $(socket_libs) $(pthread_libs)
 tls_ossl_fd_reuse_CFLAGS=$(AM_CFLAGS) -I${top_srcdir}/src $(WARN_CFLAGS)
 endif
 endif
