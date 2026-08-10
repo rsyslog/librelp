@@ -1,0 +1,20 @@
+src/tcp.c
+  h_95716f3de0caf5 2216
+tests/Makefile.am
+  h_95716f3de0caf5 14-21,58-61,86-88,105,117
+tests/tcp-accept-fd-reuse.c
+  h_95716f3de0caf5 1-175
+tests/tcp-accept-fd-reuse.sh
+  h_95716f3de0caf5 1-2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "d108c77fec6a7828f181f8383c717c6be85bdc8b",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
