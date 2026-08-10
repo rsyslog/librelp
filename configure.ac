@@ -108,6 +108,14 @@ LIBS=$save_LIBS
 
 AC_SUBST(rt_libs)
 
+save_LIBS=$LIBS
+LIBS=
+AC_SEARCH_LIBS(socket, socket)
+socket_libs=$LIBS
+LIBS=$save_LIBS
+
+AC_SUBST(socket_libs)
+
 # Checks for header files.
 AC_HEADER_STDC
 AC_CHECK_HEADERS([sys/epoll.h])
