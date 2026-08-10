@@ -15,7 +15,8 @@ if ENABLE_TLS
 if BUILD_STATIC
 # These white-box fixtures use GNU ld --wrap interposition. Solaris Studio
 # accepts the option but does not provide compatible runtime interposition.
-if !OS_SOLARIS
+if OS_SOLARIS
+else
 check_PROGRAMS+=tcp_accept_fd_reuse tls_gtls_lifecycle
 tcp_accept_fd_reuse_SOURCES=tcp-accept-fd-reuse.c
 tcp_accept_fd_reuse_LDADD=../src/.libs/librelp.a $(GNUTLS_LIBS) $(OPENSSL_LIBS) $(rt_libs) $(socket_libs) $(pthread_libs)
@@ -100,7 +101,8 @@ TESTS+=$(TLS_TESTS)
 endif
 if ENABLE_TLS
 if BUILD_STATIC
-if !OS_SOLARIS
+if OS_SOLARIS
+else
 TESTS+=$(GTLS_STATIC_TESTS)
 endif
 endif
