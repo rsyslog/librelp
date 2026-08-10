@@ -11,6 +11,14 @@ tls_ossl_fd_reuse_CFLAGS=$(AM_CFLAGS) -I${top_srcdir}/src $(WARN_CFLAGS)
 endif
 endif
 
+if ENABLE_TLS
+check_PROGRAMS+=tcp_accept_fd_reuse
+tcp_accept_fd_reuse_SOURCES=tcp-accept-fd-reuse.c
+tcp_accept_fd_reuse_LDADD=../src/.libs/librelp.a $(GNUTLS_LIBS) $(OPENSSL_LIBS)
+tcp_accept_fd_reuse_LDFLAGS=-Wl,--wrap=accept -Wl,--wrap=close
+tcp_accept_fd_reuse_CFLAGS=$(AM_CFLAGS) -I${top_srcdir}/src $(WARN_CFLAGS)
+endif
+
 receive_SOURCES=receive.c
 receive_LDADD=../src/.libs/librelp.la
 receive_CFLAGS=$(AM_CFLAGS) -I${top_srcdir}/src $(WARN_CFLAGS)
@@ -47,6 +55,10 @@ TLS_TESTS=  \
 TLS_VALGRIND_TESTS= \
 	tls-basic-vg.sh
 
+# tests specific to GnuTLS
+GTLS_TESTS= \
+	tcp-accept-fd-reuse.sh
+
 # test specific to openssl
 OSSL_TESTS= \
 	tls-wrong-permittedPeer.sh \
@@ -71,6 +83,9 @@ TESTS=  selftest_receive_watchdog.sh \
 if ENABLE_TLS_GENERIC
 TESTS+=$(TLS_TESTS)
 endif
+if ENABLE_TLS
+TESTS+=$(GTLS_TESTS)
+endif
 if ENABLE_TLS_OPENSSL
 TESTS+=$(OSSL_TESTS)
 if BUILD_STATIC
@@ -87,6 +102,7 @@ endif # HAVE_VALGRIND
 
 EXTRA_DIST=$(TESTS) \
 	$(TLS_TESTS) \
+	$(GTLS_TESTS) \
 	$(OSSL_TESTS) \
 	$(OSSL_STATIC_TESTS) \
 	$(TLS_VALGRIND_TESTS) \
@@ -98,6 +114,7 @@ EXTRA_DIST=$(TESTS) \
 	receive.c \
 	send.c \
 	tls-ossl-fd-reuse.c \
+	tcp-accept-fd-reuse.c \
 	tls-certs/ca.pem \
 	tls-certs/cert.pem \
 	tls-certs/key.pem \

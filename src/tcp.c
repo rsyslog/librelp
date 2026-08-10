@@ -2213,6 +2213,7 @@ relpTcpAcceptConnReq(relpTcp_t **ppThis, const int sock, relpSrv_t *const pSrv)
 	}
 
 	pThis->sock = iNewSock;
+	iNewSock = -1; /* ownership transferred to pThis */
 	CHKRet(relpTcpAcceptConnReqInitTLS(pThis, pSrv));
 
 	*ppThis = pThis;
@@ -2221,7 +2222,6 @@ finalize_it:
 	if(iRet != RELP_RET_OK) {
 		if(pThis != NULL)
 			relpTcpDestruct(&pThis);
-		/* the close may be redundant, but that doesn't hurt... */
 		if(iNewSock >= 0)
 			close(iNewSock);
 	}
