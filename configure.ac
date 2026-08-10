@@ -70,6 +70,7 @@ then AM_CFLAGS="$CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpoint
 fi
 
 AC_PROG_LIBTOOL
+AM_CONDITIONAL([BUILD_STATIC], [test "x$enable_static" != "xno"])
 
 PKG_PROG_PKG_CONFIG
 
@@ -106,6 +107,22 @@ rt_libs=$LIBS
 LIBS=$save_LIBS
 
 AC_SUBST(rt_libs)
+
+save_LIBS=$LIBS
+LIBS=
+AC_SEARCH_LIBS(socket, socket)
+socket_libs=$LIBS
+LIBS=$save_LIBS
+
+AC_SUBST(socket_libs)
+
+save_LIBS=$LIBS
+LIBS=
+AC_SEARCH_LIBS(pthread_create, [pthread pthreads])
+pthread_libs=$LIBS
+LIBS=$save_LIBS
+
+AC_SUBST(pthread_libs)
 
 # Checks for header files.
 AC_HEADER_STDC
@@ -271,4 +288,3 @@ echo "GNUTLS enabled:                  $enable_tls"
 echo "GNUTLS authentication supported: $have_gnutls_certificate_set_verify_function"
 echo "OPENSSL enabled:                 $enable_tls_openssl"
 echo "generic TLS tests enabled:       $enable_tls_generic"
-
