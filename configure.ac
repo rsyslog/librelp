@@ -57,6 +57,7 @@ AM_CONDITIONAL(OS_APPLE, test x$os_type == xapple)
 AM_CONDITIONAL(xOS_LINUX, test x$os_type == xlinux)
 AM_CONDITIONAL(OS_LINUX, test x$os_type == xlinux)
 AM_CONDITIONAL(OS_SOLARIS, test x$os_type == xsolaris)
+AM_CONDITIONAL(OS_SOLARIS_WRAP, test "$(uname -s)" = "SunOS")
 AM_CONDITIONAL(OS_AIX, test "x$os_type" = "xaix")
 
 AM_PATH_PYTHON(,, [:])
