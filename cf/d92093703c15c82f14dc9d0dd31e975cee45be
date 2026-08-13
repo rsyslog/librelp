@@ -1,0 +1,20 @@
+tests/Makefile.am
+  h_95716f3de0caf5 11-18,93-94,124-127,143,153
+tests/tls-ossl-retry-state.c
+  h_95716f3de0caf5 1-135
+src/tcp.c
+  h_95716f3de0caf5 3221,3392
+tests/tls-ossl-retry-state.sh
+  h_95716f3de0caf5 1-2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "cfd92093703c15c82f14dc9d0dd31e975cee45be",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
