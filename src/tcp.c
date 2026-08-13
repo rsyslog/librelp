@@ -3218,6 +3218,7 @@ relpTcpRcv_ossl(relpTcp_t *const pThis, relpOctet_t *const pRcvBuf, ssize_t *con
 
 	lenRcvd = SSL_read(pThis->ssl, pRcvBuf, *pLenBuf);
 	if(lenRcvd > 0) {
+		pThis->rtryOp = relpTCP_RETRY_none;
 		pThis->pEngine->dbgprint((char*)"relpTcpRcv_ossl: SSL_read SUCCESS len %d\n", lenRcvd);
 		*pLenBuf = lenRcvd;
 	} else {
@@ -3388,6 +3389,7 @@ relpTcpSend_ossl(relpTcp_t *const pThis, relpOctet_t *const pBuf, ssize_t *const
 
 	written = SSL_write(pThis->ssl, pBuf, *pLenBuf);
 	if(written > 0) {
+		pThis->rtryOp = relpTCP_RETRY_none;
 		pThis->pEngine->dbgprint((char*)"relpTcpSend_ossl: SSL_write SUCCESS\n");
 	} else {
 		const int err = SSL_get_error(pThis->ssl, written);
