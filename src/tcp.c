@@ -1693,7 +1693,14 @@ relpTcpSetSslConfCmd_ossl(relpTcp_t *const pThis, char *tlsConfigCmd)
 			}
 			SSL_CONF_CTX_set_flags(cctx, SSL_CONF_FLAG_FILE);
 			SSL_CONF_CTX_set_flags(cctx, SSL_CONF_FLAG_SHOW_ERRORS);
-			SSL_CONF_CTX_set_ssl_ctx(cctx, ctx);
+			/* Apply connection-specific settings to the SSL object when it
+			 * exists. Only listener setup has no SSL object yet and must
+			 * configure the shared context. */
+			if (pThis->ssl != NULL) {
+				SSL_CONF_CTX_set_ssl(cctx, pThis->ssl);
+			} else {
+				SSL_CONF_CTX_set_ssl_ctx(cctx, ctx);
+			}
 
 			do
 			{
@@ -1895,11 +1902,6 @@ relpTcpConnectTLSInit_ossl(relpTcp_t *const pThis)
 	 * flag-restricted commands that require SSL_CONF_FLAG_CLIENT */
 	pThis->sslState = osslClient;
 
-	/* SSL_CONF_cmd targets the SSL_CTX; SSL_new() snapshots the SSL_CTX's
-	 * group list at construction time, so this must run before SSL_new()
-	 * or the SSL object keeps the default groups set by SSL_CTX_new() */
-	CHKRet(relpTcpSetSslConfCmd_ossl(pThis, pThis->tlsConfigCmd));
-
 	if(!(pThis->ssl = SSL_new(ctx))) {
 		relpTcpLastSSLErrorMsg(0, pThis, "relpTcpConnectTLSInit");
 		ABORT_FINALIZE(RELP_RET_IO_ERR);
@@ -1914,6 +1916,9 @@ relpTcpConnectTLSInit_ossl(relpTcp_t *const pThis)
 		CHKRet(relpTcpSslInitCerts(pThis, pThis->ownCertFile, pThis->privKeyFile));
 	} else
 		pThis->authmode = eRelpAuthMode_None;
+
+	/* Set TLS Options if configured */
+	CHKRet(relpTcpSetSslConfCmd_ossl(pThis, pThis->tlsConfigCmd));
 
 	/* Set TLS Priority Options */
 	CHKRet(relpTcpTLSSetPrio(pThis));
