@@ -99,12 +99,14 @@ TESTS=  selftest_receive_watchdog.sh \
 	selftest_receive_usage.sh \
 	basic.sh \
 	basic-realistic.sh \
+	session-callbacks.sh \
 	receiver-abort.sh \
 	long-msg.sh \
 	oversize-msg-abort-errmsg.sh \
 	oversize-msg-accept-errmsg.sh \
 	truncate-oversize-msg.sh \
 	send-noconnect.sh \
+	send-dummyserver-no-waitstate-errmsg.sh \
 	receive-emptyconnect.sh
 if ENABLE_TLS_GENERIC
 TESTS+=$(TLS_TESTS)
@@ -146,6 +148,8 @@ EXTRA_DIST=$(TESTS) \
 	set-envvars.in \
 	dummyclient.py \
 	dummyserver.py \
+	invalid-open.py \
+	session-callbacks.sh \
 	test-framework.sh \
 	receive.c \
 	send.c \
