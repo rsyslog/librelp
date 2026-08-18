@@ -192,14 +192,13 @@ main(void)
 		fprintf(stderr, "failed to construct partial GnuTLS test objects\n");
 		goto done;
 	}
-	tcp->bTLSActive = 1;
 	if(relpTcpDestruct(&tcp) != RELP_RET_OK) {
-		fprintf(stderr, "failed to destruct partial GnuTLS session\n");
+		fprintf(stderr, "failed to destruct inactive partial GnuTLS session\n");
 		goto done;
 	}
 	if(bye_count != 3 || deinit_count != 4 || cert_free_count != 1
 	   || anon_client_free_count != 1 || anon_server_free_count != 1 || dh_free_count != 1) {
-		fprintf(stderr, "partial GnuTLS resources were not released\n");
+		fprintf(stderr, "inactive partial GnuTLS resources were not released\n");
 		goto done;
 	}
 

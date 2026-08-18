@@ -105,6 +105,9 @@ relpSrvDestruct(relpSrv_t **ppThis)
 	free(pThis->tlsConfigCmd);
 	for(i = 0 ; i < pThis->permittedPeers.nmemb ; ++i)
 		free(pThis->permittedPeers.name[i]);
+	free(pThis->permittedPeers.name);
+	pThis->permittedPeers.name = NULL;
+	pThis->permittedPeers.nmemb = 0;
 	/* done with de-init work, now free srv object itself */
 	free(pThis);
 	*ppThis = NULL;
@@ -134,11 +137,10 @@ relpSrvAddPermittedPeer(relpSrv_t *const pThis, char *peer)
 	if(newName == NULL) {
 		ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
 	}
+	pThis->permittedPeers.name = newName;
 	if((newName[newMemb - 1] = strdup(peer)) == NULL) {
-		free(newName);
 		ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
 	}
-	pThis->permittedPeers.name = newName;
 	pThis->permittedPeers.nmemb = newMemb;
 	pThis->pEngine->dbgprint((char*)"librelp: SRV permitted peer added: '%s'\n", peer);
 
