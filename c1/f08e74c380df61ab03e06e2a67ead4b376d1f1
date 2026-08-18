@@ -1,0 +1,28 @@
+src/copen.c
+  h_95716f3de0caf5 161-163,174,175-176
+src/librelp.h
+  h_95716f3de0caf5 223-249,253-279
+src/relp.c
+  h_95716f3de0caf5 156-163,230,235,245-248,281,312,574-602,709,728,845,1045
+src/relp.h
+  h_95716f3de0caf5 133,138-140
+tests/Makefile.am
+  h_95716f3de0caf5 102,151-152
+tests/invalid-open.py
+  h_95716f3de0caf5 1-7,8,9-24
+tests/receive.c
+  h_95716f3de0caf5 45,203-244,259-261,294,305,315,327-333,474-476
+tests/session-callbacks.sh
+  h_95716f3de0caf5 1-11,20-26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "c1f08e74c380df61ab03e06e2a67ead4b376d1f1",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

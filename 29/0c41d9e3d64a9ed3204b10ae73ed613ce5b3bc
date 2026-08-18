@@ -1,0 +1,14 @@
+src/relp.c
+  h_95716f3de0caf5 281,283
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "290c41d9e3d64a9ed3204b10ae73ed613ce5b3bc",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
