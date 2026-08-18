@@ -8,6 +8,14 @@ check_PROGRAMS+=tls_ossl_fd_reuse
 tls_ossl_fd_reuse_SOURCES=tls-ossl-fd-reuse.c
 tls_ossl_fd_reuse_LDADD=../src/.libs/librelp.a $(GNUTLS_LIBS) $(OPENSSL_LIBS) $(rt_libs) $(socket_libs) $(pthread_libs)
 tls_ossl_fd_reuse_CFLAGS=$(AM_CFLAGS) -I${top_srcdir}/src $(WARN_CFLAGS)
+if OS_SOLARIS_WRAP
+else
+check_PROGRAMS+=tls_ossl_retry_state
+tls_ossl_retry_state_SOURCES=tls-ossl-retry-state.c
+tls_ossl_retry_state_LDADD=../src/.libs/librelp.a $(GNUTLS_LIBS) $(OPENSSL_LIBS) $(rt_libs) $(socket_libs) $(pthread_libs)
+tls_ossl_retry_state_LDFLAGS=-Wl,--wrap=SSL_write -Wl,--wrap=SSL_read -Wl,--wrap=SSL_get_error
+tls_ossl_retry_state_CFLAGS=$(AM_CFLAGS) -I${top_srcdir}/src $(WARN_CFLAGS)
+endif
 endif
 endif
 
@@ -82,6 +90,8 @@ OSSL_TESTS= \
 	tls-wrong-signedcert.sh
 OSSL_STATIC_TESTS= \
 	tls-ossl-fd-reuse.sh
+OSSL_WRAP_STATIC_TESTS= \
+	tls-ossl-retry-state.sh
 # reenable tests when stable
 #	tls-basic-brokencert.sh
 
@@ -111,6 +121,10 @@ if ENABLE_TLS_OPENSSL
 TESTS+=$(OSSL_TESTS)
 if BUILD_STATIC
 TESTS+=$(OSSL_STATIC_TESTS)
+if OS_SOLARIS_WRAP
+else
+TESTS+=$(OSSL_WRAP_STATIC_TESTS)
+endif
 endif
 endif
 
@@ -126,6 +140,7 @@ EXTRA_DIST=$(TESTS) \
 	$(GTLS_STATIC_TESTS) \
 	$(OSSL_TESTS) \
 	$(OSSL_STATIC_TESTS) \
+	$(OSSL_WRAP_STATIC_TESTS) \
 	$(TLS_VALGRIND_TESTS) \
 	$(VALGRIND_TESTS) \
 	set-envvars.in \
@@ -135,6 +150,7 @@ EXTRA_DIST=$(TESTS) \
 	receive.c \
 	send.c \
 	tls-ossl-fd-reuse.c \
+	tls-ossl-retry-state.c \
 	tcp-accept-fd-reuse.c \
 	tls-gtls-lifecycle.c \
 	tls-certs/ca.pem \
