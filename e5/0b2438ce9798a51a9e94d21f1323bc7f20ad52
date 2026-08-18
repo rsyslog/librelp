@@ -1,0 +1,14 @@
+.github/workflows/coverage.yml
+  h_95716f3de0caf5 88
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "e50b2438ce9798a51a9e94d21f1323bc7f20ad52",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
