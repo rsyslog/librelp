@@ -153,7 +153,14 @@ addSessToEpoll(relpEngine_t *const pThis, relpEngSessLst_t *pSessLstEntry)
 static void
 delSessFromEpoll(relpEngine_t *const pThis, relpEngSessLst_t *pSessEtry)
 {
-	delFromEpollSet(pThis, pSessEtry->epevt);
+	if(pSessEtry->epevt != NULL) {
+		if(pThis->efd != -1) {
+			delFromEpollSet(pThis, pSessEtry->epevt);
+		} else {
+			free(pSessEtry->epevt);
+		}
+		pSessEtry->epevt = NULL;
+	}
 }
 #endif
 
@@ -271,6 +278,9 @@ relpEngineConstruct(relpEngine_t **ppThis)
 		pThis->tls_lib = RELP_USE_GNUTLS;
 	#endif
 	pThis->protocolVersion = RELP_CURR_PROTOCOL_VERSION;
+#	if defined(HAVE_EPOLL_CREATE1) || defined(HAVE_EPOLL_CREATE)
+	pThis->efd = -1;
+#	endif
 	pthread_mutex_init(&pThis->mutSrvLst, NULL);
 	pthread_mutex_init(&pThis->mutSessLst, NULL);
 
