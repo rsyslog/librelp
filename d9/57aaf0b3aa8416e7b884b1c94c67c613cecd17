@@ -1,0 +1,35 @@
+tests/tls-gtls-lifecycle.c
+  s_c1b658479c8fb4::t_c2a5cdcf3541ab 196,201
+src/tcp.c
+  s_c1b658479c8fb4::t_6a47affe887c02 149-152,154-160,162-163,825-827,837,1076,1079
+tests/permitted-peer-lifetime.sh
+  s_c1b658479c8fb4::t_147a232429ad45 1-2
+tests/permitted-peer-lifetime.c
+  s_c1b658479c8fb4::t_a6f9f9a34371d8 1-77
+tests/Makefile.am
+  s_c1b658479c8fb4::t_441d253fe12642 24-27,90-91,123,168
+configure.ac
+  s_c1b658479c8fb4::t_52793fc769a9f7 267-274
+src/relpsrv.c
+  s_c1b658479c8fb4::t_3a2115b5e0d99a 108-110,140
+src/relpsess.c
+  s_c1b658479c8fb4::t_2ecb4e4b71db9f 107-108,1047,1050
+src/relpclt.c
+  s_c1b658479c8fb4::t_bea374fedf1313 102-104,242
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "d957aaf0b3aa8416e7b884b1c94c67c613cecd17",
+  "prompts": {},
+  "sessions": {
+    "s_c1b658479c8fb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a01452-32a5-78d0-bb34-5f531d641ae2",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
