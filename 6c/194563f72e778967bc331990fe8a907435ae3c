@@ -1,0 +1,18 @@
+src/tcp.c
+  h_95716f3de0caf5 2000,2026-2027
+tests/tls-ossl-connect-failure-vg.sh
+  h_95716f3de0caf5 1-39
+tests/Makefile.am
+  h_95716f3de0caf5 79-80
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "6c194563f72e778967bc331990fe8a907435ae3c",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
