@@ -1,0 +1,23 @@
+src/relpsess.c
+  s_80d13bfbece8db::t_be87cdd6711bc9 92-98,190,622,624,629-630
+tests/Makefile.am
+  s_80d13bfbece8db::t_a666a3c6141647 109
+tests/send-dummyserver-no-waitstate-errmsg.sh
+  s_80d13bfbece8db::t_7ced1592ac3b43 1-22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "5fdfbe8001d4354cb32bd6bae9ca457eb7842a47",
+  "prompts": {},
+  "sessions": {
+    "s_80d13bfbece8db": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "s_80d13bfbece8db",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
