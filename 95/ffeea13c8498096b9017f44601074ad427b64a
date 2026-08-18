@@ -1,0 +1,14 @@
+ChangeLog
+  h_95716f3de0caf5 2-31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "95ffeea13c8498096b9017f44601074ad427b64a",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
