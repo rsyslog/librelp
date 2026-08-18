@@ -1997,6 +1997,7 @@ relpTcpConnectTLSInit_ossl(relpTcp_t *const pThis)
 BIO_set_nbio( conn, 1 );
 
 	SSL_set_bio(pThis->ssl, conn, conn);
+	conn = NULL; /* SSL owns the BIO after SSL_set_bio() */
 	SSL_set_connect_state(pThis->ssl); /*sets ssl to work in client mode.*/
 
 	/* Perform the TLS handshake */
