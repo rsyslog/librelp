@@ -1,0 +1,14 @@
+tests/invalid-open.py
+  h_95716f3de0caf5 8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "4cd042e0c8e8f3ecedcebcc06a744ef2a88c8375",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
