@@ -28,6 +28,51 @@ on:
   push:
 
 jobs:
+  asan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    env:
+      CC: clang
+      CFLAGS: -O1 -g -fno-omit-frame-pointer -fsanitize=address,undefined
+      LDFLAGS: -fsanitize=address,undefined
+      ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
+      LSAN_OPTIONS: exitcode=23
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            automake \
+            autoconf-archive \
+            pkg-config \
+            libtool \
+            autoconf \
+            autotools-dev \
+            uuid-dev \
+            bison \
+            flex \
+            python3-docutils \
+            libestr-dev \
+            libfastjson-dev \
+            libgnutls28-dev \
+            clang
+
+      - name: Configure project
+        run: |
+          autoreconf -fvi
+          ./configure --enable-tls --enable-valgrind=no
+
+      - name: Build and run tests under ASan/UBSan
+        run: |
+          make -j2
+          make -j2 check
+          cat tests/test-suite.log
+
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 50
