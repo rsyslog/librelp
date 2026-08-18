@@ -1749,7 +1749,14 @@ relpTcpSetSslConfCmd_ossl(relpTcp_t *const pThis, char *tlsConfigCmd)
 			}
 			SSL_CONF_CTX_set_flags(cctx, SSL_CONF_FLAG_FILE);
 			SSL_CONF_CTX_set_flags(cctx, SSL_CONF_FLAG_SHOW_ERRORS);
-			SSL_CONF_CTX_set_ssl_ctx(cctx, ctx);
+			/* Apply connection-specific settings to the SSL object when it
+			 * exists. Only listener setup has no SSL object yet and must
+			 * configure the shared context. */
+			if (pThis->ssl != NULL) {
+				SSL_CONF_CTX_set_ssl(cctx, pThis->ssl);
+			} else {
+				SSL_CONF_CTX_set_ssl_ctx(cctx, ctx);
+			}
 
 			do
 			{
@@ -1947,6 +1954,10 @@ relpTcpConnectTLSInit_ossl(relpTcp_t *const pThis)
 	/*if we reach this point we are in tls mode */
 	pThis->pEngine->dbgprint((char*)"relpTcpConnectTLSInit: TLS Mode\n");
 
+	/* set before relpTcpSetSslConfCmd_ossl: tlsConfigCmd may contain
+	 * flag-restricted commands that require SSL_CONF_FLAG_CLIENT */
+	pThis->sslState = osslClient;
+
 	if(!(pThis->ssl = SSL_new(ctx))) {
 		relpTcpLastSSLErrorMsg(0, pThis, "relpTcpConnectTLSInit");
 		ABORT_FINALIZE(RELP_RET_IO_ERR);
@@ -1969,9 +1980,6 @@ relpTcpConnectTLSInit_ossl(relpTcp_t *const pThis)
 	CHKRet(relpTcpTLSSetPrio(pThis));
 
 	SSL_set_ex_data(pThis->ssl, 0, (void*)pThis);
-
-	/*set client state */
-	pThis->sslState = osslClient;
 
 	/* Create BIO from ptcp socket! */
 	conn = relpTcpNewSocketBio_ossl(pThis->sock);
