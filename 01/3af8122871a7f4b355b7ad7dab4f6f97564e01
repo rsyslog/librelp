@@ -1,0 +1,14 @@
+src/tcp.c
+  h_95716f3de0caf5 1696-1703,1920-1922
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "013af8122871a7f4b355b7ad7dab4f6f97564e01",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
