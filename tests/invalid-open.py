@@ -5,7 +5,7 @@ import socket
 import time
 
 
-def main() -> None:
+def main():
     port = int(os.environ["TESTPORT"])
     frame = b"1 open 12 relp_version\n"
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

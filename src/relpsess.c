@@ -628,8 +628,6 @@ relpSessWaitState(relpSess_t *const pThis, const relpSessState_t stateExpected, 
 		callOnErr(pThis, (char*) "error waiting on required session state, session broken",
 			RELP_RET_SESSION_BROKEN);
 		pThis->sessState = eRelpSessState_BROKEN;
-	} else if(iRet == RELP_RET_SESSION_BROKEN) {
-		pThis->sessState = eRelpSessState_BROKEN;
 	}
 
 	LEAVE_RELPFUNC;
