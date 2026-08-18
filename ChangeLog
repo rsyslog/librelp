@@ -1,4 +1,34 @@
 ----------------------------------------------------------------------
+Version 1.13.0 - 2026-08-18
+- OpenSSL: fix socket ownership during TLS teardown
+  OpenSSL BIOs no longer close sockets owned by librelp, preventing a
+  descriptor that has already been reused from being closed during TLS
+  cleanup. Error cleanup after accepting a connection now also has a single,
+  explicit socket owner.
+  Thanks to Renaud Métrich for the original work and finding in #292; this
+  was accidentally merged via a different PR.
+- TLS: make teardown safe for both supported TLS libraries
+  GnuTLS now sends close_notify while the transport is still available and
+  releases session, credential, and DH resources even when setup fails
+  partway through. OpenSSL cleanup correctly handles partially initialized
+  TLS state. Regression tests cover the affected ownership and lifecycle
+  paths.
+- OpenSSL: prevent a busy loop after successful TLS I/O
+  Clear stale retry state after SSL_read() or SSL_write() succeeds following
+  WANT_READ or WANT_WRITE, so the event loop is not left waiting for the
+  wrong readiness direction.
+  closes: https://github.com/rsyslog/librelp/issues/296
+- OpenSSL: release peer certificates after use
+  Prevent a peer-certificate memory leak during certificate verification.
+- build: fix compiler attribute placement
+  Thanks to zhangzikang01 for the patch.
+- testbench: make TLS ownership and lifecycle regression tests portable
+  The static white-box fixtures now detect their socket, realtime, and pthread
+  link dependencies, support OpenSSL 1.0.2, and are skipped where Solaris
+  linker wrapping is unavailable.
+- CI: restrict Codecov uploads to the canonical repository.
+- development: ignore local machine-specific Codex agent notes.
+----------------------------------------------------------------------
 Version 1.12.0 - 2025-09-08
 - API: add ability to communicate source port back to caller
   This is handled via a new "on connection" callback
