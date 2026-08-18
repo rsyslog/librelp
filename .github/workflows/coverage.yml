@@ -85,6 +85,7 @@ jobs:
           lcov --list coverage.info
 
       - name: Upload coverage to Codecov
+        if: github.repository == 'rsyslog/rsyslog'
         uses: codecov/codecov-action@v3
         with:
           files: coverage.info
