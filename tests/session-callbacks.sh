@@ -9,6 +9,14 @@ startup_receiver -C ${CALLBACK_FILE} $OPT_VERBOSE
 
 $PYTHON ${srcdir}/invalid-open.py
 
+for i in $(seq 1 100); do
+	if check_output_only "session open failed reason=" ${CALLBACK_FILE}; then
+		break
+	fi
+	./msleep 10
+done
+check_output "session open failed reason=" ${CALLBACK_FILE}
+
 stop_receiver
 
 check_output "testmessage"

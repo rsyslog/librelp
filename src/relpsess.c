@@ -621,7 +621,9 @@ relpSessWaitState(relpSess_t *const pThis, const relpSessState_t stateExpected, 
 
 	finalize_it:
 	pThis->pEngine->dbgprint((char*)"relpSessWaitState returns %d\n", iRet);
-	if(iRet == RELP_RET_TIMED_OUT || relpEngineShouldStop(pThis->pEngine)) {
+	if(pThis->sessState != eRelpSessState_BROKEN
+	   && (iRet == RELP_RET_TIMED_OUT || iRet == RELP_RET_SESSION_BROKEN
+	       || relpEngineShouldStop(pThis->pEngine))) {
 		/* the session is broken! */
 		callOnErr(pThis, (char*) "error waiting on required session state, session broken",
 			RELP_RET_SESSION_BROKEN);

@@ -131,7 +131,7 @@ delFromEpollSet(relpEngine_t *const pThis, epolld_t *epd)
 {
 	int r;
 	pThis->dbgprint((char*)"librelp: delete sock %d from epoll set\n", epd->sock);
-	if((r = epoll_ctl(pThis->efd, EPOLL_CTL_DEL, epd->sock, &epd->ev)) != 0) {
+	if(pThis->efd != -1 && (r = epoll_ctl(pThis->efd, EPOLL_CTL_DEL, epd->sock, &epd->ev)) != 0) {
 		char errStr[1024];
 		int eno = errno;
 		relpEngineCallOnGenericErr(pThis, "librelp", RELP_RET_ERR_EPOLL_CTL,

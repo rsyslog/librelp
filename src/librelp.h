@@ -247,8 +247,9 @@ relpRetVal relpEngineSetOnSessOpen(relpEngine_t *pThis,
  * The callback fires when a session is removed from the engine, regardless
  * of the close cause (protocol close, I/O error, or engine shutdown). The
  * reason parameter contains the relpRetVal that triggered teardown; engine
- * shutdown uses RELP_RET_SESSION_CLOSED. The callback runs on the
- * relpEngineRun() thread and pSess is valid only during the callback.
+ * shutdown uses RELP_RET_SESSION_CLOSED. The callback may run from
+ * relpEngineRun() or relpEngineDestruct(); pSess is valid only during the
+ * callback.
  *
  * Callback parameters:
  *

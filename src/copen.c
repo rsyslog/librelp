@@ -171,7 +171,7 @@ finalize_it:
 		relpOffersDestruct(&pSrvOffers);
 	
 	if(iRet != RELP_RET_OK) {
-		if(pSess->pEngine->onSessOpenFail != NULL) {
+		if(!pSess->bServerConnOpen && pSess->pEngine->onSessOpenFail != NULL) {
 			pSess->pEngine->onSessOpenFail(pSess->pUsr, pSess, iRet);
 		}
 		if(iRet == RELP_RET_RQD_FEAT_MISSING) {

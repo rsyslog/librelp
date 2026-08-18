@@ -3,8 +3,16 @@
 
 ERROR_FILE=${TESTDIR}/dummyserver-error.log
 
-timeout 10s $PYTHON ${srcdir}/dummyserver.py $TESTPORT >${TESTDIR}/dummyserver.log 2>&1 &
+timeout 10s $PYTHON -u ${srcdir}/dummyserver.py $TESTPORT >${TESTDIR}/dummyserver.log 2>&1 &
 DUMMYSERVER_PID=$!
+
+for i in $(seq 1 100); do
+	if check_output_only "DUMMYSERVER: listening" ${TESTDIR}/dummyserver.log; then
+		break
+	fi
+	./msleep 10
+done
+check_output "DUMMYSERVER: listening" ${TESTDIR}/dummyserver.log
 
 ./send -t 127.0.0.1 -p $TESTPORT -m "testmessage" -e ${ERROR_FILE} >${TESTDIR}/send.log 2>&1 || true
 wait $DUMMYSERVER_PID || true
