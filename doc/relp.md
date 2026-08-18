@@ -12,7 +12,7 @@ terms of the GNU FDL.
 
 ## DESCRIPTION OF THE RELP PROTOCOL
 
-Relp uses a client-server model with (mostly fixed roles. The initiating part
+Relp uses a client-server model with (mostly) fixed roles. The initiating part
 of the connection is called the client, the listening part the server. In the
 state diagrams below, C stand for client and S for server.
 
@@ -20,7 +20,7 @@ Relp employs a command-response model, that is the client issues commands to
 which the server responds. To facilitate full-duplex communication, multiple
 commands can be issued at the same time, thus multiple responses may be
 outstanding at a given time. The server may reply in any order. To conserve
-ressources, the number of outstanding commands is limited by a window. Each
+resources, the number of outstanding commands is limited by a window. Each
 command is assigned a (relative) unique, monotonically increasing ID (called
 the "transaction number" or txnr for short. Each response must include that
 ID. Responses must be sent by the server in the exact same order as commands
@@ -32,8 +32,8 @@ capable of issuing a command itself. During normal operations, this does not
 pose any problem. However, if the server is shut down, there is no way for it
 to tell the client of its shutdown intension, especially if the client does
 not send any data at that moment. The same situation arises when the server
-timeouts a sessions where the client has not sent any data for an extended
-period of time (this probably is a good thing to conserve server ressources).
+times out a session where the client has not sent any data for an extended
+period of time (this probably is a good thing to conserve server resources).
 Of course, an obvious answer to that need is that the server simply closes the
 connection after having sent all responses (or all that it is still capable
 of). The client will notice the closed connection at latest when it tries to
@@ -106,8 +106,8 @@ SP = %d32
 
 RSP DATA CONTENT:
 RSP-HEADER = TXNR SP RSP-CODE [SP HUMANMSG] LF [CMDDATA]
-RSP-CODE = 200 / 500 ; 200 is ok, all the rest currently erros
-HUAMANMSG = *OCTET ; a human-readble message without LF in it
+RSP-CODE = 200 / 500 ; 200 is ok, all the rest currently errors
+HUMANMSG = *OCTET ; a human-readable message without LF in it
 CMDDATA = *OCTET ; semantics depend on original command
 TXNR is as in the relp frame, it is the TXNR of the frame being responded to.
 ```
@@ -186,9 +186,9 @@ Please note that this is a hint, and as such transferred with a TXNR of 0 and
 without any response from the client. Note that the client can not ask the
 server to defer closing of the connection. A client MUST correctly process a
 server-closed connection even if the server does not send a "serverclose"
-hint. In thus case, it must rely on the transport layer connection status. The
+hint. In this case, it must rely on the transport layer connection status. The
 primary utility of "serverclose" is to enable the client to quickly detect a
-server-closed connection, clean up ressources and go into termination (or
+server-closed connection, clean up resources and go into termination (or
 recovery code).
 
 #### Command "starttls"
@@ -202,7 +202,7 @@ format) is contained within the commands data portion.
 
 ### OFFERS
 
-During session setup, "offers" are exchange between client and server. An
+During session setup, "offers" are exchanged between client and server. An
 "offer" describes a specific feature or operation mode. Always present must be
 the "relp_version" offer which tells the other side which version of relp is in
 use.
@@ -222,7 +222,7 @@ relp_version 1 (this specification)
 #### relp_version
 
 This offer describes the protocol version. It MUST be provided in the open
-command. It has one parameter, the numerical version id. The intial version
+command. It has one parameter, the numerical version id. The initial version
 is 1. There also exists an experimental version 0, which shall not be used in
 practice.
 
@@ -255,7 +255,7 @@ given, but only the first one MUST actually be provided.
 
 ### STATE DIAGRAMS
 
-... detailling some communications scenarios:
+... detailing some communications scenarios:
 
 ```text
 Session Startup:
@@ -285,7 +285,7 @@ A very large window can be abused for denial of service attacks.
 
 #### Maximum DATALEN
 
-A too-large DATALEN can be absued for denial of service attacks.
+A too-large DATALEN can be abused for denial of service attacks.
 
 ## Use Cases
 
@@ -298,7 +298,7 @@ features.
 ### Server Session Closure with a Hibernated Client
 
 I define this use case in support of [rsyslog](http://www.rsyslog.com) and
-other possible clients which try to reduce ressource consumption.
+other possible clients which try to reduce resource consumption.
 
 Rsyslog utilizes highly threaded design, among others to take advantage of
 multicore-machines. On the other hand, it conserves resources by only running
@@ -321,15 +321,15 @@ server sends the response packet. Thus, the tcp stacks receive buffer buffers
 the server's response until the client has another message to send. Then, the
 client first checks for any outstanding responses, processes them and then
 send the new message. It is expected that in this scenario, each client
-invokation will process the past response and send a new packet. The response
+invocation will process the past response and send a new packet. The response
 to that packet will not be processed by the invocation that sent the command
 but by the next one. So we always have one outstanding response inside the OS
 buffers. Now consider the server is shutting down the connection due to
 timeout or due to the fact that it needs to shutdown itself (maybe even on an
 urgent case, like power failure - the point is it can not wait). On next client
-invokation, the client finds an outstanding response and processes it. Then,
+invocation, the client finds an outstanding response and processes it. Then,
 it tries to send a new command. That will fail, because the connection has been
-terminated. The usual session recovery logic is used to restablish the
+terminated. The usual session recovery logic is used to re-establish the
 connection when the server is back online. The command in question is
 transferred after session re-establishment.
 
@@ -359,7 +359,7 @@ unconditional termination of the session. While everything that has already
 been sent to the client will be picked up by it when it comes out of
 hibernation, anything left in the server's send queue will be lost in this
 case. As such, acks are potentially lost. This will lead to message duplication
-as the client assumes that the frames unacked at time of force-close where not
+as the client assumes that the frames unacked at time of force-close were not
 processed (there is no other safe assumption). Consequently, the client will
 re-send these frames in the next session.
 
