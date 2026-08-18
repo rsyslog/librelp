@@ -146,11 +146,21 @@ static inline void
 relpTcpFreePermittedPeers(relpTcp_t *const pThis)
 {
 	int i;
-	for(i = 0 ; i < pThis->permittedPeers.nmemb ; ++i)
+	for(i = 0 ; i < pThis->permittedPeers.nmemb ; ++i) {
+		tcpPermittedPeerWildcardComp_t *pWildcard;
+		tcpPermittedPeerWildcardComp_t *pWildcardToDel;
+
 		free(pThis->permittedPeers.peer[i].name);
+		for(pWildcard = pThis->permittedPeers.peer[i].wildcardRoot ; pWildcard != NULL ; ) {
+			pWildcardToDel = pWildcard;
+			pWildcard = pWildcard->pNext;
+			free(pWildcardToDel->pszDomainPart);
+			free(pWildcardToDel);
+		}
+	}
 	pThis->permittedPeers.nmemb = 0;
-	if(pThis->permittedPeers.peer != NULL)
-		free(pThis->permittedPeers.peer);
+	free(pThis->permittedPeers.peer);
+	pThis->permittedPeers.peer = NULL;
 }
 
 /* helper to call onAuthErr if set */
@@ -809,12 +819,12 @@ relpTcpDestructTLSBeforeSocketClose(NOTLS_UNUSED relpTcp_t *pThis,
 static relpRetVal LIBRELP_ATTR_NONNULL()
 relpTcpDestructTLSAfterSocketClose(NOTLS_UNUSED relpTcp_t *pThis)
 {
-	const int hadTLSActive = pThis->bTLSActive;
-
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
 	#if defined(ENABLE_TLS)
-		if(pThis->pEngine->tls_lib == 0 && pThis->bTLSActive) {
+		if(pThis->pEngine->tls_lib == 0
+		   && (pThis->session != NULL || pThis->xcred != NULL || pThis->anoncred != NULL
+		       || pThis->anoncredSrv != NULL || pThis->dh_params != NULL)) {
 			relpTcpDestructTLS_gtls(pThis);
 		}
 	#endif
@@ -824,9 +834,7 @@ relpTcpDestructTLSAfterSocketClose(NOTLS_UNUSED relpTcp_t *pThis)
 		}
 	#endif
 	#if defined(WITH_TLS)
-		if(hadTLSActive) {
-			relpTcpFreePermittedPeers(pThis);
-		}
+		relpTcpFreePermittedPeers(pThis);
 	#endif
 	LEAVE_RELPFUNC;
 }
@@ -1065,19 +1073,17 @@ relpTcpSetPermittedPeers(relpTcp_t LIBRELP_ATTR_UNUSED *pThis,
 	relpTcpFreePermittedPeers(pThis);
 	if(pPeers->nmemb != 0) {
 		if((pThis->permittedPeers.peer =
-			malloc(sizeof(tcpPermittedPeerEntry_t) * pPeers->nmemb)) == NULL) {
+			calloc(pPeers->nmemb, sizeof(tcpPermittedPeerEntry_t))) == NULL) {
 			ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
 		}
+		pThis->permittedPeers.nmemb = pPeers->nmemb;
 		for(i = 0 ; i < pPeers->nmemb ; ++i) {
 			if((pThis->permittedPeers.peer[i].name = strdup(pPeers->name[i])) == NULL) {
 				ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
 			}
-			pThis->permittedPeers.peer[i].wildcardRoot = NULL;
-			pThis->permittedPeers.peer[i].wildcardLast = NULL;
 			CHKRet(relpTcpPermittedPeerWildcardCompile(&(pThis->permittedPeers.peer[i])));
 		}
 	}
-	pThis->permittedPeers.nmemb = pPeers->nmemb;
 #else
 	ABORT_FINALIZE(RELP_RET_ERR_NO_TLS);
 #endif /* #ifdef  WITH_TLS */

@@ -21,6 +21,10 @@ endif
 
 if ENABLE_TLS
 if BUILD_STATIC
+check_PROGRAMS+=permitted_peer_lifetime
+permitted_peer_lifetime_SOURCES=permitted-peer-lifetime.c
+permitted_peer_lifetime_LDADD=../src/.libs/librelp.a $(GNUTLS_LIBS) $(OPENSSL_LIBS) $(rt_libs) $(socket_libs) $(pthread_libs)
+permitted_peer_lifetime_CFLAGS=$(AM_CFLAGS) -I${top_srcdir}/src $(WARN_CFLAGS)
 # These white-box fixtures use GNU ld --wrap interposition. Solaris Studio
 # accepts the option but does not provide compatible runtime interposition.
 if OS_SOLARIS_WRAP
@@ -83,6 +87,8 @@ TLS_VALGRIND_TESTS= \
 GTLS_STATIC_TESTS= \
 	tcp-accept-fd-reuse.sh \
 	tls-gtls-lifecycle.sh
+TLS_STATIC_TESTS= \
+	permitted-peer-lifetime.sh
 
 # test specific to openssl
 OSSL_TESTS= \
@@ -114,6 +120,7 @@ TESTS+=$(TLS_TESTS)
 endif
 if ENABLE_TLS
 if BUILD_STATIC
+TESTS+=$(TLS_STATIC_TESTS)
 if OS_SOLARIS_WRAP
 else
 TESTS+=$(GTLS_STATIC_TESTS)
@@ -158,6 +165,7 @@ EXTRA_DIST=$(TESTS) \
 	tls-ossl-retry-state.c \
 	tcp-accept-fd-reuse.c \
 	tls-gtls-lifecycle.c \
+	permitted-peer-lifetime.c \
 	tls-certs/ca.pem \
 	tls-certs/cert.pem \
 	tls-certs/key.pem \

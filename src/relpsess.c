@@ -104,6 +104,8 @@ relpSessFreePermittedPeers(relpSess_t *const pThis)
 	int i;
 	for(i = 0 ; i < pThis->permittedPeers.nmemb ; ++i)
 		free(pThis->permittedPeers.name[i]);
+	free(pThis->permittedPeers.name);
+	pThis->permittedPeers.name = NULL;
 	pThis->permittedPeers.nmemb = 0;
 }
 
@@ -1042,16 +1044,16 @@ relpSessSetPermittedPeers(relpSess_t *const pThis, relpPermittedPeers_t *pPeers)
 	relpSessFreePermittedPeers(pThis);
 	if(pPeers->nmemb != 0) {
 		if((pThis->permittedPeers.name =
-			malloc(sizeof(char*) * pPeers->nmemb)) == NULL) {
+			calloc(pPeers->nmemb, sizeof(char*))) == NULL) {
 			ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
 		}
+		pThis->permittedPeers.nmemb = pPeers->nmemb;
 		for(i = 0 ; i < pPeers->nmemb ; ++i) {
 			if((pThis->permittedPeers.name[i] = strdup(pPeers->name[i])) == NULL) {
 				ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
 			}
 		}
 	}
-	pThis->permittedPeers.nmemb = pPeers->nmemb;
 finalize_it:
 	LEAVE_RELPFUNC;
 }

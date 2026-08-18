@@ -264,6 +264,14 @@ AC_ARG_ENABLE(valgrind,
          esac],
         [enable_valgrind="yes"]
 )
+case " $CFLAGS $CPPFLAGS $LDFLAGS " in
+ *-fsanitize=*address*)
+        if test "$enable_valgrind" = "yes"; then
+                AC_MSG_WARN([AddressSanitizer detected; disabling Valgrind tests because they cannot run together])
+                enable_valgrind="no"
+        fi
+        ;;
+esac
 if test "$enable_valgrind" = "yes"; then
         AC_CHECK_PROG(VALGRIND, [valgrind], [valgrind], [no])
 fi
