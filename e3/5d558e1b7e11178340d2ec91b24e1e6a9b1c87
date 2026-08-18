@@ -1,0 +1,18 @@
+src/copen.c
+  h_95716f3de0caf5 174
+src/librelp.h
+  h_95716f3de0caf5 251-252
+src/relp.c
+  h_95716f3de0caf5 156-163,281
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "e35d558e1b7e11178340d2ec91b24e1e6a9b1c87",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
