@@ -122,7 +122,7 @@ relpSrvDestruct(relpSrv_t **ppThis)
  * has been started. In that case, races can happen.
  * rgerhards, 2013-06-18
  */
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpSrvAddPermittedPeer(relpSrv_t *const pThis, char *peer)
 {
 	char **newName;
@@ -150,7 +150,7 @@ finalize_it:
 /* set the user pointer. Whatever value the user provides is accepted.
  * rgerhards, 2008-07-08
  */
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpSrvSetUsrPtr(relpSrv_t *const pThis, void *pUsr)
 {
 	ENTER_RELPFUNC;
@@ -159,15 +159,16 @@ relpSrvSetUsrPtr(relpSrv_t *const pThis, void *pUsr)
 	LEAVE_RELPFUNC;
 }
 
-relpRetVal PART_OF_API
-relpSrvSetMaxDataSize(relpSrv_t *const pThis, size_t maxSize) {
+PART_OF_API relpRetVal
+relpSrvSetMaxDataSize(relpSrv_t *const pThis, size_t maxSize)
+{
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Srv);
 	pThis->maxDataSize = maxSize;
 	LEAVE_RELPFUNC;
 }
 
-relpRetVal PART_OF_API LIBRELP_ATTR_NONNULL()
+PART_OF_API relpRetVal LIBRELP_ATTR_NONNULL()
 relpSrvSetOversizeMode(relpSrv_t *const pThis, const int oversizeMode)
 {
 	ENTER_RELPFUNC;
@@ -187,7 +188,7 @@ finalize_it:
  * free the passed-in string.
  * rgerhards, 2008-03-17
  */
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpSrvSetLstnPort(relpSrv_t *const pThis, unsigned char *pLstnPort)
 {
 	ENTER_RELPFUNC;
@@ -211,7 +212,7 @@ finalize_it:
  * free the passed-in string.
  * perlei, 2018-04-19
  */
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpSrvSetLstnAddr(relpSrv_t *const pThis, unsigned char *pLstnAddr)
 {
 	ENTER_RELPFUNC;
@@ -231,7 +232,7 @@ finalize_it:
 }
 
 /* mode==NULL is valid and means "no change" */
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpSrvSetAuthMode(relpSrv_t *const pThis, char *mode)
 {
 	ENTER_RELPFUNC;
@@ -267,7 +268,7 @@ relpSrvSetFamily(relpSrv_t *const pThis, int ai_family)
 /* set the GnuTLS priority string. Providing NULL does re-set
  * any previously set string. -- rgerhards, 2013-06-12
  */
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpSrvSetGnuTLSPriString(relpSrv_t *const pThis, char *pristr)
 {
 	ENTER_RELPFUNC;
@@ -283,7 +284,7 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpSrvSetCACert(relpSrv_t *const pThis, char *cert)
 {
 	ENTER_RELPFUNC;
@@ -298,7 +299,7 @@ relpSrvSetCACert(relpSrv_t *const pThis, char *cert)
 finalize_it:
 	LEAVE_RELPFUNC;
 }
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpSrvSetOwnCert(relpSrv_t *const pThis, char *cert)
 {
 	ENTER_RELPFUNC;
@@ -313,7 +314,7 @@ relpSrvSetOwnCert(relpSrv_t *const pThis, char *cert)
 finalize_it:
 	LEAVE_RELPFUNC;
 }
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpSrvSetPrivKey(relpSrv_t *const pThis, char *cert)
 {
 	ENTER_RELPFUNC;
@@ -329,7 +330,7 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpSrvSetTlsConfigCmd(relpSrv_t *const pThis, char *cfgcmd)
 {
 	ENTER_RELPFUNC;
@@ -344,12 +345,12 @@ relpSrvSetTlsConfigCmd(relpSrv_t *const pThis, char *cfgcmd)
 finalize_it:
 	LEAVE_RELPFUNC;
 }
-void PART_OF_API
+PART_OF_API void
 relpSrvSetDHBits(relpSrv_t *const pThis, int bits)
 {
 	pThis->dhBits = bits;
 }
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpSrvEnableTLS2(relpSrv_t LIBRELP_ATTR_UNUSED *pThis)
 {
 	ENTER_RELPFUNC;
@@ -360,7 +361,7 @@ relpSrvEnableTLS2(relpSrv_t LIBRELP_ATTR_UNUSED *pThis)
 #endif /* #ifdef ENABLE_TLS | ENABLE_TLS_OPENSSL */
 	LEAVE_RELPFUNC;
 }
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpSrvEnableTLSZip2(relpSrv_t LIBRELP_ATTR_UNUSED *pThis)
 {
 	ENTER_RELPFUNC;
@@ -371,18 +372,18 @@ relpSrvEnableTLSZip2(relpSrv_t LIBRELP_ATTR_UNUSED *pThis)
 #endif /* #ifdef ENABLE_TLS | ENABLE_TLS_OPENSSL */
 	LEAVE_RELPFUNC;
 }
-void PART_OF_API
+PART_OF_API void
 relpSrvEnableTLS(relpSrv_t *const pThis)
 {
 	relpSrvEnableTLS2(pThis);
 }
-void PART_OF_API
+PART_OF_API void
 relpSrvEnableTLSZip(relpSrv_t *const pThis)
 {
 	relpSrvEnableTLSZip2(pThis);
 }
 
-void PART_OF_API
+PART_OF_API void
 relpSrvSetKeepAlive(relpSrv_t *const pThis,
 	const int bEnabled,
 	const int iKeepAliveIntvl,

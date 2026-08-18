@@ -131,7 +131,7 @@ delFromEpollSet(relpEngine_t *const pThis, epolld_t *epd)
 {
 	int r;
 	pThis->dbgprint((char*)"librelp: delete sock %d from epoll set\n", epd->sock);
-	if((r = epoll_ctl(pThis->efd, EPOLL_CTL_DEL, epd->sock, &epd->ev)) != 0) {
+	if(pThis->efd != -1 && (r = epoll_ctl(pThis->efd, EPOLL_CTL_DEL, epd->sock, &epd->ev)) != 0) {
 		char errStr[1024];
 		int eno = errno;
 		relpEngineCallOnGenericErr(pThis, "librelp", RELP_RET_ERR_EPOLL_CTL,
@@ -153,7 +153,14 @@ addSessToEpoll(relpEngine_t *const pThis, relpEngSessLst_t *pSessLstEntry)
 static void
 delSessFromEpoll(relpEngine_t *const pThis, relpEngSessLst_t *pSessEtry)
 {
-	delFromEpollSet(pThis, pSessEtry->epevt);
+	if(pSessEtry->epevt != NULL) {
+		if(pThis->efd != -1) {
+			delFromEpollSet(pThis, pSessEtry->epevt);
+		} else {
+			free(pSessEtry->epevt);
+		}
+		pSessEtry->epevt = NULL;
+	}
 }
 #endif
 
@@ -220,11 +227,12 @@ finalize_it:
  * rgerhards, 2008-03-17
  */
 static relpRetVal
-relpEngineDelSess(relpEngine_t *const pThis, relpEngSessLst_t *pSessLstEntry)
+relpEngineDelSess(relpEngine_t *const pThis, relpEngSessLst_t *pSessLstEntry, relpRetVal reason)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Engine);
 	assert(pSessLstEntry != NULL);
+	relpSess_t *const pSess = pSessLstEntry->pSess;
 
 #	if defined(HAVE_EPOLL_CREATE1) || defined(HAVE_EPOLL_CREATE)
 	delSessFromEpoll(pThis, pSessLstEntry);
@@ -233,6 +241,10 @@ relpEngineDelSess(relpEngine_t *const pThis, relpEngSessLst_t *pSessLstEntry)
 	DLL_Del(pSessLstEntry, pThis->pSessLstRoot, pThis->pSessLstLast);
 	--pThis->lenSessLst;
 	pthread_mutex_unlock(&pThis->mutSessLst);
+
+	if(pThis->onSessClose != NULL) {
+		pThis->onSessClose(pSess->pUsr, pSess, reason);
+	}
 
 	relpSessDestruct(&pSessLstEntry->pSess);
 	free(pSessLstEntry);
@@ -247,7 +259,7 @@ relpEngineDelSess(relpEngine_t *const pThis, relpEngSessLst_t *pSessLstEntry)
  * RELP function. The relp engine must only destructed after all RELP
  * operations have been finished.
  */
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpEngineConstruct(relpEngine_t **ppThis)
 {
 	relpEngine_t *pThis;
@@ -266,6 +278,9 @@ relpEngineConstruct(relpEngine_t **ppThis)
 		pThis->tls_lib = RELP_USE_GNUTLS;
 	#endif
 	pThis->protocolVersion = RELP_CURR_PROTOCOL_VERSION;
+#	if defined(HAVE_EPOLL_CREATE1) || defined(HAVE_EPOLL_CREATE)
+	pThis->efd = -1;
+#	endif
 	pthread_mutex_init(&pThis->mutSrvLst, NULL);
 	pthread_mutex_init(&pThis->mutSessLst, NULL);
 
@@ -281,7 +296,7 @@ finalize_it:
  * Terminates librelp operations, no calls are permitted after engine
  * destruction.
  */
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpEngineDestruct(relpEngine_t **ppThis)
 {
 	relpEngine_t *pThis;
@@ -296,8 +311,7 @@ relpEngineDestruct(relpEngine_t **ppThis)
 	/* now destruct all currently existing sessions */
 	for(pSessL = pThis->pSessLstRoot ; pSessL != NULL ; pSessL = pSessLNxt) {
 		pSessLNxt = pSessL->pNext;
-		relpSessDestruct(&pSessL->pSess);
-		free(pSessL);
+		relpEngineDelSess(pThis, pSessL, RELP_RET_SESSION_CLOSED);
 	}
 
 	/* and now all existing servers... */
@@ -325,7 +339,7 @@ static void dbgprintDummy(char LIBRELP_ATTR_UNUSED *fmt, ...) {}
  * function that already has been set, provide a NULL function pointer.
  * rgerhards, 2008-03-17
  */
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpEngineSetDbgprint(relpEngine_t *const pThis, void (*dbgprint)(char *fmt, ...) LIBRELP_ATTR_FORMAT(printf, 1, 2))
 {
 	ENTER_RELPFUNC;
@@ -336,7 +350,7 @@ relpEngineSetDbgprint(relpEngine_t *const pThis, void (*dbgprint)(char *fmt, ...
 }
 
 
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpEngineSetTLSLib(relpEngine_t *const pThis, NOTLS_UNUSED const int tls_lib)
 {
 	ENTER_RELPFUNC;
@@ -375,7 +389,7 @@ finalize_it:
 }
 
 
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpEngineSetTLSLibByName(relpEngine_t *const pThis, const char *const name)
 {
 	ENTER_RELPFUNC;
@@ -409,7 +423,7 @@ finalize_it:
  * * relgEngineListnerConstructFinalize()
  * rgerhards, 2013-05-14
  */
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpEngineListnerConstruct(relpEngine_t *const pThis, relpSrv_t **ppSrv)
 {
 	relpSrv_t *pSrv;
@@ -422,7 +436,7 @@ relpEngineListnerConstruct(relpEngine_t *const pThis, relpSrv_t **ppSrv)
 finalize_it:
 	LEAVE_RELPFUNC;
 }
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpEngineListnerConstructFinalize(relpEngine_t *const pThis, relpSrv_t *pSrv)
 {
 	ENTER_RELPFUNC;
@@ -456,7 +470,7 @@ static relpRetVal relpSrvSyslogRcvDummy3(void LIBRELP_ATTR_UNUSED *pUsr,
 /* set the syslog receive callback. If NULL is provided, it is set to the
  * not implemented dummy.
  */
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpEngineSetSyslogRcv2(relpEngine_t *const pThis, relpRetVal (*pCB)(void *, unsigned char*,
        unsigned char*, unsigned char*, size_t))
 {
@@ -472,7 +486,7 @@ relpEngineSetSyslogRcv2(relpEngine_t *const pThis, relpRetVal (*pCB)(void *, uns
 /* set the syslog receive callback. If NULL is provided, it is set to the
  * not implemented dummy.
  */
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpEngineSetSyslogRcv3(relpEngine_t *const pThis, relpRetVal (*pCB)(void *, unsigned char*,
        unsigned char*, unsigned char*, unsigned char*, size_t))
 {
@@ -506,7 +520,7 @@ relpEngineSetSyslogRcv3(relpEngine_t *const pThis, relpRetVal (*pCB)(void *, uns
  * errmsg   - error message as far as librelp is concerned
  * errcode  - contains librelp error status that lead to the failed auth.
  */
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpEngineSetOnAuthErr(relpEngine_t *const pThis, void (*pCB)(void*pUsr, char *authinfo, char*errmsg, relpRetVal errcode) )
 {
 	ENTER_RELPFUNC;
@@ -530,7 +544,7 @@ relpEngineSetOnAuthErr(relpEngine_t *const pThis, void (*pCB)(void*pUsr, char *a
  * errmsg   - error message as far as librelp is concerned
  * errcode  - contains librelp error status
  */
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpEngineSetOnErr(relpEngine_t *const pThis, void (*pCB)(void*pUsr, char *objinfo, char*errmsg, relpRetVal errcode) )
 {
 	ENTER_RELPFUNC;
@@ -550,7 +564,7 @@ relpEngineSetOnErr(relpEngine_t *const pThis, void (*pCB)(void*pUsr, char *objin
  * errmsg   - error message as far as librelp is concerned
  * errcode  - contains librelp error status
  */
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpEngineSetOnGenericErr(relpEngine_t *const pThis, void (*pCB)(char *objinfo, char*errmsg, relpRetVal errcode) )
 {
 	ENTER_RELPFUNC;
@@ -559,10 +573,39 @@ relpEngineSetOnGenericErr(relpEngine_t *const pThis, void (*pCB)(char *objinfo, 
 	LEAVE_RELPFUNC;
 }
 
+relpRetVal PART_OF_API
+relpEngineSetOnSessOpen(relpEngine_t *const pThis, void (*pCB)(void*pUsr, const relpSess_t *pSess) )
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Engine);
+	pThis->onSessOpen = pCB;
+	LEAVE_RELPFUNC;
+}
+
+relpRetVal PART_OF_API
+relpEngineSetOnSessClose(relpEngine_t *const pThis,
+		void (*pCB)(void*pUsr, const relpSess_t *pSess, relpRetVal reason) )
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Engine);
+	pThis->onSessClose = pCB;
+	LEAVE_RELPFUNC;
+}
+
+relpRetVal PART_OF_API
+relpEngineSetOnSessOpenFail(relpEngine_t *const pThis,
+		void (*pCB)(void*pUsr, const relpSess_t *pSess, relpRetVal reason) )
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Engine);
+	pThis->onSessOpenFail = pCB;
+	LEAVE_RELPFUNC;
+}
+
 /* Deprecated, use relpEngineListnerConstruct() family of functions.
  * See there for further information.
  */
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpEngineAddListner2(relpEngine_t *const pThis, unsigned char *pLstnPort, void *pUsr)
 {
 	relpSrv_t *pSrv = NULL;
@@ -590,7 +633,7 @@ static relpRetVal relpSrvSyslogRcvDummy(unsigned char LIBRELP_ATTR_UNUSED *pHost
 /* set the syslog receive callback. If NULL is provided, it is set to the
  * not implemented dummy.
  */
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpEngineSetSyslogRcv(relpEngine_t *const pThis, relpRetVal (*pCB)(unsigned char*, unsigned char*, unsigned char*, size_t))
 {
 	ENTER_RELPFUNC;
@@ -605,7 +648,7 @@ relpEngineSetSyslogRcv(relpEngine_t *const pThis, relpRetVal (*pCB)(unsigned cha
 /* Deprecated, use relpEngineListnerConstruct() family of functions.
  * See there for further information.
  */
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpEngineAddListner(relpEngine_t *const pThis, unsigned char *pLstnPort)
 {
 	relpSrv_t *pSrv = NULL;
@@ -629,7 +672,7 @@ finalize_it:
  * signal is sent, it may take rather long to stop the server (until another
  * machine sends data).
  */
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpEngineSetStop(relpEngine_t *const pThis)
 {
 	ENTER_RELPFUNC;
@@ -641,7 +684,7 @@ relpEngineSetStop(relpEngine_t *const pThis)
 
 /* set the socket family to use
  */
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpEngineSetFamily(relpEngine_t *const pThis, int ai_family)
 {
 	ENTER_RELPFUNC;
@@ -665,7 +708,7 @@ doRecv(relpEngine_t *const pThis, relpEngSessLst_t *pSessEtry, int sock)
 	if(localRet != RELP_RET_OK) {
 		pThis->dbgprint((char*)"relp session %d iRet %d, tearing it down\n",
 				sock, localRet);
-		relpEngineDelSess(pThis, pSessEtry);
+		relpEngineDelSess(pThis, pSessEtry, localRet);
 	}
 	return localRet;
 }
@@ -684,7 +727,7 @@ doSend(relpEngine_t *const pThis, relpEngSessLst_t *pSessEtry, int sock)
 	if(localRet != RELP_RET_OK) {
 		pThis->dbgprint((char*)"relp session %d iRet %d during send, tearing it down\n",
 				sock, localRet);
-		relpEngineDelSess(pThis, pSessEtry);
+		relpEngineDelSess(pThis, pSessEtry, localRet);
 	}
 }
 
@@ -801,7 +844,7 @@ handleSessIO(relpEngine_t *const pThis, epolld_t *epd)
 				if(localRet != RELP_RET_OK) {
 					pThis->dbgprint((char*)"relp session %d handshake iRet %d, tearing it down\n",
 							epd->sock, localRet);
-					relpEngineDelSess(pThis, pSessEtry);
+				    relpEngineDelSess(pThis, pSessEtry, localRet);
 				}
 #			else
 					pThis->dbgprint((char*)"librelp error: handshake retry requested in "
@@ -1001,7 +1044,7 @@ engineEventLoopRun(relpEngine_t *const pThis)
 								pThis->dbgprint((char*)"relp session %d handshake "
 										"iRet %d, tearing it down\n",
 										sock, localRet);
-								relpEngineDelSess(pThis, pSessEtry);
+							    relpEngineDelSess(pThis, pSessEtry, localRet);
 							}
 #						else
 							pThis->dbgprint((char*)"librelp error: handshake retry "
@@ -1044,7 +1087,7 @@ engineEventLoopRun(relpEngine_t *const pThis)
  * the several flavours of enhanced OS APIs.
  * rgerhards, 2008-03-17
  */
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpEngineRun(relpEngine_t *const pThis)
 {
 	ENTER_RELPFUNC;
@@ -1124,7 +1167,7 @@ finalize_it:
  * users should always call the client-generating functions inside the engine.
  * rgerhards, 2008-03-19
  */
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpEngineCltConstruct(relpEngine_t *const pThis, relpClt_t **ppClt)
 {
 	ENTER_RELPFUNC;
@@ -1143,7 +1186,7 @@ finalize_it:
  * relpEngineCltConstruct(), see comment there for details.
  * rgerhards, 2008-03-19
  */
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpEngineCltDestruct(relpEngine_t *const pThis, relpClt_t **ppClt)
 {
 	ENTER_RELPFUNC;
@@ -1163,11 +1206,7 @@ finalize_it:
  * a configure library entry point check.
  * rgerhards, 2008-03-25
  */
-#ifdef __GNUC__
-	/* somehow gcc-8 always gives as a wrong warning, which we so disable */
-	#pragma GCC diagnostic ignored "-Wattributes"
-#endif
-const char * PART_OF_API
+PART_OF_API const char *
 relpEngineGetVersion(void)
 {
 #	ifdef DEBUG
@@ -1177,7 +1216,7 @@ relpEngineGetVersion(void)
 #	endif
 }
 
-void PART_OF_API
+PART_OF_API void
 relpEngineSetShutdownImmdtPtr(relpEngine_t *const pThis, int *ptr)
 {
 	if(pThis->bShutdownImmdt != ptr)
@@ -1188,7 +1227,7 @@ relpEngineSetShutdownImmdtPtr(relpEngine_t *const pThis, int *ptr)
  * it has been set to forbidden! There will be no error return state in this
  * case. -- rgerhards, 2008-03-27
  */
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpEngineSetEnableCmd(relpEngine_t *const pThis, unsigned char *pszCmd, relpCmdEnaState_t stateCmd)
 {
 	ENTER_RELPFUNC;
@@ -1212,7 +1251,7 @@ finalize_it:
  * session. If disabled, the IP address will be used as the hostname.
  * rgerhards, 2008-03-31
  */
-relpRetVal PART_OF_API
+PART_OF_API relpRetVal
 relpEngineSetDnsLookupMode(relpEngine_t *const pThis, const int iMode)
 {
 	ENTER_RELPFUNC;

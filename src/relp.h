@@ -130,11 +130,14 @@ struct relpEngine_s {
                                   unsigned char *pMsg, size_t lenMsg); /**< callback for "syslog" cmd */
         relpRetVal (*onSyslogRcv2)(void*, unsigned char*pHostname, unsigned char *pIP,
                                   unsigned char *pMsg, size_t lenMsg); /**< callback for "syslog" cmd */
-       relpRetVal (*onSyslogRcv3)(void*, unsigned char*pHostname, unsigned char *pIP,
+        relpRetVal (*onSyslogRcv3)(void*, unsigned char*pHostname, unsigned char *pIP,
                                   unsigned char *pPort, unsigned char *pMsg, size_t lenMsg); /**< callback for "syslog" cmd */
         void (*onAuthErr)(void*pUsr, char *authinfo, char*errmsg, relpRetVal errcode);
         void (*onErr)(void*pUsr, char *objinfo, char*errmsg, relpRetVal errcode);
         void (*onGenericErr)(char *objinfo, char*errmsg, relpRetVal errcode);
+        void (*onSessOpen)(void*pUsr, const relpSess_t *pSess);
+        void (*onSessClose)(void*pUsr, const relpSess_t *pSess, relpRetVal reason);
+        void (*onSessOpenFail)(void*pUsr, const relpSess_t *pSess, relpRetVal reason);
 	int protocolVersion; /**< version of the relp protocol supported by this engine */
 
 	/* Flags */

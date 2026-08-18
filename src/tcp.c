@@ -699,29 +699,42 @@ finalize_it:
 static relpRetVal LIBRELP_ATTR_NONNULL()
 relpTcpDestructTLS_gtls(relpTcp_t *pThis)
 {
-	int sslRet;
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
 
-	sslRet = gnutls_bye(pThis->session, GNUTLS_SHUT_WR);
-	while(sslRet == GNUTLS_E_INTERRUPTED || sslRet == GNUTLS_E_AGAIN) {
-		sslRet = gnutls_bye(pThis->session, GNUTLS_SHUT_WR);
+	if(pThis->session != NULL) {
+		gnutls_deinit(pThis->session);
+		pThis->session = NULL;
 	}
-	gnutls_deinit(pThis->session);
 	if (pThis->xcred != NULL) {
 		gnutls_certificate_free_credentials(pThis->xcred);
+		pThis->xcred = NULL;
 	}
+	if(pThis->anoncred != NULL) {
+		gnutls_anon_free_client_credentials(pThis->anoncred);
+		pThis->anoncred = NULL;
+	}
+	if(pThis->anoncredSrv != NULL) {
+		gnutls_anon_free_server_credentials(pThis->anoncredSrv);
+		pThis->anoncredSrv = NULL;
+	}
+	if(pThis->dh_params != NULL) {
+		gnutls_dh_params_deinit(pThis->dh_params);
+		pThis->dh_params = NULL;
+	}
+	pThis->bTLSActive = 0;
 
 	LEAVE_RELPFUNC;
 }
-#else
-static relpRetVal LIBRELP_ATTR_NONNULL()
-relpTcpDestructTLS_gtls(LIBRELP_ATTR_UNUSED relpTcp_t *pThis)
-{
-	return RELP_RET_ERR_INTERNAL;
-}
 #endif  /* defined(ENABLE_TLS) */
 #if defined(ENABLE_TLS_OPENSSL)
+BIO *
+relpTcpNewSocketBio_ossl(const int sock)
+{
+	/* relpTcp_t owns sock and closes it in relpTcpDestruct(). */
+	return BIO_new_socket(sock, BIO_NOCLOSE);
+}
+
 static relpRetVal LIBRELP_ATTR_NONNULL()
 relpTcpDestructTLS_ossl(relpTcp_t *pThis)
 {
@@ -729,26 +742,28 @@ relpTcpDestructTLS_ossl(relpTcp_t *pThis)
 	RELPOBJ_assert(pThis, Tcp);
 
 	if(pThis->ssl != NULL) {
-		pThis->pEngine->dbgprint((char*)"relpTcpDestruct_ossl: try "
-			"shutdown #1 for [%p]\n", (void *) pThis->ssl);
-		const int sslRet = SSL_shutdown(pThis->ssl);
-		if (sslRet <= 0) {
-			const int sslErr = SSL_get_error(pThis->ssl, sslRet);
-			pThis->pEngine->dbgprint((char*)"relpTcpDestruct_ossl: shutdown failed with err = %d, "
-				"forcing ssl shutdown!\n", sslErr);
+		if(pThis->bTLSActive) {
+			pThis->pEngine->dbgprint((char*)"relpTcpDestruct_ossl: try "
+				"shutdown #1 for [%p]\n", (void *) pThis->ssl);
+			const int sslRet = SSL_shutdown(pThis->ssl);
+			if (sslRet <= 0) {
+				const int sslErr = SSL_get_error(pThis->ssl, sslRet);
+				pThis->pEngine->dbgprint((char*)"relpTcpDestruct_ossl: shutdown failed with err = %d, "
+					"forcing ssl shutdown!\n", sslErr);
 
-			/* ignore those SSL Errors on shutdown */
-			if(	sslErr != SSL_ERROR_SYSCALL &&
-					sslErr != SSL_ERROR_ZERO_RETURN &&
-					sslErr != SSL_ERROR_WANT_READ &&
-					sslErr != SSL_ERROR_WANT_WRITE) {
-				/* Output Warning only */
-				relpTcpLastSSLErrorMsg(sslRet, pThis, "relpTcpDestruct_ossl");
+				/* ignore those SSL Errors on shutdown */
+				if(	sslErr != SSL_ERROR_SYSCALL &&
+						sslErr != SSL_ERROR_ZERO_RETURN &&
+						sslErr != SSL_ERROR_WANT_READ &&
+						sslErr != SSL_ERROR_WANT_WRITE) {
+					/* Output Warning only */
+					relpTcpLastSSLErrorMsg(sslRet, pThis, "relpTcpDestruct_ossl");
+				}
+
+				pThis->pEngine->dbgprint((char*)"relpTcpDestruct_ossl: session closed (un)successfully \n");
+			} else {
+				pThis->pEngine->dbgprint((char*)"relpTcpDestruct_ossl: session closed successfully \n");
 			}
-
-			pThis->pEngine->dbgprint((char*)"relpTcpDestruct_ossl: session closed (un)successfully \n");
-		} else {
-			pThis->pEngine->dbgprint((char*)"relpTcpDestruct_ossl: session closed successfully \n");
 		}
 
 		pThis->bTLSActive = 0;
@@ -758,37 +773,66 @@ relpTcpDestructTLS_ossl(relpTcp_t *pThis)
 
 	LEAVE_RELPFUNC;
 }
-#else
-static relpRetVal LIBRELP_ATTR_NONNULL()
-relpTcpDestructTLS_ossl(LIBRELP_ATTR_UNUSED relpTcp_t *pThis)
-{
-	return RELP_RET_ERR_INTERNAL;
-}
 #endif /* defined(ENABLE_TLS_OPENSSL) */
 /* TLS-part of RELP tcp instance destruction - brought to its own function
  * to make things easier.
  */
 static relpRetVal LIBRELP_ATTR_NONNULL()
-relpTcpDestructTLS(NOTLS_UNUSED relpTcp_t *pThis)
+relpTcpDestructTLSBeforeSocketClose(NOTLS_UNUSED relpTcp_t *pThis,
+	const int sendCloseNotify)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
-	#if  defined(WITH_TLS)
-		if(pThis->bTLSActive) {
-			if(pThis->pEngine->tls_lib == 0) {
-				relpTcpDestructTLS_gtls(pThis);
-			} else {
-				relpTcpDestructTLS_ossl(pThis);
-			}
-			relpTcpFreePermittedPeers(pThis);
+	#if defined(ENABLE_TLS)
+		if(pThis->pEngine->tls_lib == 0 && sendCloseNotify && pThis->bTLSActive
+		   && pThis->session != NULL && pThis->sock != -1) {
+			int sslRet;
+
+			/* Do not retry EAGAIN: teardown must not block on a nonblocking socket. */
+			do {
+				sslRet = gnutls_bye(pThis->session, GNUTLS_SHUT_WR);
+			} while(sslRet == GNUTLS_E_INTERRUPTED);
 		}
-	#endif /* #ifdef  WITH_TLS */
+	#else
+		(void) pThis;
+		(void) sendCloseNotify;
+	#endif
+	#if defined(ENABLE_TLS_OPENSSL)
+		/* A partial SSL object can own a BIO that still refers to this socket. */
+		if(pThis->pEngine->tls_lib != 0 && pThis->ssl != NULL && !pThis->bTLSActive) {
+			relpTcpDestructTLS_ossl(pThis);
+		}
+	#endif
 	LEAVE_RELPFUNC;
 }
 
-/** Destruct a RELP tcp instance */
-relpRetVal
-relpTcpDestruct(relpTcp_t **ppThis)
+static relpRetVal LIBRELP_ATTR_NONNULL()
+relpTcpDestructTLSAfterSocketClose(NOTLS_UNUSED relpTcp_t *pThis)
+{
+	const int hadTLSActive = pThis->bTLSActive;
+
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Tcp);
+	#if defined(ENABLE_TLS)
+		if(pThis->pEngine->tls_lib == 0 && pThis->bTLSActive) {
+			relpTcpDestructTLS_gtls(pThis);
+		}
+	#endif
+	#if defined(ENABLE_TLS_OPENSSL)
+		if(pThis->pEngine->tls_lib != 0 && pThis->ssl != NULL && pThis->bTLSActive) {
+			relpTcpDestructTLS_ossl(pThis);
+		}
+	#endif
+	#if defined(WITH_TLS)
+		if(hadTLSActive) {
+			relpTcpFreePermittedPeers(pThis);
+		}
+	#endif
+	LEAVE_RELPFUNC;
+}
+
+static relpRetVal
+relpTcpDestructInternal(relpTcp_t **ppThis, const int sendCloseNotify)
 {
 	relpTcp_t *pThis;
 
@@ -800,6 +844,9 @@ relpTcpDestruct(relpTcp_t **ppThis)
 		RELPOBJ_assert(pThis, Tcp);
 		// Only DEBUG if pThis  is available
 		pThis->pEngine->dbgprint((char*)"relpTcpDestruct for %p\n", (void *) pThis);
+
+		/* GnuTLS needs a live transport to send close_notify. */
+		relpTcpDestructTLSBeforeSocketClose(pThis, sendCloseNotify);
 
 		if(pThis->sock != -1) {
 			shutdown(pThis->sock, SHUT_RDWR);
@@ -815,7 +862,7 @@ relpTcpDestruct(relpTcp_t **ppThis)
 			}
 			free(pThis->socks);
 		}
-		relpTcpDestructTLS(pThis);
+		relpTcpDestructTLSAfterSocketClose(pThis);
 
 		free(pThis->pRemHostIP);
 		free(pThis->pRemHostName);
@@ -832,6 +879,13 @@ relpTcpDestruct(relpTcp_t **ppThis)
 	}
 
 	LEAVE_RELPFUNC;
+}
+
+/** Destruct a RELP tcp instance */
+relpRetVal
+relpTcpDestruct(relpTcp_t **ppThis)
+{
+	return relpTcpDestructInternal(ppThis, 1);
 }
 
 #ifdef ENABLE_TLS
@@ -880,7 +934,7 @@ relpTcpAbortDestruct(relpTcp_t **ppThis)
 		}
 	}
 
-	iRet = relpTcpDestruct(ppThis);
+	iRet = relpTcpDestructInternal(ppThis, 0);
 
 	LEAVE_RELPFUNC;
 }
@@ -1458,7 +1512,7 @@ finalize_it:
 static relpRetVal
 relpTcpChkPeerAuth(relpTcp_t *const pThis)
 {
-	X509* certpeer;
+	X509 *certpeer = NULL;
 	int r;
 	ENTER_RELPFUNC;
 
@@ -1502,6 +1556,8 @@ relpTcpChkPeerAuth(relpTcp_t *const pThis)
 	}
 
 finalize_it:
+	if(certpeer != NULL)
+		X509_free(certpeer);
 	LEAVE_RELPFUNC;
 }
 
@@ -1693,7 +1749,14 @@ relpTcpSetSslConfCmd_ossl(relpTcp_t *const pThis, char *tlsConfigCmd)
 			}
 			SSL_CONF_CTX_set_flags(cctx, SSL_CONF_FLAG_FILE);
 			SSL_CONF_CTX_set_flags(cctx, SSL_CONF_FLAG_SHOW_ERRORS);
-			SSL_CONF_CTX_set_ssl_ctx(cctx, ctx);
+			/* Apply connection-specific settings to the SSL object when it
+			 * exists. Only listener setup has no SSL object yet and must
+			 * configure the shared context. */
+			if (pThis->ssl != NULL) {
+				SSL_CONF_CTX_set_ssl(cctx, pThis->ssl);
+			} else {
+				SSL_CONF_CTX_set_ssl_ctx(cctx, ctx);
+			}
 
 			do
 			{
@@ -1812,7 +1875,7 @@ relpTcpAcceptConnReqInitTLS_ossl(relpTcp_t *const pThis, relpSrv_t *const pSrv)
 	pThis->sslState = osslServer;
 
 	/* Create BIO from ptcp socket! */
-	client = BIO_new_socket(pThis->sock, BIO_CLOSE /*BIO_NOCLOSE*/);
+	client = relpTcpNewSocketBio_ossl(pThis->sock);
 	pThis->pEngine->dbgprint((char*)"relpTcpAcceptConnReqInitTLS_ossl: Init client BIO[%p] done\n", (void *)client);
 
 	/* Set debug Callback for client BIO as well! */
@@ -1891,6 +1954,10 @@ relpTcpConnectTLSInit_ossl(relpTcp_t *const pThis)
 	/*if we reach this point we are in tls mode */
 	pThis->pEngine->dbgprint((char*)"relpTcpConnectTLSInit: TLS Mode\n");
 
+	/* set before relpTcpSetSslConfCmd_ossl: tlsConfigCmd may contain
+	 * flag-restricted commands that require SSL_CONF_FLAG_CLIENT */
+	pThis->sslState = osslClient;
+
 	if(!(pThis->ssl = SSL_new(ctx))) {
 		relpTcpLastSSLErrorMsg(0, pThis, "relpTcpConnectTLSInit");
 		ABORT_FINALIZE(RELP_RET_IO_ERR);
@@ -1914,11 +1981,8 @@ relpTcpConnectTLSInit_ossl(relpTcp_t *const pThis)
 
 	SSL_set_ex_data(pThis->ssl, 0, (void*)pThis);
 
-	/*set client state */
-	pThis->sslState = osslClient;
-
 	/* Create BIO from ptcp socket! */
-	conn = BIO_new_socket(pThis->sock, BIO_CLOSE /*BIO_NOCLOSE*/);
+	conn = relpTcpNewSocketBio_ossl(pThis->sock);
 	pThis->pEngine->dbgprint((char*)"relpTcpConnectTLSInit: Init conn BIO[%p] done\n", (void *)conn);
 
 	/* Set debug Callback for client BIO as well! */
@@ -1933,6 +1997,7 @@ relpTcpConnectTLSInit_ossl(relpTcp_t *const pThis)
 BIO_set_nbio( conn, 1 );
 
 	SSL_set_bio(pThis->ssl, conn, conn);
+	conn = NULL; /* SSL owns the BIO after SSL_set_bio() */
 	SSL_set_connect_state(pThis->ssl); /*sets ssl to work in client mode.*/
 
 	/* Perform the TLS handshake */
@@ -1956,7 +2021,11 @@ finalize_it:
 	pThis->pEngine->dbgprint((char*)"relpTcpConnectTLSInit: END iRet = %d, pThis=[%p], pNsd->rtryOp=%d\n",
 		iRet, (void *) pThis, pThis->rtryOp);
 	if(iRet != RELP_RET_OK)	{
-		if (conn != NULL) {
+		if(pThis->ssl != NULL) {
+			/* SSL owns conn after SSL_set_bio(). */
+			SSL_free(pThis->ssl);
+			pThis->ssl = NULL;
+		} else if(conn != NULL) {
 			BIO_free(conn);
 		}
 	}
@@ -2206,6 +2275,7 @@ relpTcpAcceptConnReq(relpTcp_t **ppThis, const int sock, relpSrv_t *const pSrv)
 	}
 
 	pThis->sock = iNewSock;
+	iNewSock = -1; /* ownership transferred to pThis */
 	CHKRet(relpTcpAcceptConnReqInitTLS(pThis, pSrv));
 
 	*ppThis = pThis;
@@ -2214,7 +2284,6 @@ finalize_it:
 	if(iRet != RELP_RET_OK) {
 		if(pThis != NULL)
 			relpTcpDestruct(&pThis);
-		/* the close may be redundant, but that doesn't hurt... */
 		if(iNewSock >= 0)
 			close(iNewSock);
 	}
@@ -3160,6 +3229,7 @@ relpTcpRcv_ossl(relpTcp_t *const pThis, relpOctet_t *const pRcvBuf, ssize_t *con
 
 	lenRcvd = SSL_read(pThis->ssl, pRcvBuf, *pLenBuf);
 	if(lenRcvd > 0) {
+		pThis->rtryOp = relpTCP_RETRY_none;
 		pThis->pEngine->dbgprint((char*)"relpTcpRcv_ossl: SSL_read SUCCESS len %d\n", lenRcvd);
 		*pLenBuf = lenRcvd;
 	} else {
@@ -3330,6 +3400,7 @@ relpTcpSend_ossl(relpTcp_t *const pThis, relpOctet_t *const pBuf, ssize_t *const
 
 	written = SSL_write(pThis->ssl, pBuf, *pLenBuf);
 	if(written > 0) {
+		pThis->rtryOp = relpTCP_RETRY_none;
 		pThis->pEngine->dbgprint((char*)"relpTcpSend_ossl: SSL_write SUCCESS\n");
 	} else {
 		const int err = SSL_get_error(pThis->ssl, written);
