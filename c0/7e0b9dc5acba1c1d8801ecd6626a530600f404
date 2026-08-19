@@ -1,0 +1,20 @@
+tests/send.c
+  h_95716f3de0caf5 397-398
+tests/receive.c
+  h_95716f3de0caf5 512-517
+tests/tls-client-auth-no-cert.sh
+  h_95716f3de0caf5 1-40
+tests/Makefile.am
+  h_95716f3de0caf5 79
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "c07e0b9dc5acba1c1d8801ecd6626a530600f404",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
