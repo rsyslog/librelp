@@ -1,0 +1,14 @@
+tests/tls-certvalid-untrusted.sh
+  h_95716f3de0caf5 4,9,24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "93162b95731780a285bdea110251f1b7c4985d95",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
