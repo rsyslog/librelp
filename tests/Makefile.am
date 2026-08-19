@@ -76,6 +76,7 @@ TLS_TESTS=  \
 	tls-basic-tlscommand-ciphers.sh \
 	tls-basic-certchain.sh \
 	tls-basic-certvalid-mixed.sh \
+	tls-client-auth-no-cert.sh \
 	tls-receiver-abort.sh \
 	tls-missing-param-sender.sh \
 	tls-missing-param-receiver.sh

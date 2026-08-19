@@ -505,11 +505,15 @@ int main(int argc, char *argv[]) {
 		if(authMode != NULL) {
 			TRY(relpSrvSetAuthMode(pRelpSrv, authMode));
 			TRY(relpSrvSetCACert(pRelpSrv, caCertFile));
-			TRY(relpSrvSetOwnCert(pRelpSrv, myCertFile));
-			TRY(relpSrvSetPrivKey(pRelpSrv, myPrivKeyFile));
 			if (permittedPeer != NULL) {
 				TRY(relpSrvAddPermittedPeer(pRelpSrv, permittedPeer));
 			}
+		}
+		if(myCertFile != NULL) {
+			TRY(relpSrvSetOwnCert(pRelpSrv, myCertFile));
+		}
+		if(myPrivKeyFile != NULL) {
+			TRY(relpSrvSetPrivKey(pRelpSrv, myPrivKeyFile));
 		}
 	}
 
