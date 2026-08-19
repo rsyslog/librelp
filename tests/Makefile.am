@@ -70,6 +70,7 @@ TLS_TESTS=  \
 	tls-basic-realistic.sh \
 	tls-basic-anon.sh \
 	tls-basic-certvalid.sh \
+	tls-gtls-certvalid-no-trust-anchor.sh \
 	tls-basic-fingerprint.sh \
 	tls-basic-wildcard.sh \
 	tls-basic-tlscommand.sh \
