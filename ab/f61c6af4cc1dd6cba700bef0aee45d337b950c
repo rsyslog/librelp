@@ -1,0 +1,18 @@
+tests/Makefile.am
+  h_95716f3de0caf5 73
+tests/tls-basic-certchain.sh
+  h_95716f3de0caf5 4,7
+tests/tls-gtls-certvalid-no-trust-anchor.sh
+  h_95716f3de0caf5 1-25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "abf61c6af4cc1dd6cba700bef0aee45d337b950c",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
