@@ -380,6 +380,7 @@ relpOffersConstructFromFrame(relpOffers_t **ppOffers, relpFrame_t *pFrame)
 	unsigned char c;
 	size_t iName;
 	size_t iVal;
+	size_t nValues;
 	unsigned char szFeatNam[RELP_MAX_OFFER_FEATURENAME+1];
 	unsigned char szFeatVal[RELP_MAX_OFFER_FEATUREVALUE+1];
 
@@ -403,6 +404,7 @@ relpOffersConstructFromFrame(relpOffers_t **ppOffers, relpFrame_t *pFrame)
 		CHKRet(relpOfferAdd(&pOffer, szFeatNam, pOffers));
 
 		/* and now process the values (if any) */
+		nValues = 0;
 		while(localRet == RELP_RET_OK && c != '\n') {
 			localRet = relpFrameGetNextC(pFrame, &c); /* eat the "=" or "," */
 			iVal = 0;
@@ -412,6 +414,8 @@ relpOffersConstructFromFrame(relpOffers_t **ppOffers, relpFrame_t *pFrame)
 				localRet = relpFrameGetNextC(pFrame, &c);
 			}
 			if(iVal > 0) { /* only set feature if one is actually given */
+				if(++nValues > RELP_MAX_OFFER_VALUES)
+					ABORT_FINALIZE(RELP_RET_INVALID_OFFER);
 				szFeatVal[iVal] = '\0'; /* space is reserved for this */
 				CHKRet(relpOfferValueAdd(szFeatVal, 0, pOffer));
 			}
