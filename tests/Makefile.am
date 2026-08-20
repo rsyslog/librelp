@@ -119,6 +119,13 @@ TESTS=  selftest_receive_watchdog.sh \
 	send-noconnect.sh \
 	send-dummyserver-no-waitstate-errmsg.sh \
 	receive-emptyconnect.sh
+if !ENABLE_TLS_GENERIC
+check_PROGRAMS+=tls-request-no-tls
+tls_request_no_tls_SOURCES=tls-request-no-tls.c
+tls_request_no_tls_LDADD=../src/.libs/librelp.a $(rt_libs) $(socket_libs) $(pthread_libs)
+tls_request_no_tls_CFLAGS=$(AM_CFLAGS) -I${top_srcdir}/src $(WARN_CFLAGS)
+TESTS+=tls-request-no-tls
+endif
 if ENABLE_TLS_GENERIC
 TESTS+=$(TLS_TESTS)
 endif
@@ -179,6 +186,7 @@ EXTRA_DIST=$(TESTS) \
 	permitted-peer-lifetime.c \
 	tls-openssl-retry-state.sh \
 	tls-openssl-retry-state.c \
+	tls-request-no-tls.c \
 	tls-certs/ca.pem \
 	tls-certs/cert.pem \
 	tls-certs/key.pem \
