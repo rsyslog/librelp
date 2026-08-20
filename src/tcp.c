@@ -2778,6 +2778,28 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 
+/* Check that the peer certificate chains to a trusted CA. */
+static int
+relpTcpChkPeerCertValid_gtls(relpTcp_t *const pThis)
+{
+	int ret;
+	unsigned int status = 0;
+
+	ret = gnutls_certificate_verify_peers2(pThis->session, &status);
+	if(ret < 0) {
+		callOnAuthErr(pThis, "", "certificate validation failed",
+			RELP_RET_AUTH_CERT_INVL);
+		return GNUTLS_E_CERTIFICATE_ERROR;
+	}
+	if(status != 0) { /* Certificate is not trusted */
+		callOnAuthErr(pThis, "", "certificate validation failed",
+			RELP_RET_AUTH_CERT_INVL);
+		return GNUTLS_E_CERTIFICATE_ERROR;
+	}
+
+	return 0;
+}
+
 /* This function will verify the peer's certificate, and check
  * if the hostname matches, as well as the activation, expiration dates.
  */
@@ -2813,11 +2835,20 @@ relpTcpVerifyCertificateCallback(gnutls_session_t session)
 	 */
 	gnutls_x509_crt_init(&cert);
 	bMustDeinitCert = 1; /* indicate cert is initialized and must be freed on exit */
-	gnutls_x509_crt_import(cert, &cert_list[0], GNUTLS_X509_FMT_DER);
+	r = gnutls_x509_crt_import(cert, &cert_list[0], GNUTLS_X509_FMT_DER);
+	if(chkGnutlsCode(pThis, "Failed to import peer certificate", RELP_RET_AUTH_CERT_INVL, r)) {
+		callOnAuthErr(pThis, "", "certificate validation failed",
+			RELP_RET_AUTH_CERT_INVL);
+		r = GNUTLS_E_CERTIFICATE_ERROR; goto done;
+	}
 	if(pThis->authmode == eRelpAuthMode_Fingerprint) {
 		r = relpTcpChkPeerFingerprint(pThis, cert);
-	} else if(pThis->authmode == eRelpAuthMode_Name){
+	} else if(pThis->authmode == eRelpAuthMode_Name) {
 		r = relpTcpChkPeerName(pThis, (void*)cert);
+	} else if(pThis->authmode == eRelpAuthMode_CertValid) {
+		r = relpTcpChkPeerCertValid_gtls(pThis);
+	} else {
+		r = GNUTLS_E_CERTIFICATE_ERROR;
 	}
 
 	if(r != 0) goto done;
