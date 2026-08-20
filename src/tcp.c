@@ -3325,6 +3325,7 @@ relpTcpRcv(relpTcp_t *const pThis, relpOctet_t *const pRcvBuf, ssize_t *const pL
 			relpTcpRcv_ossl(pThis, pRcvBuf, pLenBuf);
 		}
 	} else {
+		pThis->rtryOp = relpTCP_RETRY_none;
 		*pLenBuf = lenRcvd = recv(pThis->sock, pRcvBuf, *pLenBuf, MSG_DONTWAIT);
 		if(lenRcvd > 0) {
 			pThis->pEngine->dbgprint((char*)"relpTcpRcv: read %zd bytes from sock %d\n",
