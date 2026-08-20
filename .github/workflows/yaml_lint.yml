@@ -47,8 +47,10 @@ jobs:
 
       - name: Run yamllint
         if: steps.changed.outputs.any_changed == 'true'
+        env:
+          ALL_CHANGED_FILES: ${{ steps.changed.outputs.all_changed_files }}
         run: |
-          yamllint -d relaxed ${{ steps.changed.outputs.all_changed_files }}
+          yamllint -d relaxed $ALL_CHANGED_FILES
 
       - name: Skip yamllint, no YAML changes
         if: steps.changed.outputs.any_changed != 'true'
