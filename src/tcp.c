@@ -1484,23 +1484,7 @@ relpTcpInitTLS(relpTcp_t *const pThis)
 		} else
 			pThis->pEngine->dbgprint((char*)"relpTcpInitTLS: Successfully initialized CA certificate #1\n");
 	} else {
-		/* Init CA from own Certificate */
-		if(	pThis->ownCertFile != NULL ) {
-			if (SSL_CTX_load_verify_locations(ctx, pThis->ownCertFile, NULL) != 1) {
-				callOnErr(pThis, (char*)"relpTcpInitTLS: Error, Certificate could not be accessed."
-						" Is the file at the right path? And do we have the permissions?\n",
-						RELP_RET_ERR_TLS_SETUP);
-				/* Output Additional OpenSSL output */
-				relpTcpLastSSLErrorMsg(0, pThis, "relpTcpInitTLS");
-				ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
-			} else
-				pThis->pEngine->dbgprint(
-					(char*)"relpTcpInitTLS: Successfully initialized CA Certificate #2\n");
-		}
-
-		if(pThis->ownCertFile == NULL) {
-			pThis->pEngine->dbgprint((char*)"relpTcpInitTLS: CA certificate MISSING\n");
-		}
+		pThis->pEngine->dbgprint((char*)"relpTcpInitTLS: CA certificate MISSING\n");
 	}
 finalize_it:
 	LEAVE_RELPFUNC;
