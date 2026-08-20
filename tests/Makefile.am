@@ -76,6 +76,7 @@ TLS_TESTS=  \
 	tls-basic-tlscommand.sh \
 	tls-basic-tlscommand-ciphers.sh \
 	tls-basic-certchain.sh \
+	tls-certvalid-untrusted.sh \
 	tls-basic-certvalid-mixed.sh \
 	tls-client-auth-no-cert.sh \
 	tls-receiver-abort.sh \
