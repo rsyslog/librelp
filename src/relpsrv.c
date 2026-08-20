@@ -353,23 +353,25 @@ relpSrvSetDHBits(relpSrv_t *const pThis, int bits)
 	pThis->dhBits = bits;
 }
 PART_OF_API relpRetVal
-relpSrvEnableTLS2(relpSrv_t LIBRELP_ATTR_UNUSED *pThis)
+relpSrvEnableTLS2(relpSrv_t *const pThis)
 {
 	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Srv);
 	pThis->bEnableTLS = 1;
 #if !(defined(ENABLE_TLS) || defined(ENABLE_TLS_OPENSSL))
 	iRet = RELP_RET_ERR_NO_TLS;
-#endif /* #ifdef ENABLE_TLS | ENABLE_TLS_OPENSSL */
+#endif /* !(defined(ENABLE_TLS) || defined(ENABLE_TLS_OPENSSL)) */
 	LEAVE_RELPFUNC;
 }
 PART_OF_API relpRetVal
-relpSrvEnableTLSZip2(relpSrv_t LIBRELP_ATTR_UNUSED *pThis)
+relpSrvEnableTLSZip2(relpSrv_t *const pThis)
 {
 	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Srv);
 	pThis->bEnableTLSZip = 1;
 #if !(defined(ENABLE_TLS) || defined(ENABLE_TLS_OPENSSL))
 	iRet = RELP_RET_ERR_NO_TLS;
-#endif /* #ifdef ENABLE_TLS | ENABLE_TLS_OPENSSL */
+#endif /* !(defined(ENABLE_TLS) || defined(ENABLE_TLS_OPENSSL)) */
 	LEAVE_RELPFUNC;
 }
 PART_OF_API void
