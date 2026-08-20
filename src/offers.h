@@ -38,6 +38,8 @@
 /* some max sizes, these are defined in the RELP spec! */
 #define RELP_MAX_OFFER_FEATURENAME 32
 #define RELP_MAX_OFFER_FEATUREVALUE 255
+/* Keep malformed open frames from causing excessive per-value allocations. */
+#define RELP_MAX_OFFER_VALUES 64
 
 /* relp offer parameters
  * rgerhards, 2008-03-24
