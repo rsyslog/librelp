@@ -1438,16 +1438,9 @@ relpTcpInitTLS(relpTcp_t *const pThis)
 					(char*)"relpTcpInitTLS: Successfully initialized CA Certificate #2\n");
 		}
 
-		// Init local System default certificate storage instead.
-		if (SSL_CTX_set_default_verify_paths(ctx) != 1) {
-			callOnErr(pThis, (char*)"relpTcpInitTLS: Error, CA default certificate storage "
-					"could not be set.", RELP_RET_ERR_TLS_SETUP);
-			/* Output Additional OpenSSL output */
-			relpTcpLastSSLErrorMsg(0, pThis, "relpTcpInitTLS");
-			ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
-		} else
-			pThis->pEngine->dbgprint((char*)"relpTcpInitTLS: Successfully initialized default "
-					"CA certificate storage\n");
+		if(pThis->ownCertFile == NULL) {
+			pThis->pEngine->dbgprint((char*)"relpTcpInitTLS: CA certificate MISSING\n");
+		}
 	}
 finalize_it:
 	LEAVE_RELPFUNC;
