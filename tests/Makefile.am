@@ -95,6 +95,7 @@ TLS_STATIC_TESTS= \
 
 # test specific to openssl
 OSSL_TESTS= \
+	tls-ossl-certvalid-no-trust-anchor.sh \
 	tls-wrong-permittedPeer.sh \
 	tls-wrong-authname.sh \
 	tls-wrong-signedcert.sh
