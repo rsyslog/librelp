@@ -356,9 +356,8 @@ PART_OF_API relpRetVal
 relpSrvEnableTLS2(relpSrv_t LIBRELP_ATTR_UNUSED *pThis)
 {
 	ENTER_RELPFUNC;
-#if defined(ENABLE_TLS) || defined(ENABLE_TLS_OPENSSL)
 	pThis->bEnableTLS = 1;
-#else
+#if !(defined(ENABLE_TLS) || defined(ENABLE_TLS_OPENSSL))
 	iRet = RELP_RET_ERR_NO_TLS;
 #endif /* #ifdef ENABLE_TLS | ENABLE_TLS_OPENSSL */
 	LEAVE_RELPFUNC;
@@ -367,9 +366,8 @@ PART_OF_API relpRetVal
 relpSrvEnableTLSZip2(relpSrv_t LIBRELP_ATTR_UNUSED *pThis)
 {
 	ENTER_RELPFUNC;
-#if defined(ENABLE_TLS) || defined(ENABLE_TLS_OPENSSL)
 	pThis->bEnableTLSZip = 1;
-#else
+#if !(defined(ENABLE_TLS) || defined(ENABLE_TLS_OPENSSL))
 	iRet = RELP_RET_ERR_NO_TLS;
 #endif /* #ifdef ENABLE_TLS | ENABLE_TLS_OPENSSL */
 	LEAVE_RELPFUNC;
