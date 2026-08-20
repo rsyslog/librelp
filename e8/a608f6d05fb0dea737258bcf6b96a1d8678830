@@ -1,0 +1,17 @@
+tests/tls-ossl-certvalid-no-trust-anchor.sh
+  h_95716f3de0caf5 1-34
+  h_95716f3de0caf5 35
+tests/Makefile.am
+  h_95716f3de0caf5 98
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "e8a608f6d05fb0dea737258bcf6b96a1d8678830",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
