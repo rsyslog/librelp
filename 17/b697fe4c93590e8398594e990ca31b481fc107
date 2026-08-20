@@ -1,0 +1,18 @@
+src/relpsrv.c
+  h_95716f3de0caf5 353,356,360,364,367,371
+tests/Makefile.am
+  h_95716f3de0caf5 2,17-20,63-65,91
+tests/tls-request-no-tls.c
+  h_95716f3de0caf5 1-33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "17b697fe4c93590e8398594e990ca31b481fc107",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
