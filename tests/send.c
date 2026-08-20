@@ -462,7 +462,7 @@ int main(int argc, char *argv[]) {
 	printf("send: Connect DONE\n");
 
 	if(num_messages == 0) {
-		send_msgs_single(pMsg);
+		TRY(send_msgs_single(pMsg));
 	} else {
 		send_msgs_counter();
 	}
