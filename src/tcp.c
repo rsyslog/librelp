@@ -967,7 +967,7 @@ static inline size_t SALEN(struct sockaddr *sa) {
 static inline int8_t
 isAnonAuth(relpTcp_t *const pThis)
 {
-	return pThis->ownCertFile == NULL;
+	return pThis->ownCertFile == NULL && pThis->authmode == eRelpAuthMode_None;
 }
 
 /* Set pRemHost based on the address provided. This is to be called upon accept()ing
