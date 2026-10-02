@@ -141,6 +141,7 @@ typedef struct relpTcp_s {
 	#endif
 	#ifdef ENABLE_TLS_OPENSSL
 	SSL *ssl;		/* OpenSSL main SSL obj */
+	SSL_CTX *ctx;		/* trust store for this client or listener */
 	osslSslState_t sslState;/**< what must we retry? */
 	#endif
 	relpTcpRtryState_t rtryOp;

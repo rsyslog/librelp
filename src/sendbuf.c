@@ -179,7 +179,6 @@ relpSendbufSendAll(relpSendbuf_t *pThis, relpSess_t *pSess, int bAddToUnacked)
 	 */
 	if(bAddToUnacked) {
 		if((iRet = relpSessAddUnacked(pSess, pThis)) != RELP_RET_OK) {
-			relpSendbufDestruct(&pThis);
 			FINALIZE;
 		}
 pSess->pEngine->dbgprint((char*)"sendbuf added to unacked list\n");
@@ -201,5 +200,7 @@ pSess->pEngine->dbgprint((char*)"sendbuf added to unacked list\n");
 else pSess->pEngine->dbgprint((char*)"sendbuf NOT added to unacked list\n");
 
 finalize_it:
+	if(iRet != RELP_RET_OK && bAddToUnacked)
+		relpSendbufDestruct(&pThis);
 	LEAVE_RELPFUNC;
 }

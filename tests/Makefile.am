@@ -1,6 +1,13 @@
 TEST_EXTENSIONS=.sh
 check_PROGRAMS=receive send chkseq have_tlslib msleep
 
+if BUILD_STATIC
+check_PROGRAMS+=plain_send_sigpipe
+plain_send_sigpipe_SOURCES=plain-send-sigpipe.c
+plain_send_sigpipe_LDADD=../src/.libs/librelp.a $(GNUTLS_LIBS) $(OPENSSL_LIBS) $(rt_libs) $(socket_libs) $(pthread_libs)
+plain_send_sigpipe_CFLAGS=$(AM_CFLAGS) -I${top_srcdir}/src $(WARN_CFLAGS)
+endif
+
 if ENABLE_TLS_OPENSSL
 if BUILD_STATIC
 # This white-box test needs internal symbols that are not exported by librelp.
@@ -97,7 +104,8 @@ TLS_STATIC_TESTS= \
 OSSL_TESTS= \
 	tls-wrong-permittedPeer.sh \
 	tls-wrong-authname.sh \
-	tls-wrong-signedcert.sh
+	tls-wrong-signedcert.sh \
+	tls-ossl-client-untrusted-server.sh
 OSSL_STATIC_TESTS= \
 	tls-ossl-fd-reuse.sh
 OSSL_WRAP_STATIC_TESTS= \
@@ -118,6 +126,10 @@ TESTS=  selftest_receive_watchdog.sh \
 	send-noconnect.sh \
 	send-dummyserver-no-waitstate-errmsg.sh \
 	receive-emptyconnect.sh
+TESTS+=syslog-callback-failure.sh
+if BUILD_STATIC
+TESTS+=plain-send-sigpipe.sh
+endif
 if ENABLE_TLS_GENERIC
 TESTS+=$(TLS_TESTS)
 endif
