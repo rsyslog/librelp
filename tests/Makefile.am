@@ -126,6 +126,7 @@ TESTS=  selftest_receive_watchdog.sh \
 	send-noconnect.sh \
 	send-dummyserver-no-waitstate-errmsg.sh \
 	receive-emptyconnect.sh
+TESTS+=session-limits.sh
 TESTS+=syslog-callback-failure.sh
 if BUILD_STATIC
 TESTS+=plain-send-sigpipe.sh
@@ -172,6 +173,7 @@ EXTRA_DIST=$(TESTS) \
 	dummyclient.py \
 	dummyserver.py \
 	invalid-open.py \
+	session-limits.py \
 	session-callbacks.sh \
 	test-framework.sh \
 	receive.c \

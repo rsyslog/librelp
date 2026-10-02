@@ -285,6 +285,7 @@ int main(int argc, char *argv[]) {
 	char *authMode = NULL;
 	int maxDataSize = 0;
 	int oversizeMode = 0;
+	unsigned maxSessions = 0, openTimeout = 0, idleTimeout = 0;
 	int ret = 0;
 	int append_outfile = 0;
 	int watchdog_timeout = 60; /* one seconds looks like a good default */
@@ -313,6 +314,9 @@ int main(int argc, char *argv[]) {
 		{"tlsconfcmd", required_argument, 0, 'c'},
 		{"watchdog-timeout", required_argument, 0, 'W'},
 		{"no-exit-on-error", no_argument, 0, 'N'},
+		{"max-sessions", required_argument, 0, 1001},
+		{"open-timeout", required_argument, 0, 1002},
+		{"idle-timeout", required_argument, 0, 1003},
 		{"fail-syslog-callback", no_argument, 0, 'q'},
 		{"omit-syslog-callback", no_argument, 0, 'Q'},
 		{0, 0, 0, 0}
@@ -321,6 +325,15 @@ int main(int argc, char *argv[]) {
 	while((c = getopt_long(argc, argv, "a:c:Ae:F:l:m:No:O:P:p:qQTvW:C:x:y:z:", long_options, &option_index)) != -1) {
 #endif
 		switch(c) {
+		case 1001:
+			maxSessions = (unsigned)atoi(optarg);
+			break;
+		case 1002:
+			openTimeout = (unsigned)atoi(optarg);
+			break;
+		case 1003:
+			idleTimeout = (unsigned)atoi(optarg);
+			break;
 		case 'a':
 			authMode = optarg;
 			break;
@@ -479,6 +492,9 @@ int main(int argc, char *argv[]) {
 	alarm(watchdog_timeout);
 
 	TRY(relpEngineConstruct(&pRelpEngine));
+	if(maxSessions) TRY(relpEngineSetMaxSessions(pRelpEngine, maxSessions));
+	if(openTimeout) TRY(relpEngineSetOpenTimeout(pRelpEngine, openTimeout));
+	if(idleTimeout) TRY(relpEngineSetIdleTimeout(pRelpEngine, idleTimeout));
 	TRY(relpEngineSetDbgprint(pRelpEngine, verbose ? dbgprintf : NULL));
 	TRY(relpEngineSetOnErr(pRelpEngine, onErr));
 	TRY(relpEngineSetOnGenericErr(pRelpEngine, onGenericErr));

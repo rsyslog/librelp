@@ -159,6 +159,9 @@ struct relpEngine_s {
 	relpEngSessLst_t *pSessLstLast;
 	int lenSessLst;
 	pthread_mutex_t mutSessLst;
+	unsigned maxSessions; /* maximum accepted server sessions across all listeners */
+	unsigned openTimeout; /* absolute deadline for completing a server open, seconds */
+	unsigned idleTimeout; /* inactivity deadline for established server sessions, seconds */
 
 #	if defined(HAVE_EPOLL_CREATE1) || defined(HAVE_EPOLL_CREATE)
 	int efd;	/**< file descriptor for epoll */

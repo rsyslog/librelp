@@ -35,6 +35,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <sys/select.h>
+#include <sys/socket.h>
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
@@ -296,6 +297,9 @@ relpEngineConstruct(relpEngine_t **ppThis)
 		pThis->tls_lib = RELP_USE_GNUTLS;
 	#endif
 	pThis->protocolVersion = RELP_CURR_PROTOCOL_VERSION;
+	pThis->maxSessions = 500;
+	pThis->openTimeout = 30;
+	pThis->idleTimeout = 3600;
 #	if defined(HAVE_EPOLL_CREATE1) || defined(HAVE_EPOLL_CREATE)
 	pThis->efd = -1;
 #	endif
@@ -711,6 +715,58 @@ relpEngineSetFamily(relpEngine_t *const pThis, int ai_family)
 	LEAVE_RELPFUNC;
 }
 
+PART_OF_API relpRetVal
+relpEngineSetMaxSessions(relpEngine_t *const pThis, unsigned maxSessions)
+{
+	RELPOBJ_assert(pThis, Engine);
+	if(maxSessions == 0)
+		return RELP_RET_INVALID_PARAM;
+	pThis->maxSessions = maxSessions;
+	return RELP_RET_OK;
+}
+
+PART_OF_API relpRetVal
+relpEngineSetOpenTimeout(relpEngine_t *const pThis, unsigned seconds)
+{
+	RELPOBJ_assert(pThis, Engine);
+	if(seconds == 0)
+		return RELP_RET_INVALID_PARAM;
+	pThis->openTimeout = seconds;
+	return RELP_RET_OK;
+}
+
+PART_OF_API relpRetVal
+relpEngineSetIdleTimeout(relpEngine_t *const pThis, unsigned seconds)
+{
+	RELPOBJ_assert(pThis, Engine);
+	if(seconds == 0)
+		return RELP_RET_INVALID_PARAM;
+	pThis->idleTimeout = seconds;
+	return RELP_RET_OK;
+}
+
+/* Expire sessions between event batches so epoll never holds a pointer to a
+ * session removed by this sweep. An incomplete open has an absolute deadline;
+ * incoming bytes must not extend it. */
+static void
+expireServerSessions(relpEngine_t *const pThis)
+{
+	struct timespec now;
+	if(clock_gettime(CLOCK_MONOTONIC, &now) != 0)
+		return;
+	for(relpEngSessLst_t *entry = pThis->pSessLstRoot, *next; entry != NULL; entry = next) {
+		next = entry->pNext;
+		relpSess_t *const sess = entry->pSess;
+		const time_t since = sess->bServerConnOpen ? sess->lastActivity : sess->acceptedAt;
+		const unsigned limit = sess->bServerConnOpen ? pThis->idleTimeout : pThis->openTimeout;
+		if(now.tv_sec >= since && (unsigned long)(now.tv_sec - since) >= limit) {
+			pThis->dbgprint((char*)"librelp: server session %d timed out\n", relpSessGetSock(sess));
+			sess->sessState = eRelpSessState_BROKEN;
+			relpEngineDelSess(pThis, entry, RELP_RET_TIMED_OUT);
+		}
+	}
+}
+
 /* helper for relpEngineRun; receives data when it is time to
  * do so. Includes all housekeeping, like closing the session.
  */
@@ -756,6 +812,15 @@ handleConnectionRequest(relpEngine_t *const pThis, relpSrv_t *pSrv, int sock)
 	relpSess_t *pNewSess;
 
 	pThis->dbgprint((char*)"new connect on RELP socket #%d\n", sock);
+	pthread_mutex_lock(&pThis->mutSessLst);
+	const int atCapacity = (unsigned)pThis->lenSessLst >= pThis->maxSessions;
+	pthread_mutex_unlock(&pThis->mutSessLst);
+	if(atCapacity) {
+		const int rejectedSock = accept(sock, NULL, NULL);
+		if(rejectedSock >= 0)
+			close(rejectedSock);
+		return;
+	}
 	localRet = relpSessAcceptAndConstruct(&pNewSess, pSrv, sock);
 	if(localRet == RELP_RET_OK) {
 		if(relpEngineAddToSess(pThis, pNewSess) != RELP_RET_OK)
@@ -901,6 +966,7 @@ engineEventLoopRun(relpEngine_t *const pThis)
 
 	pThis->bStop = 0;
 	while(!relpEngineShouldStop(pThis)) {
+		expireServerSessions(pThis);
 		/* very naive implementation, O(n) - can change this once things work...
 		 * But even the naive implementation is better than select, e.g. has no
 		 * limit on the number of sockets.
@@ -930,7 +996,8 @@ engineEventLoopRun(relpEngine_t *const pThis)
 		/* wait for io to become ready */
 		if(relpEngineShouldStop(pThis)) break;
 		pThis->dbgprint((char*)"librelp: doing epoll_wait\n");
-		const int nEvents = epoll_wait(pThis->efd, events, sizeof(events)/sizeof(struct epoll_event), -1);
+		const int nEvents = epoll_wait(pThis->efd, events, sizeof(events)/sizeof(struct epoll_event),
+			pThis->lenSessLst ? 1000 : -1);
 		pThis->dbgprint((char*)"librelp: done epoll_wait, nEvents:%d\n", nEvents);
 		if(relpEngineShouldStop(pThis)) break;
 
@@ -976,6 +1043,7 @@ engineEventLoopRun(relpEngine_t *const pThis)
 
 	pThis->bStop = 0;
 	while(!relpEngineShouldStop(pThis)) {
+		expireServerSessions(pThis);
 	        int maxfds = 0;
 	        FD_ZERO(&readfds);
 	        FD_ZERO(&writefds);
@@ -1033,7 +1101,9 @@ engineEventLoopRun(relpEngine_t *const pThis)
 
 		/* wait for io to become ready */
 		if(relpEngineShouldStop(pThis)) break;
-		nfds = select(maxfds+1, (fd_set *) &readfds, &writefds, NULL, NULL);
+		struct timeval timeout = { 1, 0 };
+		nfds = select(maxfds+1, (fd_set *) &readfds, &writefds, NULL,
+			pThis->lenSessLst ? &timeout : NULL);
 		pThis->dbgprint((char*)"relp select returns, nfds %d\n", nfds);
 		if(relpEngineShouldStop(pThis)) break;
 

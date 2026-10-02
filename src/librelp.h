@@ -203,6 +203,15 @@ relpRetVal relpEngineListnerConstruct(relpEngine_t *pThis, relpSrv_t **ppSrv);
 relpRetVal relpEngineListnerConstructFinalize(relpEngine_t *pThis, relpSrv_t *pSrv);
 relpRetVal relpEngineSetStop(relpEngine_t *pThis);
 relpRetVal relpEngineSetFamily(relpEngine_t *pThis, int ai_family);
+/** Limit accepted server sessions across all listeners (default: 500). Must be positive.
+ * Configure before relpEngineRun(). */
+relpRetVal relpEngineSetMaxSessions(relpEngine_t *pThis, unsigned maxSessions);
+/** Set the absolute deadline for completing TLS and RELP open (default: 30 seconds). Must be positive.
+ * Configure before relpEngineRun(). */
+relpRetVal relpEngineSetOpenTimeout(relpEngine_t *pThis, unsigned seconds);
+/** Set inactivity deadline after RELP open (default: 3600 seconds). Must be positive.
+ * Configure before relpEngineRun(). */
+relpRetVal relpEngineSetIdleTimeout(relpEngine_t *pThis, unsigned seconds);
 relpRetVal relpEngineRun(relpEngine_t *pThis);
 relpRetVal relpEngineCltDestruct(relpEngine_t *pThis, relpClt_t **ppClt);
 relpRetVal relpEngineCltConstruct(relpEngine_t *pThis, relpClt_t **ppClt);
