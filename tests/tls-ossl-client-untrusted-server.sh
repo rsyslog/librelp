@@ -14,6 +14,6 @@ startup_receiver -T -a "name" -x ${srcdir}/tls-certs/ossl-ca.pem \
 	-e $TESTDIR/$errorlog $OPT_VERBOSE > $TESTDIR/sender.log 2>&1
 
 stop_receiver
-check_output "send: authentication error.*self-signed certificate in certificate chain" \
+check_output "send: authentication error.*self[- ]signed certificate in certificate chain" \
 	$TESTDIR/sender.log -z
 terminate

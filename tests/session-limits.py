@@ -9,6 +9,7 @@ import time
 
 PORT = int(os.environ["TESTPORT"])
 ADDR = ("127.0.0.1", PORT)
+now = getattr(time, "monotonic", time.time)
 
 
 def connect():
@@ -18,8 +19,8 @@ def connect():
 
 
 def wait_closed(sock, seconds=4):
-    deadline = time.monotonic() + seconds
-    while time.monotonic() < deadline:
+    deadline = now() + seconds
+    while now() < deadline:
         try:
             data = sock.recv(4096)
         except socket.timeout:
@@ -33,9 +34,9 @@ def open_session():
     sock = connect()
     offers = b"relp_version=0\ncommands=syslog\n"
     sock.sendall(b"1 open " + str(len(offers)).encode() + b" " + offers + b"\n")
-    deadline = time.monotonic() + 2
+    deadline = now() + 2
     response = b""
-    while b"200 OK" not in response and time.monotonic() < deadline:
+    while b"200 OK" not in response and now() < deadline:
         try:
             chunk = sock.recv(4096)
         except socket.timeout:
@@ -68,7 +69,7 @@ def main():
                 break
         except socket.timeout:
             pass
-        except (BrokenPipeError, ConnectionResetError):
+        except socket.error:
             closed = True
             break
     if not closed:
@@ -94,8 +95,8 @@ def main():
     wait_closed(established)
     established.close()
 
-    with open_session() as replacement:
-        pass
+    replacement = open_session()
+    replacement.close()
 
 
 def stalled_tls_handshake():
