@@ -125,12 +125,18 @@ relpRetVal
 relpSendqDestruct(relpSendq_t **ppThis)
 {
 	relpSendq_t *pThis;
+	relpSendqe_t *pEntry;
 
 	ENTER_RELPFUNC;
 	assert(ppThis != NULL);
 	pThis = *ppThis;
 	RELPOBJ_assert(pThis, Sendq);
 
+	while(pThis->pRoot != NULL) {
+		pEntry = pThis->pRoot;
+		DLL_Del(pEntry, pThis->pRoot, pThis->pLast);
+		relpSendqeDestruct(&pEntry);
+	}
 	pthread_mutex_destroy(&pThis->mut);
 	/* done with de-init work, now free sendq object itself */
 	free(pThis);

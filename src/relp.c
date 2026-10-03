@@ -35,6 +35,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <sys/select.h>
+#include <sys/socket.h>
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
@@ -144,10 +145,11 @@ delFromEpollSet(relpEngine_t *const pThis, epolld_t *epd)
 static relpRetVal
 addSessToEpoll(relpEngine_t *const pThis, relpEngSessLst_t *pSessLstEntry)
 {
-	addToEpollSet(pThis, epolld_sess, pSessLstEntry,
+	relpRetVal iRet = addToEpollSet(pThis, epolld_sess, pSessLstEntry,
 		relpSessGetSock(pSessLstEntry->pSess), &pSessLstEntry->epevt);
-	pSessLstEntry->epollState = epoll_rdonly;
-	return RELP_RET_OK;
+	if(iRet == RELP_RET_OK)
+		pSessLstEntry->epollState = epoll_rdonly;
+	return iRet;
 }
 
 static void
@@ -199,11 +201,18 @@ finalize_it:
 static relpRetVal
 relpEngineAddToSess(relpEngine_t *const pThis, relpSess_t *pSess)
 {
-	relpEngSessLst_t *pSessLstEntry;
+	relpEngSessLst_t *pSessLstEntry = NULL;
+	int linked = 0;
 
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Engine);
 	RELPOBJ_assert(pSess, Sess);
+
+#	if !defined(HAVE_EPOLL_CREATE1) && !defined(HAVE_EPOLL_CREATE)
+	/* A newly accepted session is visited in this select cycle too. */
+	if(relpSessGetSock(pSess) < 0 || relpSessGetSock(pSess) >= FD_SETSIZE)
+		ABORT_FINALIZE(RELP_RET_IO_ERR);
+#	endif
 
 	if((pSessLstEntry = calloc(1, sizeof(relpEngSessLst_t))) == NULL)
 		ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
@@ -213,12 +222,22 @@ relpEngineAddToSess(relpEngine_t *const pThis, relpSess_t *pSess)
 	pthread_mutex_lock(&pThis->mutSessLst);
 	DLL_Add(pSessLstEntry, pThis->pSessLstRoot, pThis->pSessLstLast);
 	++pThis->lenSessLst;
+	linked = 1;
 	pthread_mutex_unlock(&pThis->mutSessLst);
 #	if defined(HAVE_EPOLL_CREATE1) || defined(HAVE_EPOLL_CREATE)
-	addSessToEpoll(pThis, pSessLstEntry);
+	CHKRet(addSessToEpoll(pThis, pSessLstEntry));
 #	endif
 
 finalize_it:
+	if(iRet != RELP_RET_OK && pSessLstEntry != NULL) {
+		if(linked) {
+			pthread_mutex_lock(&pThis->mutSessLst);
+			DLL_Del(pSessLstEntry, pThis->pSessLstRoot, pThis->pSessLstLast);
+			--pThis->lenSessLst;
+			pthread_mutex_unlock(&pThis->mutSessLst);
+		}
+		free(pSessLstEntry);
+	}
 	LEAVE_RELPFUNC;
 }
 
@@ -278,6 +297,9 @@ relpEngineConstruct(relpEngine_t **ppThis)
 		pThis->tls_lib = RELP_USE_GNUTLS;
 	#endif
 	pThis->protocolVersion = RELP_CURR_PROTOCOL_VERSION;
+	pThis->maxSessions = 500;
+	pThis->openTimeout = 30;
+	pThis->idleTimeout = 3600;
 #	if defined(HAVE_EPOLL_CREATE1) || defined(HAVE_EPOLL_CREATE)
 	pThis->efd = -1;
 #	endif
@@ -693,6 +715,58 @@ relpEngineSetFamily(relpEngine_t *const pThis, int ai_family)
 	LEAVE_RELPFUNC;
 }
 
+PART_OF_API relpRetVal
+relpEngineSetMaxSessions(relpEngine_t *const pThis, unsigned maxSessions)
+{
+	RELPOBJ_assert(pThis, Engine);
+	if(maxSessions == 0)
+		return RELP_RET_INVALID_PARAM;
+	pThis->maxSessions = maxSessions;
+	return RELP_RET_OK;
+}
+
+PART_OF_API relpRetVal
+relpEngineSetOpenTimeout(relpEngine_t *const pThis, unsigned seconds)
+{
+	RELPOBJ_assert(pThis, Engine);
+	if(seconds == 0)
+		return RELP_RET_INVALID_PARAM;
+	pThis->openTimeout = seconds;
+	return RELP_RET_OK;
+}
+
+PART_OF_API relpRetVal
+relpEngineSetIdleTimeout(relpEngine_t *const pThis, unsigned seconds)
+{
+	RELPOBJ_assert(pThis, Engine);
+	if(seconds == 0)
+		return RELP_RET_INVALID_PARAM;
+	pThis->idleTimeout = seconds;
+	return RELP_RET_OK;
+}
+
+/* Expire sessions between event batches so epoll never holds a pointer to a
+ * session removed by this sweep. An incomplete open has an absolute deadline;
+ * incoming bytes must not extend it. */
+static void
+expireServerSessions(relpEngine_t *const pThis)
+{
+	struct timespec now;
+	if(clock_gettime(CLOCK_MONOTONIC, &now) != 0)
+		return;
+	for(relpEngSessLst_t *entry = pThis->pSessLstRoot, *next; entry != NULL; entry = next) {
+		next = entry->pNext;
+		relpSess_t *const sess = entry->pSess;
+		const time_t since = sess->bServerConnOpen ? sess->lastActivity : sess->acceptedAt;
+		const unsigned limit = sess->bServerConnOpen ? pThis->idleTimeout : pThis->openTimeout;
+		if(now.tv_sec >= since && (unsigned long)(now.tv_sec - since) >= limit) {
+			pThis->dbgprint((char*)"librelp: server session %d timed out\n", relpSessGetSock(sess));
+			sess->sessState = eRelpSessState_BROKEN;
+			relpEngineDelSess(pThis, entry, RELP_RET_TIMED_OUT);
+		}
+	}
+}
+
 /* helper for relpEngineRun; receives data when it is time to
  * do so. Includes all housekeeping, like closing the session.
  */
@@ -738,9 +812,19 @@ handleConnectionRequest(relpEngine_t *const pThis, relpSrv_t *pSrv, int sock)
 	relpSess_t *pNewSess;
 
 	pThis->dbgprint((char*)"new connect on RELP socket #%d\n", sock);
+	pthread_mutex_lock(&pThis->mutSessLst);
+	const int atCapacity = (unsigned)pThis->lenSessLst >= pThis->maxSessions;
+	pthread_mutex_unlock(&pThis->mutSessLst);
+	if(atCapacity) {
+		const int rejectedSock = accept(sock, NULL, NULL);
+		if(rejectedSock >= 0)
+			close(rejectedSock);
+		return;
+	}
 	localRet = relpSessAcceptAndConstruct(&pNewSess, pSrv, sock);
 	if(localRet == RELP_RET_OK) {
-		relpEngineAddToSess(pThis, pNewSess);
+		if(relpEngineAddToSess(pThis, pNewSess) != RELP_RET_OK)
+			relpSessDestruct(&pNewSess);
 	}
 }
 
@@ -797,11 +881,13 @@ engineEventLoopInit(relpEngine_t LIBRELP_ATTR_UNUSED *pThis)
 	 */
 	for(pSrvEtry = pThis->pSrvLstRoot ; pSrvEtry != NULL ; pSrvEtry = pSrvEtry->pNext) {
 		nLstn = relpSrvGetNumLstnSocks(pSrvEtry->pSrv);
-		const size_t allocsize = sizeof(epolld_t) * nLstn;
-		CHKmalloc(pSrvEtry->epevts = (epolld_t **)malloc(allocsize));
+		if(nLstn == 0)
+			continue;
+		CHKmalloc(pSrvEtry->epevts = (epolld_t **)calloc(nLstn, sizeof(epolld_t *)));
 		for(i = 0 ; i < nLstn ; ++i) {
 			sock = relpSrvGetLstnSock(pSrvEtry->pSrv, i+1);
-			addToEpollSet(pThis, epolld_lstn, pSrvEtry->pSrv, sock, &(pSrvEtry->epevts[i]));
+			CHKRet(addToEpollSet(pThis, epolld_lstn, pSrvEtry->pSrv, sock,
+				&(pSrvEtry->epevts[i])));
 		}
 	}
 finalize_it:
@@ -814,10 +900,14 @@ engineEventLoopExit(relpEngine_t LIBRELP_ATTR_UNUSED *pThis)
 	ENTER_RELPFUNC;
 	for(pSrvEtry = pThis->pSrvLstRoot ; pSrvEtry != NULL ; pSrvEtry = pSrvEtry->pNext) {
 		const int nLstn = relpSrvGetNumLstnSocks(pSrvEtry->pSrv);
+		if(pSrvEtry->epevts == NULL)
+			continue;
 		for(int i = 0 ; i < nLstn ; ++i) {
-			delFromEpollSet(pThis, pSrvEtry->epevts[i]);
+			if(pSrvEtry->epevts[i] != NULL)
+				delFromEpollSet(pThis, pSrvEtry->epevts[i]);
 		}
 		free(pSrvEtry->epevts);
+		pSrvEtry->epevts = NULL;
 	}
 	if(pThis->efd != -1) {
 		close(pThis->efd);
@@ -876,6 +966,7 @@ engineEventLoopRun(relpEngine_t *const pThis)
 
 	pThis->bStop = 0;
 	while(!relpEngineShouldStop(pThis)) {
+		expireServerSessions(pThis);
 		/* very naive implementation, O(n) - can change this once things work...
 		 * But even the naive implementation is better than select, e.g. has no
 		 * limit on the number of sockets.
@@ -905,7 +996,8 @@ engineEventLoopRun(relpEngine_t *const pThis)
 		/* wait for io to become ready */
 		if(relpEngineShouldStop(pThis)) break;
 		pThis->dbgprint((char*)"librelp: doing epoll_wait\n");
-		const int nEvents = epoll_wait(pThis->efd, events, sizeof(events)/sizeof(struct epoll_event), -1);
+		const int nEvents = epoll_wait(pThis->efd, events, sizeof(events)/sizeof(struct epoll_event),
+			pThis->lenSessLst ? 1000 : -1);
 		pThis->dbgprint((char*)"librelp: done epoll_wait, nEvents:%d\n", nEvents);
 		if(relpEngineShouldStop(pThis)) break;
 
@@ -951,6 +1043,7 @@ engineEventLoopRun(relpEngine_t *const pThis)
 
 	pThis->bStop = 0;
 	while(!relpEngineShouldStop(pThis)) {
+		expireServerSessions(pThis);
 	        int maxfds = 0;
 	        FD_ZERO(&readfds);
 	        FD_ZERO(&writefds);
@@ -959,6 +1052,11 @@ engineEventLoopRun(relpEngine_t *const pThis)
 		for(pSrvEtry = pThis->pSrvLstRoot ; pSrvEtry != NULL ; pSrvEtry = pSrvEtry->pNext) {
 			for(iSocks = 1 ; iSocks <= relpSrvGetNumLstnSocks(pSrvEtry->pSrv) ; ++iSocks) {
 				sock = relpSrvGetLstnSock(pSrvEtry->pSrv, iSocks);
+				if(sock < 0 || sock >= FD_SETSIZE) {
+					relpEngineCallOnGenericErr(pThis, "librelp", RELP_RET_IO_ERR,
+						"listener socket %d exceeds select descriptor range", sock);
+					ABORT_FINALIZE(RELP_RET_IO_ERR);
+				}
 				FD_SET(sock, &readfds);
 				if(sock > maxfds) maxfds = sock;
 			}
@@ -967,6 +1065,11 @@ engineEventLoopRun(relpEngine_t *const pThis)
 		/* Add all sessions for reception and sending (they all have just one socket) */
 		for(pSessEtry = pThis->pSessLstRoot ; pSessEtry != NULL ; pSessEtry = pSessEtry->pNext) {
 			sock = relpSessGetSock(pSessEtry->pSess);
+			if(sock < 0 || sock >= FD_SETSIZE) {
+				relpEngineCallOnGenericErr(pThis, "librelp", RELP_RET_IO_ERR,
+					"session socket %d exceeds select descriptor range", sock);
+				ABORT_FINALIZE(RELP_RET_IO_ERR);
+			}
 #			if defined(ENABLE_TLS) || defined(ENABLE_TLS_OPENSSL)
 			if(relpSessTcpRequiresRtry(pSessEtry->pSess)) {
 				pThis->dbgprint((char*)"librelp: retry op requested for sock %d\n", sock);
@@ -998,7 +1101,9 @@ engineEventLoopRun(relpEngine_t *const pThis)
 
 		/* wait for io to become ready */
 		if(relpEngineShouldStop(pThis)) break;
-		nfds = select(maxfds+1, (fd_set *) &readfds, &writefds, NULL, NULL);
+		struct timeval timeout = { 1, 0 };
+		nfds = select(maxfds+1, (fd_set *) &readfds, &writefds, NULL,
+			pThis->lenSessLst ? &timeout : NULL);
 		pThis->dbgprint((char*)"relp select returns, nfds %d\n", nfds);
 		if(relpEngineShouldStop(pThis)) break;
 
@@ -1068,6 +1173,7 @@ engineEventLoopRun(relpEngine_t *const pThis)
 
 	}
 
+finalize_it:
 	LEAVE_RELPFUNC;
 }
 #endif /* epoll/select support */
@@ -1090,12 +1196,19 @@ engineEventLoopRun(relpEngine_t *const pThis)
 PART_OF_API relpRetVal
 relpEngineRun(relpEngine_t *const pThis)
 {
+	relpRetVal loopRet;
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Engine);
 
-	CHKRet(engineEventLoopInit(pThis));
-	engineEventLoopRun(pThis);
-	engineEventLoopExit(pThis);
+	iRet = engineEventLoopInit(pThis);
+	if(iRet != RELP_RET_OK) {
+		engineEventLoopExit(pThis);
+		goto finalize_it;
+	}
+	loopRet = engineEventLoopRun(pThis);
+	iRet = engineEventLoopExit(pThis);
+	if(loopRet != RELP_RET_OK)
+		iRet = loopRet;
 finalize_it:
 	LEAVE_RELPFUNC;
 }
@@ -1137,19 +1250,24 @@ relpEngineDispatchFrame(relpEngine_t *const pThis, relpSess_t *pSess, relpFrame_
 	 * at the top of the list!
 	 */
 	if(!strcmp((char*)pFrame->cmd, "syslog")) {
-		/*	When processing Syslog frames, we ignore return code.
-		*	Otherwise valid messages in the frame buffer will be
-		*	discarded. And it's better to have duplicated messages
-		*	instead of losing them.
-		*/
-		relpSCSyslog(pFrame, pSess);
+		if(pSess->pSrv == NULL)
+			ABORT_FINALIZE(RELP_RET_INVALID_CMD);
+		CHKRet(relpSCSyslog(pFrame, pSess));
 	} else if(!strcmp((char*)pFrame->cmd, "rsp")) {
+		if(pSess->pClt == NULL)
+			ABORT_FINALIZE(RELP_RET_INVALID_CMD);
 		CHKRet(relpSCRsp(pFrame, pSess));
 	} else if(!strcmp((char*)pFrame->cmd, "open")) {
+		if(pSess->pSrv == NULL)
+			ABORT_FINALIZE(RELP_RET_INVALID_CMD);
 		CHKRet(relpSCInit(pFrame, pSess));
 	} else if(!strcmp((char*)pFrame->cmd, "close")) {
+		if(pSess->pSrv == NULL)
+			ABORT_FINALIZE(RELP_RET_INVALID_CMD);
 		CHKRet(relpSCClose(pFrame, pSess));
 	} else if(!strcmp((char*)pFrame->cmd, "serverclose")) {
+		if(pSess->pClt == NULL)
+			ABORT_FINALIZE(RELP_RET_INVALID_CMD);
 		CHKRet(relpCCServerclose(pFrame, pSess));
 	} else {
 		pThis->dbgprint((char*)"invalid or not supported relp command '%s'\n", pFrame->cmd);

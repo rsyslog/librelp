@@ -46,6 +46,7 @@ static FILE *sessFile = NULL;
 static char *pidFileName = NULL;
 
 static int immediate_exit = 0; /* if set to 1, force-exit as soon as possible */
+static int fail_syslog_callback = 0;
 
 static relpEngine_t *pRelpEngine;
 
@@ -135,6 +136,8 @@ static relpRetVal onSyslogRcv(unsigned char *pHostname LIBRELP_ATTR_UNUSED,
 	unsigned char *pIP LIBRELP_ATTR_UNUSED, unsigned char *msg,
 	size_t lenMsg)
 {
+	if(fail_syslog_callback)
+		return RELP_RET_NOT_IMPLEMENTED;
 
 	char *pMsg;
 
@@ -282,16 +285,18 @@ int main(int argc, char *argv[]) {
 	char *authMode = NULL;
 	int maxDataSize = 0;
 	int oversizeMode = 0;
+	unsigned maxSessions = 0, openTimeout = 0, idleTimeout = 0;
 	int ret = 0;
 	int append_outfile = 0;
 	int watchdog_timeout = 60; /* one seconds looks like a good default */
 	int no_exit_on_err = 0;
+	int omit_syslog_callback = 0;
 	int i = 0;
 	const char *tlslib = NULL;
 	const char* outfile_name = NULL;
 
 #if defined(_AIX)
-	while((c = getopt(argc, argv, "a:c:Ae:F:l:m:No:O:P:p:TvW:C:x:y:z:")) != EOF) {
+	while((c = getopt(argc, argv, "a:c:Ae:F:l:m:No:O:P:p:qQTvW:C:x:y:z:")) != EOF) {
 #else
 	static struct option long_options[] =
 	{
@@ -309,12 +314,26 @@ int main(int argc, char *argv[]) {
 		{"tlsconfcmd", required_argument, 0, 'c'},
 		{"watchdog-timeout", required_argument, 0, 'W'},
 		{"no-exit-on-error", no_argument, 0, 'N'},
+		{"max-sessions", required_argument, 0, 1001},
+		{"open-timeout", required_argument, 0, 1002},
+		{"idle-timeout", required_argument, 0, 1003},
+		{"fail-syslog-callback", no_argument, 0, 'q'},
+		{"omit-syslog-callback", no_argument, 0, 'Q'},
 		{0, 0, 0, 0}
 	};
 
-	while((c = getopt_long(argc, argv, "a:c:Ae:F:l:m:No:O:P:p:TvW:C:x:y:z:", long_options, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "a:c:Ae:F:l:m:No:O:P:p:qQTvW:C:x:y:z:", long_options, &option_index)) != -1) {
 #endif
 		switch(c) {
+		case 1001:
+			maxSessions = (unsigned)atoi(optarg);
+			break;
+		case 1002:
+			openTimeout = (unsigned)atoi(optarg);
+			break;
+		case 1003:
+			idleTimeout = (unsigned)atoi(optarg);
+			break;
 		case 'a':
 			authMode = optarg;
 			break;
@@ -400,6 +419,12 @@ int main(int argc, char *argv[]) {
 		case 'N':
 			no_exit_on_err = 1;
 			break;
+		case 'q':
+			fail_syslog_callback = 1;
+			break;
+		case 'Q':
+			omit_syslog_callback = 1;
+			break;
 		default:
 			print_usage();
 			return -1;
@@ -467,6 +492,9 @@ int main(int argc, char *argv[]) {
 	alarm(watchdog_timeout);
 
 	TRY(relpEngineConstruct(&pRelpEngine));
+	if(maxSessions) TRY(relpEngineSetMaxSessions(pRelpEngine, maxSessions));
+	if(openTimeout) TRY(relpEngineSetOpenTimeout(pRelpEngine, openTimeout));
+	if(idleTimeout) TRY(relpEngineSetIdleTimeout(pRelpEngine, idleTimeout));
 	TRY(relpEngineSetDbgprint(pRelpEngine, verbose ? dbgprintf : NULL));
 	TRY(relpEngineSetOnErr(pRelpEngine, onErr));
 	TRY(relpEngineSetOnGenericErr(pRelpEngine, onGenericErr));
@@ -481,7 +509,8 @@ int main(int argc, char *argv[]) {
 
 	TRY(relpEngineSetEnableCmd(pRelpEngine, (unsigned char*) "syslog", eRelpCmdState_Required));
 	TRY(relpEngineSetFamily(pRelpEngine, protFamily));
-	TRY(relpEngineSetSyslogRcv(pRelpEngine, onSyslogRcv));
+	if(!omit_syslog_callback)
+		TRY(relpEngineSetSyslogRcv(pRelpEngine, onSyslogRcv));
 	TRY(relpEngineSetDnsLookupMode(pRelpEngine, 0)); /* 0=disable */
 
 	TRY(relpEngineListnerConstruct(pRelpEngine, &pRelpSrv));

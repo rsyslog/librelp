@@ -34,6 +34,7 @@
 #define	RELPSESS_H_INCLUDED
 
 #include <pthread.h>
+#include <time.h>
 
 #include "relpsrv.h"
 
@@ -71,6 +72,8 @@ struct relpSess_s {
 	relpEngine_t *pEngine;
 	relpSessType_t sessType;	/**< session type: 0 - server, 1 - client */
 	int bServerConnOpen;	/**< server part: is connection established? */
+	time_t acceptedAt; /* monotonic seconds, server sessions only */
+	time_t lastActivity; /* monotonic seconds of last received data */
 	void *pUsr;		/**< user provided pointer (opaque data) */
 	relpTcp_t *pTcp;	/**< our sockt to the remote peer */
 	struct relpFrame_s *pCurrRcvFrame; /**< the current receive frame (a buffer) */

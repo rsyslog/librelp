@@ -59,23 +59,20 @@ BEGINcommand(S, Syslog)
 		ABORT_FINALIZE(RELP_RET_CMD_DISABLED);
 	}
 
-	/* TODO: right now, the callbacks are called without checking the
-	 * return code. I assume this should at least be optionally done.
-	 * Consider implementing this. rgerhards, 2018-04-17
-	 */
        /* only highest version callback is called */
        if(pSess->pEngine->onSyslogRcv3 != NULL) {
-               pSess->pEngine->onSyslogRcv3(pSess->pSrv->pUsr, pSess->pTcp->pRemHostName,
+               CHKRet(pSess->pEngine->onSyslogRcv3(pSess->pSrv->pUsr, pSess->pTcp->pRemHostName,
                                                pSess->pTcp->pRemHostIP, pSess->pTcp->pRemHostPort,
-                                               pFrame->pData, pFrame->lenData);
+                                               pFrame->pData, pFrame->lenData));
        } else if(pSess->pEngine->onSyslogRcv2 != NULL) {
-               pSess->pEngine->onSyslogRcv2(pSess->pSrv->pUsr, pSess->pTcp->pRemHostName,
-                                               pSess->pTcp->pRemHostIP, pFrame->pData, pFrame->lenData);
+               CHKRet(pSess->pEngine->onSyslogRcv2(pSess->pSrv->pUsr, pSess->pTcp->pRemHostName,
+                                               pSess->pTcp->pRemHostIP, pFrame->pData, pFrame->lenData));
        } else if(pSess->pEngine->onSyslogRcv != NULL) {
-               pSess->pEngine->onSyslogRcv(pSess->pTcp->pRemHostName, pSess->pTcp->pRemHostIP,
-                                               pFrame->pData, pFrame->lenData);
+               CHKRet(pSess->pEngine->onSyslogRcv(pSess->pTcp->pRemHostName, pSess->pTcp->pRemHostIP,
+                                               pFrame->pData, pFrame->lenData));
        } else {
                pSess->pEngine->dbgprint((char*)"error: no syslog reception callback is set, nothing done\n");
+               ABORT_FINALIZE(RELP_RET_NOT_IMPLEMENTED);
        }
 
 	/* send response */

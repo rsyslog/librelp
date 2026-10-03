@@ -133,6 +133,9 @@ relpSessConstruct(relpSess_t **ppThis, relpEngine_t *pEngine, int connType, void
 	pThis->stateCmdSyslog = pEngine->stateCmdSyslog;
 	if(connType == RELP_SRV_CONN) {
 		pThis->pSrv = (relpSrv_t*) pParent;
+		struct timespec now;
+		if(clock_gettime(CLOCK_MONOTONIC, &now) == 0)
+			pThis->acceptedAt = pThis->lastActivity = now.tv_sec;
 	} else {
 		pThis->pClt = (relpClt_t*) pParent;
 	}
@@ -303,6 +306,11 @@ relpSessRcvData(relpSess_t *const pThis)
 		}
 	} else {
 		/* Terminate buffer and output received data to debug*/
+		if(pThis->pSrv != NULL) {
+			struct timespec now;
+			if(clock_gettime(CLOCK_MONOTONIC, &now) == 0)
+				pThis->lastActivity = now.tv_sec;
+		}
 		rcvBuf[lenBuf] = '\0';
 		pThis->pEngine->dbgprint((char*)"relp session read %d octets, buf '%s'\n", (int) lenBuf, rcvBuf);
 
