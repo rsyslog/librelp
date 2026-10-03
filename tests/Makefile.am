@@ -102,6 +102,7 @@ TLS_STATIC_TESTS= \
 
 # test specific to openssl
 OSSL_TESTS= \
+	tls-ossl-certvalid-no-trust-anchor.sh \
 	tls-wrong-permittedPeer.sh \
 	tls-wrong-authname.sh \
 	tls-wrong-signedcert.sh \
@@ -151,6 +152,13 @@ if OS_SOLARIS_WRAP
 else
 TESTS+=$(OSSL_WRAP_STATIC_TESTS)
 endif
+TESTS+=tls-openssl-retry-state.sh
+check_PROGRAMS+=tls-openssl-retry-state
+
+tls_openssl_retry_state_SOURCES=tls-openssl-retry-state.c ../src/tcp.c
+tls_openssl_retry_state_LDADD=../src/.libs/librelp.a $(GNUTLS_LIBS) $(OPENSSL_LIBS) $(rt_libs) $(socket_libs) $(pthread_libs)
+tls_openssl_retry_state_CFLAGS=$(AM_CFLAGS) -I${top_srcdir}/src $(WARN_CFLAGS)
+tls_openssl_retry_state_CPPFLAGS=-DTEST_CERT_DIR=\"$(srcdir)/tls-certs\"
 endif
 endif
 
@@ -183,6 +191,8 @@ EXTRA_DIST=$(TESTS) \
 	tcp-accept-fd-reuse.c \
 	tls-gtls-lifecycle.c \
 	permitted-peer-lifetime.c \
+	tls-openssl-retry-state.sh \
+	tls-openssl-retry-state.c \
 	tls-certs/ca.pem \
 	tls-certs/cert.pem \
 	tls-certs/key.pem \

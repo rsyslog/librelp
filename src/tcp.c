@@ -1508,23 +1508,7 @@ relpTcpInitTLS(relpTcp_t *const pThis)
 		} else
 			pThis->pEngine->dbgprint((char*)"relpTcpInitTLS: Successfully initialized CA certificate #1\n");
 	} else {
-		/* Init CA from own Certificate */
-		if(	pThis->ownCertFile != NULL ) {
-			if (SSL_CTX_load_verify_locations(pThis->ctx, pThis->ownCertFile, NULL) != 1) {
-				callOnErr(pThis, (char*)"relpTcpInitTLS: Error, Certificate could not be accessed."
-						" Is the file at the right path? And do we have the permissions?\n",
-						RELP_RET_ERR_TLS_SETUP);
-				/* Output Additional OpenSSL output */
-				relpTcpLastSSLErrorMsg(0, pThis, "relpTcpInitTLS");
-				ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
-			} else
-				pThis->pEngine->dbgprint(
-					(char*)"relpTcpInitTLS: Successfully initialized CA Certificate #2\n");
-		}
-
-		if(pThis->ownCertFile == NULL) {
-			pThis->pEngine->dbgprint((char*)"relpTcpInitTLS: CA certificate MISSING\n");
-		}
+		pThis->pEngine->dbgprint((char*)"relpTcpInitTLS: CA certificate MISSING\n");
 	}
 finalize_it:
 	LEAVE_RELPFUNC;
@@ -1657,7 +1641,10 @@ finalize_it:
 static int
 relpTcpGetRtryDirection_ossl(relpTcp_t *const pThis)
 {
-	if (pThis->rtryOp == relpTCP_RETRY_send)
+	if (pThis->rtryOsslErr == SSL_ERROR_WANT_READ)
+		return 0; /* try to read data */
+	else if (pThis->rtryOsslErr == SSL_ERROR_WANT_WRITE ||
+		pThis->rtryOp == relpTCP_RETRY_send)
 		return 1; /* try to write data */
 	else
 		return 0; /* try to read data = default */
@@ -1682,6 +1669,7 @@ relpTcpRtryHandshake_ossl(relpTcp_t *const pThis)
 			if(	resErr == SSL_ERROR_WANT_READ ||
 				resErr == SSL_ERROR_WANT_WRITE) {
 				pThis->rtryOp = relpTCP_RETRY_handshake;
+				pThis->rtryOsslErr = resErr; /* Store SSL ErrorCode into */
 				pThis->pEngine->dbgprint((char*)"relpTcpRtryHandshake: Server handshake does not "
 					"complete immediately - setting to retry (this is OK and normal)\n");
 				FINALIZE;
@@ -1709,7 +1697,7 @@ relpTcpRtryHandshake_ossl(relpTcp_t *const pThis)
 			if(	resErr == SSL_ERROR_WANT_READ ||
 				resErr == SSL_ERROR_WANT_WRITE) {
 				pThis->rtryOp = relpTCP_RETRY_handshake;
-//				pThis->rtryOsslErr = resErr; /* Store SSL ErrorCode into*/
+				pThis->rtryOsslErr = resErr; /* Store SSL ErrorCode into */
 				pThis->pEngine->dbgprint((char*)"relpTcpRtryHandshake: "
 					"Client handshake does not complete immediately "
 					"- setting to retry (this is OK and normal)\n");
@@ -1733,6 +1721,7 @@ relpTcpRtryHandshake_ossl(relpTcp_t *const pThis)
 	}
 
 	pThis->rtryOp = relpTCP_RETRY_none;
+	pThis->rtryOsslErr = SSL_ERROR_NONE;
 	CHKRet(relpTcpPostHandshakeCheck(pThis));
 	CHKRet(relpTcpChkPeerAuth(pThis));
 
@@ -3242,6 +3231,8 @@ relpTcpRcv_ossl(relpTcp_t *const pThis, relpOctet_t *const pRcvBuf, ssize_t *con
 	if(lenRcvd > 0) {
 		pThis->rtryOp = relpTCP_RETRY_none;
 		pThis->pEngine->dbgprint((char*)"relpTcpRcv_ossl: SSL_read SUCCESS len %d\n", lenRcvd);
+		pThis->rtryOp = relpTCP_RETRY_none;
+		pThis->rtryOsslErr = SSL_ERROR_NONE;
 		*pLenBuf = lenRcvd;
 	} else {
 		*pLenBuf = -1;
@@ -3414,12 +3405,15 @@ relpTcpSend_ossl(relpTcp_t *const pThis, relpOctet_t *const pBuf, ssize_t *const
 	if(written > 0) {
 		pThis->rtryOp = relpTCP_RETRY_none;
 		pThis->pEngine->dbgprint((char*)"relpTcpSend_ossl: SSL_write SUCCESS\n");
+		pThis->rtryOp = relpTCP_RETRY_none;
+		pThis->rtryOsslErr = SSL_ERROR_NONE;
 	} else {
 		const int err = SSL_get_error(pThis->ssl, written);
 		if(	err == SSL_ERROR_ZERO_RETURN ) {
 			pThis->pEngine->dbgprint((char*)"relpTcpSend_ossl: SSL_ERROR_ZERO_RETURN received, "
 				"retry next time\n");
 			pThis->rtryOp = relpTCP_RETRY_send;
+			pThis->rtryOsslErr = err; /* Store SSL ErrorCode into */
 			written = 0;
 		} else if(err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE) {
 			/* Check for SSL Shutdown: simply abort then (is this right???) */
@@ -3431,6 +3425,7 @@ relpTcpSend_ossl(relpTcp_t *const pThis, relpOctet_t *const pBuf, ssize_t *const
 				err == SSL_ERROR_WANT_READ ? "read" : "write");
 			relpTcpLastSSLErrorMsg( (int)written, pThis, "relpTcpSend_ossl UNEXPECTED");
 			pThis->rtryOp = relpTCP_RETRY_send;
+			pThis->rtryOsslErr = err; /* Store SSL ErrorCode into */
 			written = 0;
 		} else {
 			/* Output error and abort */
