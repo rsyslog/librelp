@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /*
  * Verify that every permitted-peer owner releases its copied entries and
  * pointer array, including TCP wildcard compilation state.

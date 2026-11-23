@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* a simple program to check which TLs libs are available in
  * the current build. Returns 0 if available, 1 if not, 2 if error.
  * Written 2018-11-23 by Rainer Gerhards, released under ASL 2.0
