@@ -213,7 +213,6 @@ relpSessDestruct(relpSess_t **ppThis)
 
 	free(pThis->srvPort);
 	free(pThis->srvAddr);
-	free(pThis->clientIP);
 	free(pThis->pristring);
 	free(pThis->caCertFile);
 	free(pThis->ownCertFile);
@@ -904,7 +903,7 @@ relpSessConnect(relpSess_t *const pThis, int protFamily, unsigned char *port, un
 		CHKRet(relpTcpSetAuthMode(pThis->pTcp, pThis->authmode));
 		CHKRet(relpTcpSetPermittedPeers(pThis->pTcp, &pThis->permittedPeers));
 	}
-	CHKRet(relpTcpConnect(pThis->pTcp, protFamily, port, host, pThis->clientIP));
+	CHKRet(relpTcpConnect(pThis->pTcp, protFamily, port, host, &pThis->sourceBind));
 	relpSessSetSessState(pThis, eRelpSessState_PRE_INIT);
 
 	/* create offers */
@@ -1015,19 +1014,6 @@ relpSessSetConnTimeout(relpSess_t *const pThis, int connTimeout)
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
 	pThis->connTimeout = connTimeout;
-	LEAVE_RELPFUNC;
-}
-
-relpRetVal
-relpSessSetClientIP(relpSess_t *const pThis, unsigned char *ip)
-{
-	ENTER_RELPFUNC;
-	RELPOBJ_assert(pThis, Sess);
-	free(pThis->clientIP);
-	if(ip == NULL)
-		pThis->clientIP = NULL;
-	else
-		pThis->clientIP = (unsigned char*) strdup((char*)  ip);
 	LEAVE_RELPFUNC;
 }
 

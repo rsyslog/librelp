@@ -3766,11 +3766,12 @@ relpTcpConnect(relpTcp_t *const pThis,
 	const int family,
 	unsigned char *port,
 	unsigned char *host,
-	unsigned char *clientIP)
+	const relpSourceBind_t *binding)
 {
 	struct addrinfo *res = NULL;
 	struct addrinfo hints;
-	struct addrinfo *reslocal = NULL;
+	const struct addrinfo *destination;
+	const relpSourceEndpoint_t *source;
 	struct pollfd pfd;
 	char errmsg[1424];
 	int so_error;
@@ -3791,18 +3792,18 @@ relpTcpConnect(relpTcp_t *const pThis,
 		ABORT_FINALIZE(RELP_RET_IO_ERR);
 	}
 
-	if((pThis->sock = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) == -1) {
+	destination = relpSourceBindSelect(binding, res, &source);
+	if(destination == NULL) {
+		callOnErr(pThis, (char *)"local and remote RELP addresses have no common IP family", RELP_RET_IO_ERR);
 		ABORT_FINALIZE(RELP_RET_IO_ERR);
 	}
 
-	if(clientIP != NULL) {
-		if(getaddrinfo((char*)clientIP, (char*)NULL, &hints, &reslocal) != 0) {
-			pThis->pEngine->dbgprint((char*)"error %d in getaddrinfo of clientIP\n", errno);
-			ABORT_FINALIZE(RELP_RET_IO_ERR);
-		}
-		if(bind(pThis->sock, reslocal->ai_addr, reslocal->ai_addrlen) != 0) {
-			ABORT_FINALIZE(RELP_RET_IO_ERR);
-		}
+	if((pThis->sock = socket(destination->ai_family, destination->ai_socktype, destination->ai_protocol)) == -1) {
+		ABORT_FINALIZE(RELP_RET_IO_ERR);
+	}
+	if(source != NULL && bind(pThis->sock, (const struct sockaddr *)&source->address, source->length) != 0) {
+		callOnErr(pThis, (char *)"could not bind the configured local RELP address", RELP_RET_IO_ERR);
+		ABORT_FINALIZE(RELP_RET_IO_ERR);
 	}
 
 	if(fcntl(pThis->sock, F_SETFL, O_NONBLOCK) == -1) {
@@ -3810,7 +3811,7 @@ relpTcpConnect(relpTcp_t *const pThis,
 			RELP_RET_IO_ERR);
 		ABORT_FINALIZE(RELP_RET_IO_ERR);
 	}
-	if(connect(pThis->sock, res->ai_addr, res->ai_addrlen) == -1) {
+	if(connect(pThis->sock, destination->ai_addr, destination->ai_addrlen) == -1) {
 #if defined(_AIX)
 		// AIX Workarround handling other ERRNO codes
 		if(	errno != 0 &&
@@ -3846,9 +3847,6 @@ relpTcpConnect(relpTcp_t *const pThis,
 finalize_it:
 	if(res != NULL)
 		freeaddrinfo(res);
-	if(reslocal != NULL)
-		freeaddrinfo(reslocal);
-
 	if(iRet != RELP_RET_OK) {
 		if(pThis->sock != -1) {
 			close(pThis->sock);

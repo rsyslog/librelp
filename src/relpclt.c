@@ -91,7 +91,6 @@ relpCltDestruct(relpClt_t **ppThis)
 
 	if(pThis->pSess != NULL)
 		relpSessDestruct(&pThis->pSess);
-	free(pThis->clientIP);
 	free(pThis->pristring);
 	free(pThis->caCertFile);
 	free(pThis->ownCertFile);
@@ -125,7 +124,7 @@ relpCltConnect(relpClt_t *const pThis, int protFamily, unsigned char *port, unsi
 	CHKRet(relpSessSetTimeout(pThis->pSess, pThis->timeout));
 	CHKRet(relpSessSetConnTimeout(pThis->pSess, pThis->connTimeout));
 	CHKRet(relpSessSetWindowSize(pThis->pSess, pThis->sizeWindow));
-	CHKRet(relpSessSetClientIP(pThis->pSess, pThis->clientIP));
+	pThis->pSess->sourceBind = pThis->sourceBind;
 	if(pThis->bEnableTLS) {
 		CHKRet(relpSessEnableTLS(pThis->pSess));
 		if(pThis->bEnableTLSZip) {
@@ -214,17 +213,11 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 
-/** Set the local IP address to be used when acting as a client.
- */
 PART_OF_API relpRetVal
 relpCltSetClientIP(relpClt_t *const pThis, unsigned char *ipAddr)
 {
-	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Clt);
-	free(pThis->clientIP);
-	pThis->clientIP = ipAddr == NULL ? NULL :
-					   (unsigned char*)strdup((char*) ipAddr);
-	LEAVE_RELPFUNC;
+	return relpSourceBindResolve(&pThis->sourceBind, (const char *)ipAddr);
 }
 
 PART_OF_API relpRetVal

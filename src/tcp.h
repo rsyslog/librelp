@@ -41,6 +41,7 @@
 #	include <openssl/ssl.h>
 #endif
 #include "relp.h"
+#include "sourcebind.h"
 
 typedef enum { relpTCP_RETRY_none = 0,
 	relpTCP_RETRY_handshake = 1,
@@ -170,7 +171,7 @@ relpRetVal relpTcpAcceptConnReq(relpTcp_t **ppThis, int sock, relpSrv_t *pSrv);
 relpRetVal relpTcpRcv(relpTcp_t *pThis, relpOctet_t *pRcvBuf, ssize_t *pLenBuf);
 relpRetVal relpTcpSend(relpTcp_t *pThis, relpOctet_t *pBuf, ssize_t *pLenBuf);
 relpRetVal relpTcpConnect(relpTcp_t *pThis, int family, unsigned char *port,
-	unsigned char *host, unsigned char *clientIP);
+	unsigned char *host, const relpSourceBind_t *binding);
 relpRetVal relpTcpEnableTLS(relpTcp_t *pThis);
 relpRetVal relpTcpEnableTLSZip(relpTcp_t *pThis);
 relpRetVal relpTcpSetDHBits(relpTcp_t *pThis, int bits);
