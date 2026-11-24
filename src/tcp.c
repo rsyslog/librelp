@@ -3774,6 +3774,7 @@ relpTcpConnect(relpTcp_t *const pThis,
 	struct pollfd pfd;
 	char errmsg[1424];
 	int so_error;
+	int bindError;
 	socklen_t len = sizeof so_error;
 	int r;
 
@@ -3804,8 +3805,12 @@ relpTcpConnect(relpTcp_t *const pThis,
 	if((pThis->sock = socket(destination->ai_family, destination->ai_socktype, destination->ai_protocol)) == -1) {
 		ABORT_FINALIZE(RELP_RET_IO_ERR);
 	}
-	if(relpSourceBindApply(binding, pThis->sock, destination->ai_family) != RELP_RET_OK) {
-		callOnErr(pThis, (char *)"could not bind the configured local RELP address", RELP_RET_IO_ERR);
+	bindError = relpSourceBindApply(binding, pThis->sock, destination->ai_family);
+	if(bindError != 0) {
+		char errStr[1200];
+		_relpEngine_strerror_r(bindError, errStr, sizeof(errStr));
+		snprintf(errmsg, sizeof(errmsg), "could not bind the configured local RELP address: '%s'", errStr);
+		callOnErr(pThis, errmsg, RELP_RET_IO_ERR);
 		ABORT_FINALIZE(RELP_RET_IO_ERR);
 	}
 

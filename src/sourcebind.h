@@ -19,6 +19,7 @@ typedef struct {
 
 relpRetVal relpSourceBindResolve(relpSourceBind_t *binding, const char *address);
 int relpSourceBindAllowsFamily(const relpSourceBind_t *binding, int family);
-relpRetVal relpSourceBindApply(const relpSourceBind_t *binding, int socketFd, int family);
+/* Returns zero on success or an errno value on failure. */
+int relpSourceBindApply(const relpSourceBind_t *binding, int socketFd, int family);
 
 #endif

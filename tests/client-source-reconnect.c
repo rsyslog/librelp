@@ -2,6 +2,8 @@
 
 #include "config.h"
 #include <arpa/inet.h>
+#include <errno.h>
+#include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,8 +14,33 @@
 #include "tcp.h"
 
 static const char *expectedAddress;
+static int resolverError;
+static unsigned int bindCalls;
 
 relpRetVal __wrap_relpSessTryReestablish(relpSess_t *session);
+int __wrap_getaddrinfo(const char *node, const char *service, const struct addrinfo *hints, struct addrinfo **result);
+int __real_getaddrinfo(const char *node, const char *service, const struct addrinfo *hints, struct addrinfo **result);
+int __wrap_bind(int socketFd, const struct sockaddr *address, socklen_t length);
+
+int
+__wrap_getaddrinfo(const char *node, const char *service, const struct addrinfo *hints, struct addrinfo **result)
+{
+	if(resolverError != 0) {
+		if(resolverError == EAI_SYSTEM)
+			errno = EIO;
+		return resolverError;
+	}
+	return __real_getaddrinfo(node, service, hints, result);
+}
+
+int
+__wrap_bind(int socketFd, const struct sockaddr *address, socklen_t length)
+{
+	++bindCalls;
+	errno = socketFd == -1 && address != NULL && length == sizeof(struct sockaddr_in) && address->sa_family == AF_INET
+		? EADDRNOTAVAIL : EINVAL;
+	return -1;
+}
 
 /* Observe the binding given to the reconnect path without opening a socket. */
 relpRetVal
@@ -43,7 +70,15 @@ main(void)
 	relpClt_t *client = NULL;
 	unsigned char initialAddress[] = "127.0.0.2";
 	unsigned char changedAddress[] = "127.0.0.3";
-	unsigned char invalidAddress[] = "invalid:ipv6:address";
+	const struct {
+		int resolverError;
+		relpRetVal expected;
+	} resolutionErrors[] = {
+		{EAI_NONAME, RELP_RET_ERR_INVAL},
+		{EAI_AGAIN, RELP_RET_IO_ERR},
+		{EAI_SYSTEM, RELP_RET_IO_ERR},
+		{EAI_MEMORY, RELP_RET_OUT_OF_MEMORY}
+	};
 	int result = EXIT_FAILURE;
 
 	if(relpEngineConstruct(&engine) != RELP_RET_OK ||
@@ -62,15 +97,27 @@ main(void)
 		goto done;
 	}
 
-	if(relpCltSetClientIP(client, invalidAddress) == RELP_RET_OK ||
-	   relpCltReconnect(client) != RELP_RET_OK) {
-		fprintf(stderr, "a failed update did not preserve the source address\n");
+	for(size_t i = 0; i < sizeof(resolutionErrors) / sizeof(resolutionErrors[0]); ++i) {
+		resolverError = resolutionErrors[i].resolverError;
+		if(relpCltSetClientIP(client, initialAddress) != resolutionErrors[i].expected ||
+		   relpCltReconnect(client) != RELP_RET_OK) {
+			fprintf(stderr, "incorrect result or lost binding after resolver error %d\n", resolverError);
+			goto done;
+		}
+	}
+	resolverError = 0;
+
+	if(relpSourceBindApply(&client->sourceBind, -1, AF_INET) != EADDRNOTAVAIL ||
+	   relpSourceBindApply(&client->sourceBind, -1, AF_INET6) != EAFNOSUPPORT ||
+	   bindCalls != 1) {
+		fprintf(stderr, "source binding did not preserve the bind error\n");
 		goto done;
 	}
 
 	expectedAddress = NULL;
 	if(relpCltSetClientIP(client, NULL) != RELP_RET_OK ||
-	   relpCltReconnect(client) != RELP_RET_OK) {
+	   relpCltReconnect(client) != RELP_RET_OK ||
+	   relpSourceBindApply(&client->sourceBind, -1, AF_INET) != 0 || bindCalls != 1) {
 		fprintf(stderr, "reconnect retained the cleared source address\n");
 		goto done;
 	}
