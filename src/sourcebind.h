@@ -7,8 +7,6 @@
 #include <sys/socket.h>
 #include "librelp.h"
 
-struct addrinfo;
-
 typedef struct {
 	struct sockaddr_storage address;
 	socklen_t length;
@@ -20,7 +18,7 @@ typedef struct {
 } relpSourceBind_t;
 
 relpRetVal relpSourceBindResolve(relpSourceBind_t *binding, const char *address);
-const struct addrinfo *relpSourceBindSelect(const relpSourceBind_t *binding,
-	const struct addrinfo *destinations, const relpSourceEndpoint_t **source);
+int relpSourceBindAllowsFamily(const relpSourceBind_t *binding, int family);
+relpRetVal relpSourceBindApply(const relpSourceBind_t *binding, int socketFd, int family);
 
 #endif

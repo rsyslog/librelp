@@ -45,23 +45,31 @@ relpSourceBindResolve(relpSourceBind_t *binding, const char *address)
 	return RELP_RET_OK;
 }
 
-const struct addrinfo *
-relpSourceBindSelect(const relpSourceBind_t *binding, const struct addrinfo *destinations,
-	const relpSourceEndpoint_t **source)
+static const relpSourceEndpoint_t *
+sourceForFamily(const relpSourceBind_t *binding, int family)
 {
-	*source = NULL;
-	if(binding->ipv4.length == 0 && binding->ipv6.length == 0)
-		return destinations;
-
-	for(const struct addrinfo *dest = destinations; dest != NULL; dest = dest->ai_next) {
-		if(dest->ai_family == AF_INET && binding->ipv4.length != 0) {
-			*source = &binding->ipv4;
-			return dest;
-		}
-		if(dest->ai_family == AF_INET6 && binding->ipv6.length != 0) {
-			*source = &binding->ipv6;
-			return dest;
-		}
-	}
+	if(family == AF_INET && binding->ipv4.length != 0)
+		return &binding->ipv4;
+	if(family == AF_INET6 && binding->ipv6.length != 0)
+		return &binding->ipv6;
 	return NULL;
+}
+
+int
+relpSourceBindAllowsFamily(const relpSourceBind_t *binding, int family)
+{
+	return (binding->ipv4.length == 0 && binding->ipv6.length == 0) ||
+		sourceForFamily(binding, family) != NULL;
+}
+
+relpRetVal
+relpSourceBindApply(const relpSourceBind_t *binding, int socketFd, int family)
+{
+	if(binding->ipv4.length == 0 && binding->ipv6.length == 0)
+		return RELP_RET_OK;
+
+	const relpSourceEndpoint_t *const source = sourceForFamily(binding, family);
+	if(source == NULL || bind(socketFd, (const struct sockaddr *)&source->address, source->length) != 0)
+		return RELP_RET_IO_ERR;
+	return RELP_RET_OK;
 }
