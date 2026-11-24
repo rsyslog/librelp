@@ -305,7 +305,7 @@ relpRetVal relpCltSendSyslog(relpClt_t *pThis, unsigned char *pMsg, size_t lenMs
 relpRetVal relpCltSetTimeout(relpClt_t *pThis, unsigned timeout);
 relpRetVal relpCltSetConnTimeout(relpClt_t *pThis, int connTimeout);
 relpRetVal relpCltSetWindowSize(relpClt_t *pThis, int sizeWindow);
-/* Resolve the source address for new connections. NULL clears the setting. */
+/* Resolve the source address for the next connect or reconnect. NULL clears it. */
 relpRetVal relpCltSetClientIP(relpClt_t *pThis, unsigned char *ipAddr);
 relpRetVal relpCltEnableTLS(relpClt_t *pThis);
 relpRetVal relpCltEnableTLSZip(relpClt_t *pThis);

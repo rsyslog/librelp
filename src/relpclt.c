@@ -153,8 +153,7 @@ finalize_it:
 
 /** Try to reconnect a broken session to the remote
  * server. The main difference to relpCltConnect() is that the
- * session object is already existing and session parameters (like
- * remote host) can not be changed.
+ * session already exists and retains the original destination.
  * rgerhards, 2008-03-23
  */
 PART_OF_API relpRetVal
@@ -164,6 +163,8 @@ relpCltReconnect(relpClt_t *const pThis)
 	RELPOBJ_assert(pThis, Clt);
 	RELPOBJ_assert(pThis->pSess, Sess);
 
+	/* A reconnect opens a new socket and uses the latest source binding. */
+	pThis->pSess->sourceBind = pThis->sourceBind;
 	CHKRet(relpSessTryReestablish(pThis->pSess));
 
 finalize_it:
