@@ -8,7 +8,8 @@
 relpRetVal
 relpSourceBindResolve(relpSourceBind_t *binding, const char *address)
 {
-	relpSourceBind_t next = {0};
+	relpSourceBind_t next;
+	memset(&next, 0, sizeof(next));
 	if(address != NULL) {
 		const struct addrinfo hints = {
 			.ai_family = AF_UNSPEC,
