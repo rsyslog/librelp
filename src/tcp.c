@@ -456,39 +456,142 @@ finalize_it:
 }
 
 
+#define RELP_OPENSSL_SHA256_DIGEST_SIZE 32
+#define RELP_OPENSSL_SHA256_PIN_SIZE (7 + (RELP_OPENSSL_SHA256_DIGEST_SIZE * 3) - 1)
+#define RELP_OPENSSL_SHA256_TEXT_SIZE (RELP_OPENSSL_SHA256_PIN_SIZE + 1)
+
+/* Compare the canonical SHA256 fingerprint form without formatting the digest
+ * through the legacy SHA1 helper above. */
+static int
+relpTcpFingerprintSHA256Matches_ossl(const char *pin,
+	const unsigned char *fingerprint)
+{
+	static const char hex[] = "0123456789ABCDEF";
+	size_t i;
+	size_t pos = 7;
+
+	if (strlen(pin) != RELP_OPENSSL_SHA256_PIN_SIZE ||
+		strncmp(pin, "SHA256:", 7) != 0) {
+		return 0;
+	}
+
+	for (i = 0; i < RELP_OPENSSL_SHA256_DIGEST_SIZE; ++i) {
+		if (pin[pos] != hex[fingerprint[i] >> 4] ||
+			pin[pos + 1] != hex[fingerprint[i] & 0x0f]) {
+			return 0;
+		}
+		pos += 2;
+		if (i + 1 < RELP_OPENSSL_SHA256_DIGEST_SIZE) {
+			if (pin[pos] != ':') {
+				return 0;
+			}
+			++pos;
+		}
+	}
+
+	return pin[pos] == '\0';
+}
+
+static int
+relpTcpFingerprintSHA256Format_ossl(const unsigned char *fingerprint,
+	char *fpPrintable, const size_t bufLen)
+{
+	static const char hex[] = "0123456789ABCDEF";
+	size_t i;
+	size_t pos = 7;
+
+	if (bufLen < RELP_OPENSSL_SHA256_TEXT_SIZE) {
+		return 0;
+	}
+
+	memcpy(fpPrintable, "SHA256:", 7);
+	for (i = 0; i < RELP_OPENSSL_SHA256_DIGEST_SIZE; ++i) {
+		fpPrintable[pos++] = hex[fingerprint[i] >> 4];
+		fpPrintable[pos++] = hex[fingerprint[i] & 0x0f];
+		if (i + 1 < RELP_OPENSSL_SHA256_DIGEST_SIZE) {
+			fpPrintable[pos++] = ':';
+		}
+	}
+	fpPrintable[pos] = '\0';
+	return 1;
+}
+
+
 /* Check the peer's ID in fingerprint auth mode. */
 static int
 relpTcpChkPeerFingerprint_ossl(relpTcp_t *const pThis, X509* cert)
 {
 	int i;
 	unsigned int n;
+	unsigned int nSHA256;
 	unsigned char fingerprint[20 /*EVP_MAX_MD_SIZE*/];
-	char fpPrintable[256];
+	unsigned char fingerprintSHA256[RELP_OPENSSL_SHA256_DIGEST_SIZE];
+	char fpPrintable[256] = "";
+	char fpPrintableSHA256[RELP_OPENSSL_SHA256_TEXT_SIZE] = "";
 
 	size_t size;
 	int bFoundPositiveMatch;
-	const EVP_MD *fdig = EVP_sha1();
+	int bNeedSHA1 = 0;
+	int bNeedSHA256 = 0;
+	const EVP_MD *fdig;
 	ENTER_RELPFUNC;
 
-	/* obtain the SHA1 fingerprint */
-	size = sizeof(fingerprint);
-	if (!X509_digest(cert,fdig,fingerprint,&n)) {
-		pThis->pEngine->dbgprint((char*)"relpTcpChkPeerFingerprint: error X509cert is not valid!\n");
-		ABORT_FINALIZE(RELP_RET_ERR_TLS);
+	/* Select only the algorithms explicitly requested by the configured pins. */
+	for (i = 0; i < pThis->permittedPeers.nmemb; ++i) {
+		if (strncmp(pThis->permittedPeers.peer[i].name, "SHA256:", 7) == 0) {
+			bNeedSHA256 = 1;
+		} else if (strncmp(pThis->permittedPeers.peer[i].name, "SHA1:", 5) == 0) {
+			bNeedSHA1 = 1;
+		}
 	}
 
-	// TODO: fingerprint gtls vs ossl
-	GenFingerprintStr_ossl(fingerprint, size, fpPrintable,sizeof(fpPrintable));
-	pThis->pEngine->dbgprint((char*)"relpTcpChkPeerFingerprint: "
-		"peer's certificate SHA1 fingerprint: %s\n", fpPrintable);
+	if (bNeedSHA1) {
+		/* Obtain the legacy SHA1 fingerprint only when a SHA1 pin is configured. */
+		fdig = EVP_sha1();
+		size = sizeof(fingerprint);
+		if (fdig == NULL || !X509_digest(cert, fdig, fingerprint, &n)) {
+			pThis->pEngine->dbgprint((char*)"relpTcpChkPeerFingerprint: error X509cert is not valid!\n");
+			ABORT_FINALIZE(RELP_RET_ERR_TLS);
+		}
+
+		// TODO: fingerprint gtls vs ossl
+		GenFingerprintStr_ossl(fingerprint, size, fpPrintable, sizeof(fpPrintable));
+		pThis->pEngine->dbgprint((char*)"relpTcpChkPeerFingerprint: "
+			"peer's certificate SHA1 fingerprint: %s\n", fpPrintable);
+	}
+
+	/* Compute SHA256 only when a SHA256 pin was explicitly configured. */
+	if (bNeedSHA256) {
+		const EVP_MD *fdigSHA256 = EVP_sha256();
+		if (fdigSHA256 == NULL ||
+			!X509_digest(cert, fdigSHA256, fingerprintSHA256, &nSHA256) ||
+			nSHA256 != RELP_OPENSSL_SHA256_DIGEST_SIZE ||
+			!relpTcpFingerprintSHA256Format_ossl(fingerprintSHA256,
+				fpPrintableSHA256, sizeof(fpPrintableSHA256))) {
+			pThis->pEngine->dbgprint((char*)"relpTcpChkPeerFingerprint: error computing SHA256 fingerprint\n");
+			ABORT_FINALIZE(RELP_RET_ERR_TLS);
+		}
+	}
 
 	/* now search through the permitted peers to see if we can find a permitted one */
 	bFoundPositiveMatch = 0;
 	for(i = 0 ; i < pThis->permittedPeers.nmemb ; ++i)
 	{
+		const char *pin = pThis->permittedPeers.peer[i].name;
+		const char *fpForPin = "";
+		int bMatch = 0;
+
+		if (strncmp(pin, "SHA256:", 7) == 0) {
+			fpForPin = fpPrintableSHA256;
+			bMatch = bNeedSHA256 &&
+				relpTcpFingerprintSHA256Matches_ossl(pin, fingerprintSHA256);
+		} else if (strncmp(pin, "SHA1:", 5) == 0) {
+			fpForPin = fpPrintable;
+			bMatch = bNeedSHA1 && !strcmp(fpPrintable, pin);
+		}
 		pThis->pEngine->dbgprint((char*)"relpTcpChkPeerFingerprint: checking peer '%s','%s'\n",
-			fpPrintable, pThis->permittedPeers.peer[i].name);
-		if(!strcmp(fpPrintable, pThis->permittedPeers.peer[i].name)) {
+			fpForPin, pin);
+		if (bMatch) {
 			pThis->pEngine->dbgprint((char*)"relpTcpChkPeerFingerprint: "
 				"peer's certificate MATCH found: %s\n",
 				pThis->permittedPeers.peer[i].name);
@@ -500,7 +603,23 @@ relpTcpChkPeerFingerprint_ossl(relpTcp_t *const pThis, X509* cert)
 	if(!bFoundPositiveMatch) {
 		pThis->pEngine->dbgprint((char*)"relpTcpChkPeerFingerprint: invalid peer fingerprint, "
 			"not permitted to talk to it\n");
-		callOnAuthErr(pThis, fpPrintable, "non-permited fingerprint", RELP_RET_AUTH_ERR_FP);
+		if (bNeedSHA256) {
+			callOnAuthErr(pThis, fpPrintableSHA256,
+				"non-permited fingerprint", RELP_RET_AUTH_ERR_FP);
+		} else if (bNeedSHA1) {
+			callOnAuthErr(pThis, fpPrintable,
+				"non-permited fingerprint", RELP_RET_AUTH_ERR_FP);
+		} else if (pThis->permittedPeers.nmemb > 0) {
+			char errmsg[256];
+			snprintf(errmsg, sizeof(errmsg),
+				"unsupported configured fingerprint digest in pin '%s'; supported: SHA1, SHA256",
+				pThis->permittedPeers.peer[0].name);
+			callOnAuthErr(pThis, "", errmsg, RELP_RET_AUTH_ERR_FP);
+		} else {
+			callOnAuthErr(pThis, "",
+				"no supported fingerprint pin configured; expected SHA1 or SHA256",
+				RELP_RET_AUTH_ERR_FP);
+		}
 		ABORT_FINALIZE(RELP_RET_AUTH_ERR_FP);
 	}
 finalize_it:
