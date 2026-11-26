@@ -1,8 +1,14 @@
 /*
- * Regression test for recording a server TLS request in a build without TLS
- * support. The request must not fall through to a plaintext listener.
+ * Regression test: in a build without TLS support, a server TLS request must
+ * be recorded even though the enable call reports RELP_RET_ERR_NO_TLS, so that
+ * relpSrvRun() refuses to start instead of falling back to a plaintext
+ * listener (fail-open).
+ *
+ * Oracle: every API call is made unconditionally (not inside assert(), which
+ * NDEBUG would remove); the test fails with exit code 1 and a message if a
+ * return code or the resulting server state differs from the expectation.
  */
-#include <assert.h>
+#include <stdio.h>
 #include <stddef.h>
 
 #include "config.h"
@@ -10,24 +16,39 @@
 #include "relp.h"
 #include "relpsrv.h"
 
+#define CHECK(cond, msg) do { \
+	if(!(cond)) { \
+		fprintf(stderr, "tls-request-no-tls: FAIL: %s\n", msg); \
+		return 1; \
+	} \
+} while(0)
+
 int
 main(void)
 {
 	relpEngine_t *engine = NULL;
 	relpSrv_t *server = NULL;
+	relpRetVal ret;
 
-	assert(relpEngineConstruct(&engine) == RELP_RET_OK);
-	assert(relpEngineListnerConstruct(engine, &server) == RELP_RET_OK);
+	ret = relpEngineConstruct(&engine);
+	CHECK(ret == RELP_RET_OK, "relpEngineConstruct failed");
+	ret = relpEngineListnerConstruct(engine, &server);
+	CHECK(ret == RELP_RET_OK, "relpEngineListnerConstruct failed");
 
-	assert(relpSrvEnableTLS2(server) == RELP_RET_ERR_NO_TLS);
-	assert(relpSrvEnableTLSZip2(server) == RELP_RET_ERR_NO_TLS);
-	assert(server->bEnableTLS == 1);
-	assert(server->bEnableTLSZip == 1);
+	ret = relpSrvEnableTLS2(server);
+	CHECK(ret == RELP_RET_ERR_NO_TLS, "relpSrvEnableTLS2 did not report RELP_RET_ERR_NO_TLS");
+	ret = relpSrvEnableTLSZip2(server);
+	CHECK(ret == RELP_RET_ERR_NO_TLS, "relpSrvEnableTLSZip2 did not report RELP_RET_ERR_NO_TLS");
+	CHECK(server->bEnableTLS == 1, "TLS request was not recorded");
+	CHECK(server->bEnableTLSZip == 1, "TLS zip request was not recorded");
 
-	assert(relpSrvRun(server) == RELP_RET_ERR_NO_TLS);
-	assert(server->pTcp == NULL);
+	ret = relpSrvRun(server);
+	CHECK(ret == RELP_RET_ERR_NO_TLS, "relpSrvRun did not refuse to start without TLS");
+	CHECK(server->pTcp == NULL, "relpSrvRun created a listener");
 
-	assert(relpSrvDestruct(&server) == RELP_RET_OK);
-	assert(relpEngineDestruct(&engine) == RELP_RET_OK);
+	ret = relpSrvDestruct(&server);
+	CHECK(ret == RELP_RET_OK, "relpSrvDestruct failed");
+	ret = relpEngineDestruct(&engine);
+	CHECK(ret == RELP_RET_OK, "relpEngineDestruct failed");
 	return 0;
 }
