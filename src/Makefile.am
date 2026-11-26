@@ -16,7 +16,7 @@ AM_CFLAGS=-fvisibility=hidden
 
 lib_LTLIBRARIES = librelp.la
 
-EXTRA_DIST = librelp.h
+EXTRA_DIST = librelp.h gnutlsfingerprint.c gnutlsfingerprint.h
 
 librelp_la_SOURCES = \
 	librelp.h \
@@ -48,6 +48,11 @@ librelp_la_SOURCES = \
 	dbllinklist.h \
 	cmdif.h \
 	compat/strndup.c
+if GNUTLS_FINGERPRINT_DIGESTS
+librelp_la_SOURCES += \
+	gnutlsfingerprint.c \
+	gnutlsfingerprint.h
+endif
 librelp_la_CPPFLAGS = $(AM_CLFAGS) $(PTHREADS_CFLAGS) $(GNUTLS_CFLAGS) $(OPENSSL_CFLAGS) $(WARN_CFLAGS)
 librelp_la_LIBADD = $(rt_libs) $(GNUTLS_LIBS) $(OPENSSL_LIBS)
 # info on version-info:

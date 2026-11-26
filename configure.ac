@@ -163,6 +163,16 @@ AC_ARG_ENABLE(tls-openssl,
          esac],
         [enable_tls_openssl="yes"]
 )
+AC_ARG_ENABLE([gnutls-fingerprint-digests],
+        [AS_HELP_STRING([--enable-gnutls-fingerprint-digests],
+                [Enable flexible GnuTLS fingerprint digests @<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) enable_gnutls_fingerprint_digests="yes" ;;
+          no) enable_gnutls_fingerprint_digests="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-gnutls-fingerprint-digests) ;;
+         esac],
+        [enable_gnutls_fingerprint_digests="yes"]
+)
 
 if test "$enable_tls_openssl" = "yes"; then
 	PKG_CHECK_MODULES(OPENSSL, openssl)
@@ -203,6 +213,20 @@ if test "$enable_tls" = "yes"; then
 	CFLAGS="$save_CFLAGS"
 	LIBS="$save_LIBS"
 fi
+if test "$enable_tls" = "yes" && \
+	test "$have_gnutls_certificate_set_verify_function" = "yes" && \
+	test "$enable_gnutls_fingerprint_digests" = "yes"; then
+	AC_DEFINE([ENABLE_GNUTLS_FINGERPRINT_DIGESTS], [1],
+		[Enable the optional multi-digest GnuTLS fingerprint verifier])
+fi
+AM_CONDITIONAL([GNUTLS_FINGERPRINT_DIGESTS],
+	[test "$enable_tls" = "yes" && \
+	 test "$have_gnutls_certificate_set_verify_function" = "yes" && \
+	 test "$enable_gnutls_fingerprint_digests" = "yes"])
+AM_CONDITIONAL([GNUTLS_FINGERPRINT_SHA1_ONLY],
+	[test "$enable_tls" = "yes" && \
+	 test "$have_gnutls_certificate_set_verify_function" = "yes" && \
+	 test "$enable_gnutls_fingerprint_digests" = "no"])
 AM_CONDITIONAL(ENABLE_TLS, test "$enable_tls" = "yes")
 AM_CONDITIONAL([ENABLE_TLS_GENERIC], [test "$enable_tls_generic" = "yes"])
 

@@ -116,6 +116,10 @@ OSSL_STATIC_TESTS= \
 	tls-ossl-fd-reuse.sh
 OSSL_WRAP_STATIC_TESTS= \
 	tls-ossl-retry-state.sh
+GNUTLS_FINGERPRINT_DIGESTS_TESTS= \
+	tls-gtls-fingerprint-sha256.sh
+GNUTLS_FINGERPRINT_SHA1_ONLY_TESTS= \
+	tls-gtls-fingerprint-unsupported-digest.sh
 # reenable tests when stable
 #	tls-basic-brokencert.sh
 
@@ -133,6 +137,12 @@ TESTS=  selftest_receive_watchdog.sh \
 	send-dummyserver-no-waitstate-errmsg.sh \
 	receive-emptyconnect.sh \
 	$(SOURCE_BIND_TESTS)
+if GNUTLS_FINGERPRINT_DIGESTS
+TESTS+=$(GNUTLS_FINGERPRINT_DIGESTS_TESTS)
+endif
+if GNUTLS_FINGERPRINT_SHA1_ONLY
+TESTS+=$(GNUTLS_FINGERPRINT_SHA1_ONLY_TESTS)
+endif
 if ENABLE_TLS_GENERIC
 TESTS+=$(TLS_TESTS)
 endif
@@ -178,6 +188,8 @@ EXTRA_DIST=$(TESTS) \
 	$(OSSL_WRAP_STATIC_TESTS) \
 	$(TLS_VALGRIND_TESTS) \
 	$(VALGRIND_TESTS) \
+	$(GNUTLS_FINGERPRINT_DIGESTS_TESTS) \
+	$(GNUTLS_FINGERPRINT_SHA1_ONLY_TESTS) \
 	set-envvars.in \
 	dummyclient.py \
 	dummyserver.py \
