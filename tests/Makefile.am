@@ -1,6 +1,19 @@
 TEST_EXTENSIONS=.sh
 check_PROGRAMS=receive send chkseq have_tlslib msleep
 
+if BUILD_STATIC
+if OS_SOLARIS_WRAP
+else
+# Observe the session binding at reconnect using the linker's wrap option.
+check_PROGRAMS+=client_source_reconnect
+client_source_reconnect_SOURCES=client-source-reconnect.c
+client_source_reconnect_LDADD=../src/.libs/librelp.a $(GNUTLS_LIBS) $(OPENSSL_LIBS) $(rt_libs) $(socket_libs) $(pthread_libs)
+client_source_reconnect_LDFLAGS=-Wl,--wrap=relpSessTryReestablish -Wl,--wrap=getaddrinfo -Wl,--wrap=bind
+client_source_reconnect_CFLAGS=$(AM_CFLAGS) -I${top_srcdir}/src $(WARN_CFLAGS)
+SOURCE_BIND_TESTS=client-source-reconnect.sh
+endif
+endif
+
 if ENABLE_TLS_OPENSSL
 if BUILD_STATIC
 # This white-box test needs internal symbols that are not exported by librelp.
@@ -118,7 +131,8 @@ TESTS=  selftest_receive_watchdog.sh \
 	truncate-oversize-msg.sh \
 	send-noconnect.sh \
 	send-dummyserver-no-waitstate-errmsg.sh \
-	receive-emptyconnect.sh
+	receive-emptyconnect.sh \
+	$(SOURCE_BIND_TESTS)
 if !ENABLE_TLS_GENERIC
 check_PROGRAMS+=tls-request-no-tls
 tls_request_no_tls_SOURCES=tls-request-no-tls.c
@@ -175,6 +189,7 @@ EXTRA_DIST=$(TESTS) \
 	dummyclient.py \
 	dummyserver.py \
 	invalid-open.py \
+	client-source-reconnect.sh \
 	session-callbacks.sh \
 	test-framework.sh \
 	receive.c \

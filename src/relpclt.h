@@ -33,6 +33,8 @@
 #ifndef RELPCLT_H_INCLUDED
 #define	RELPCLT_H_INCLUDED
 
+#include "sourcebind.h"
+
 /* the RELPCLT object
  * rgerhards, 2008-03-16
  */
@@ -54,7 +56,7 @@ struct relpClt_s {
 	int protFamily;		/**< protocol family to connect over (IPv4, v6, ...) */
 	unsigned char *port;	/**< server port to connect to */
 	unsigned char *host;	/**< host(name) to connect to */
-	unsigned char *clientIP;/**< ip to bind to, or NULL if irrelevant */
+	relpSourceBind_t sourceBind;
 	unsigned timeout;	/**< session timeout */
 	int connTimeout;	/**< connection timeout */
 };

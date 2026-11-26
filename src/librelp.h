@@ -305,6 +305,11 @@ relpRetVal relpCltSendSyslog(relpClt_t *pThis, unsigned char *pMsg, size_t lenMs
 relpRetVal relpCltSetTimeout(relpClt_t *pThis, unsigned timeout);
 relpRetVal relpCltSetConnTimeout(relpClt_t *pThis, int connTimeout);
 relpRetVal relpCltSetWindowSize(relpClt_t *pThis, int sizeWindow);
+/* Resolve and store the source address for the next connect or reconnect.
+ * Each call resolves the hostname again. NULL clears the binding.
+ * An invalid address returns RELP_RET_ERR_INVAL. A temporary or system
+ * resolver failure returns RELP_RET_IO_ERR. Any error preserves the binding.
+ */
 relpRetVal relpCltSetClientIP(relpClt_t *pThis, unsigned char *ipAddr);
 relpRetVal relpCltEnableTLS(relpClt_t *pThis);
 relpRetVal relpCltEnableTLSZip(relpClt_t *pThis);

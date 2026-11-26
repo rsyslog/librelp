@@ -28,6 +28,8 @@ librelp_la_SOURCES = \
 	relpframe.h \
 	tcp.c \
 	tcp.h \
+	sourcebind.c \
+	sourcebind.h \
 	sendq.c \
 	sendq.h \
 	sendbuf.c \

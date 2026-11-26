@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /*
  * Verify accepted-socket ownership on an error after ownership transfer.
  *
