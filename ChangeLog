@@ -29,6 +29,9 @@ SECURITY RELEASE - all users of TLS should update
   call. Errors are reported precisely (RELP_RET_ERR_INVAL for an invalid
   address, RELP_RET_IO_ERR for resolver failures) and keep the previous
   binding; NULL clears it. Reconnects use the current binding.
+- send buffer and send queue: handle write results explicitly
+  Zero-byte, short, negative and oversized write results are each handled
+  explicitly; queue order and retry state are preserved.
 - licensing: start moving librelp to the Apache License 2.0
   Files without external contributions are now under Apache-2.0 and carry
   SPDX identifiers; the license text is shipped as COPYING.ASL20. All other
