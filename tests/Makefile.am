@@ -95,6 +95,7 @@ TLS_TESTS=  \
 	tls-receiver-abort.sh \
 	tls-missing-param-sender.sh \
 	tls-missing-param-receiver.sh
+GNUTLS_TESTS=tls-gnutls-sha256-fingerprint.sh
 TLS_VALGRIND_TESTS= \
 	tls-basic-vg.sh \
 	tls-ossl-connect-failure-vg.sh
@@ -137,12 +138,19 @@ if ENABLE_TLS_GENERIC
 TESTS+=$(TLS_TESTS)
 endif
 if ENABLE_TLS
+TESTS+=$(GNUTLS_TESTS)
 if BUILD_STATIC
 TESTS+=$(TLS_STATIC_TESTS)
 if OS_SOLARIS_WRAP
 else
 TESTS+=$(GTLS_STATIC_TESTS)
 endif
+check_PROGRAMS+=gnutls_fingerprint_policy
+gnutls_fingerprint_policy_SOURCES=gnutls-fingerprint-policy.c
+gnutls_fingerprint_policy_LDADD=../src/.libs/librelp.a $(GNUTLS_LIBS) $(OPENSSL_LIBS) $(rt_libs) $(socket_libs) $(pthread_libs)
+gnutls_fingerprint_policy_CFLAGS=$(AM_CFLAGS) -I${top_srcdir}/src $(WARN_CFLAGS)
+gnutls_fingerprint_policy_CPPFLAGS=-DTEST_CERT_DIR=\"$(srcdir)/tls-certs\"
+TESTS+=gnutls_fingerprint_policy
 endif
 endif
 if ENABLE_TLS_OPENSSL
@@ -172,6 +180,7 @@ endif # HAVE_VALGRIND
 
 EXTRA_DIST=$(TESTS) \
 	$(TLS_TESTS) \
+	$(GNUTLS_TESTS) \
 	$(GTLS_STATIC_TESTS) \
 	$(OSSL_TESTS) \
 	$(OSSL_STATIC_TESTS) \
@@ -191,6 +200,7 @@ EXTRA_DIST=$(TESTS) \
 	tls-ossl-retry-state.c \
 	tcp-accept-fd-reuse.c \
 	tls-gtls-lifecycle.c \
+	gnutls-fingerprint-policy.c \
 	permitted-peer-lifetime.c \
 	tls-openssl-retry-state.sh \
 	tls-openssl-retry-state.c \

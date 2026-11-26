@@ -48,6 +48,9 @@ librelp_la_SOURCES = \
 	dbllinklist.h \
 	cmdif.h \
 	compat/strndup.c
+if ENABLE_TLS
+librelp_la_SOURCES += gnutls_fingerprint.c gnutls_fingerprint.h
+endif
 librelp_la_CPPFLAGS = $(AM_CLFAGS) $(PTHREADS_CFLAGS) $(GNUTLS_CFLAGS) $(OPENSSL_CFLAGS) $(WARN_CFLAGS)
 librelp_la_LIBADD = $(rt_libs) $(GNUTLS_LIBS) $(OPENSSL_LIBS)
 # info on version-info:
