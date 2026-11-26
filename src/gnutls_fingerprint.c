@@ -22,11 +22,7 @@
 #if GNUTLS_VERSION_NUMBER < 0x030202
 typedef gnutls_mac_algorithm_t fingerprintDigestId_t;
 #define FINGERPRINT_DIGEST_UNKNOWN GNUTLS_MAC_UNKNOWN
-static fingerprintDigestId_t
-fingerprintDigestGetId(const char *const name)
-{
-	return gnutls_mac_get_id(name);
-}
+#define FINGERPRINT_DIGEST_LOOKUP gnutls_mac_get_id
 static const char *
 fingerprintDigestGetName(const fingerprintDigestId_t id)
 {
@@ -35,11 +31,7 @@ fingerprintDigestGetName(const fingerprintDigestId_t id)
 #else
 typedef gnutls_digest_algorithm_t fingerprintDigestId_t;
 #define FINGERPRINT_DIGEST_UNKNOWN GNUTLS_DIG_UNKNOWN
-static fingerprintDigestId_t
-fingerprintDigestGetId(const char *const name)
-{
-	return gnutls_digest_get_id(name);
-}
+#define FINGERPRINT_DIGEST_LOOKUP gnutls_digest_get_id
 static const char *
 fingerprintDigestGetName(const fingerprintDigestId_t id)
 {
@@ -50,46 +42,25 @@ fingerprintDigestGetName(const fingerprintDigestId_t id)
 #define MAX_FINGERPRINT_DIGESTS 10
 #define MAX_FINGERPRINT_BYTES 126
 
-static size_t
-collectDigestIds(const size_t pinCount, relpGnuTLSFingerprintPinAt pinAt,
-	const void *const context, fingerprintDigestId_t digestIds[MAX_FINGERPRINT_DIGESTS])
+static fingerprintDigestId_t
+lookupPinDigest(const char *const pin)
 {
-	char digestName[32];
-	size_t digestCount = 0;
-	size_t i;
+	char name[32];
+	size_t length;
 
-	for(i = 0; i < pinCount && digestCount < MAX_FINGERPRINT_DIGESTS; ++i) {
-		const char *const pin = pinAt(context, i);
-		const char *colon;
-		size_t nameLength;
-		fingerprintDigestId_t digestId;
-		size_t j;
-		int duplicate = 0;
-
-		if(pin == NULL)
-			continue;
-		colon = strchr(pin, ':');
-		if(colon == NULL)
-			continue;
-		nameLength = (size_t) (colon - pin);
-		if(nameLength > sizeof(digestName) - 1)
-			nameLength = sizeof(digestName) - 1;
-		memcpy(digestName, pin, nameLength);
-		digestName[nameLength] = '\0';
-		digestId = fingerprintDigestGetId(digestName);
-		if(digestId == FINGERPRINT_DIGEST_UNKNOWN)
-			continue;
-
-		for(j = 0; j < digestCount; ++j) {
-			if(digestIds[j] == digestId) {
-				duplicate = 1;
-				break;
-			}
-		}
-		if(!duplicate)
-			digestIds[digestCount++] = digestId;
-	}
-	return digestCount;
+	if(pin == NULL)
+		return FINGERPRINT_DIGEST_UNKNOWN;
+	length = strcspn(pin, ":");
+	if(pin[length] == '\0')
+		return FINGERPRINT_DIGEST_UNKNOWN;
+	if(length >= sizeof(name))
+		length = sizeof(name) - 1;
+	memcpy(name, pin, length);
+	name[length] = '\0';
+	/* Some GnuTLS headers declare the lookup const. Call indirectly so the
+	 * compiler preserves writes to the name buffer that the lookup reads. */
+	fingerprintDigestId_t (*volatile lookup)(const char *) = FINGERPRINT_DIGEST_LOOKUP;
+	return lookup(name);
 }
 
 static int
@@ -154,11 +125,14 @@ relpGnuTLSFingerprintCheck(gnutls_x509_crt_t cert, const size_t pinCount,
 	relpGnuTLSFingerprintPinAt pinAt, const void *const context,
 	char *const authInfo, const size_t authInfoLength, int *const gnutlsError)
 {
-	fingerprintDigestId_t digestIds[MAX_FINGERPRINT_DIGESTS];
+	fingerprintDigestId_t seen[MAX_FINGERPRINT_DIGESTS];
 	unsigned char digest[MAX_FINGERPRINT_BYTES];
-	size_t digestCount;
+	const char *digestName = NULL;
+	size_t digestCount = 0;
+	size_t digestLength = 0;
+	size_t nameLength = 0;
+	size_t requiredLength = 0;
 	size_t i;
-	int gnuRet;
 
 	if(authInfo != NULL && authInfoLength > 0)
 		authInfo[0] = '\0';
@@ -167,25 +141,39 @@ relpGnuTLSFingerprintCheck(gnutls_x509_crt_t cert, const size_t pinCount,
 	if(cert == NULL || pinAt == NULL)
 		return RELP_GNUTLS_FINGERPRINT_INVALID_POLICY;
 
-	/* Recognized digest prefixes consume a slot even when their pin text is
-	 * malformed. Unknown prefixes and malformed entries remain nonmatching. */
-	digestCount = collectDigestIds(pinCount, pinAt, context, digestIds);
-	for(i = 0; i < digestCount; ++i) {
-		const char *digestName = fingerprintDigestGetName(digestIds[i]);
-		size_t digestLength = sizeof(digest);
+	/* Try the first occurrence of each digest as we scan the prefixes, even
+	 * when its pin text is malformed. The sorted set tracks membership only. */
+	for(i = 0; i < pinCount && digestCount < MAX_FINGERPRINT_DIGESTS; ++i) {
+		const fingerprintDigestId_t digestId = lookupPinDigest(pinAt(context, i));
+		size_t position = 0;
 		size_t j;
+		int gnuRet;
+
+		if(digestId == FINGERPRINT_DIGEST_UNKNOWN)
+			continue;
+		while(position < digestCount && seen[position] < digestId)
+			++position;
+		if(position < digestCount && seen[position] == digestId)
+			continue;
+		for(j = digestCount; j > position; --j)
+			seen[j] = seen[j - 1];
+		seen[position] = digestId;
+		++digestCount;
+
+		digestName = fingerprintDigestGetName(digestId);
 		if(digestName == NULL)
 			digestName = "0000";
 
+		digestLength = sizeof(digest);
 		gnuRet = gnutls_x509_crt_get_fingerprint(cert,
-			(gnutls_digest_algorithm_t) digestIds[i], digest, &digestLength);
+			(gnutls_digest_algorithm_t) digestId, digest, &digestLength);
 		if(gnuRet != GNUTLS_E_SUCCESS) {
 			if(gnutlsError != NULL)
 				*gnutlsError = gnuRet;
 			return RELP_GNUTLS_FINGERPRINT_ERROR;
 		}
-		const size_t nameLength = strlen(digestName);
-		const size_t requiredLength = nameLength + 3 * digestLength + 1;
+		nameLength = strlen(digestName);
+		requiredLength = nameLength + 3 * digestLength + 1;
 
 		/* Preserve the historical text limit even for callers with larger buffers. */
 		if(requiredLength >= RELP_GNUTLS_FINGERPRINT_AUTHINFO_SIZE)
@@ -194,9 +182,10 @@ relpGnuTLSFingerprintCheck(gnutls_x509_crt_t cert, const size_t pinCount,
 			if(pinMatchesDigest(pinAt(context, j), digestName, nameLength, digest, digestLength))
 				return RELP_GNUTLS_FINGERPRINT_MATCH;
 		}
-		if(i + 1 == digestCount && authInfo != NULL && requiredLength <= authInfoLength)
-			writeAuthInfo(digestName, nameLength, digest, digestLength, authInfo);
 	}
+	if(digestName != NULL && requiredLength < RELP_GNUTLS_FINGERPRINT_AUTHINFO_SIZE &&
+	   authInfo != NULL && requiredLength <= authInfoLength)
+		writeAuthInfo(digestName, nameLength, digest, digestLength, authInfo);
 	return RELP_GNUTLS_FINGERPRINT_NO_MATCH;
 }
 
