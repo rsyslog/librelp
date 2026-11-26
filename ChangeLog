@@ -1,4 +1,46 @@
 ----------------------------------------------------------------------
+Version 1.14.0 - 2026-11-26
+SECURITY RELEASE - all users of TLS should update
+- GnuTLS: tls.authmode "certvalid" now really validates the peer certificate
+  [CVE-2026-132888]
+  With GnuTLS and authmode "certvalid", librelp replaced the GnuTLS chain
+  validation with its own callback, which reported success for "certvalid"
+  without any check. Any certificate, including self-signed ones and those
+  from an unrelated CA, was accepted, on the server and the client side.
+  The peer chain is now verified against the configured CA. Releases since
+  1.2.18 are affected. OpenSSL builds were not affected.
+  Workaround for older releases: use authmode "fingerprint" or "name", or
+  the OpenSSL driver.
+  Thanks to s4cr00t (Alipay Security Team) for reporting this to Red Hat.
+- TLS client: select credentials according to the configured auth mode, so
+  a client without its own certificate still verifies the server.
+- OpenSSL: do not trust the local certificate chain as CA
+  BEHAVIOUR CHANGE: if no CA file is configured, the own certificate file is
+  no longer loaded as trust anchor. Configure a CA file for certificate
+  based authentication.
+- OpenSSL: do not load the system default CA store when no CA file is set
+  BEHAVIOUR CHANGE: without a configured CA file, certificates signed by any
+  CA in the system store are no longer accepted.
+- relp: limit the number of values accepted in an "open" offer
+- OpenSSL: fix retry state handling after successful I/O on send
+- tcp: clear plain-TCP receive retry state before recv()
+- client: reimplement local client IP binding (relpCltSetClientIP)
+  The source address is now resolved when it is set, and again on every
+  call. Errors are reported precisely (RELP_RET_ERR_INVAL for an invalid
+  address, RELP_RET_IO_ERR for resolver failures) and keep the previous
+  binding; NULL clears it. Reconnects use the current binding.
+- licensing: start moving librelp to the Apache License 2.0
+  Files without external contributions are now under Apache-2.0 and carry
+  SPDX identifiers; the license text is shipped as COPYING.ASL20. All other
+  files keep their current license.
+- note: CVE-2026-132889 (a corrupted TLS record terminated the host process
+  with GnuTLS) was already fixed in 1.11.0; releases 1.4.0 to 1.10.0 are
+  affected.
+- testbench: new regression tests for certvalid trust validation, client
+  auth without own certificate, OpenSSL send retry state and source binding;
+  single-message send failures now fail the test.
+- CI: prevent command injection in the yamllint workflow.
+----------------------------------------------------------------------
 Version 1.13.0 - 2026-08-18
 - API: add server-session lifecycle callbacks
   Applications can now register callbacks for session open, close, and
