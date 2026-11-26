@@ -34,6 +34,7 @@
 #define	RELPTCP_H_INCLUDED
 
 #include <stdint.h>
+#include <sys/types.h>
 #ifdef ENABLE_TLS
 #       include <gnutls/gnutls.h>
 #endif
