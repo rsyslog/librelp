@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 
-/* Fixed-profile certificate fingerprint pin verification.
+/* Runtime-compatible GnuTLS certificate fingerprint pin verification.
  *
  * Copyright 2026 by Adiscon GmbH.
  *
@@ -8,9 +8,6 @@
  *
  * Licensed under the Apache License, Version 2.0.
  * See COPYING.ASL20 for the license text.
- *
- * The accepted algorithms are explicit to keep pin policy reviewable and to
- * avoid silently changing the allowlist when a TLS library adds algorithms.
  */
 #include "config.h"
 
@@ -18,29 +15,84 @@
 
 #if defined(ENABLE_TLS) && defined(HAVE_GNUTLS_CERTIFICATE_SET_VERIFY_FUNCTION)
 
+#include <stdio.h>
 #include <string.h>
 
-typedef struct {
-	const char *name;
-	size_t nameLength;
-	size_t digestLength;
-	gnutls_digest_algorithm_t algorithm;
-} fingerprintAlgorithm_t;
+/* GnuTLS used the MAC API for digest lookup before 3.2.2. The old matcher
+ * used the same compatibility boundary. */
+#if GNUTLS_VERSION_NUMBER < 0x030202
+typedef gnutls_mac_algorithm_t fingerprintDigestId_t;
+#define FINGERPRINT_DIGEST_UNKNOWN GNUTLS_MAC_UNKNOWN
+static fingerprintDigestId_t
+fingerprintDigestGetId(const char *const name)
+{
+	return gnutls_mac_get_id(name);
+}
+static const char *
+fingerprintDigestGetName(const fingerprintDigestId_t id)
+{
+	return gnutls_mac_get_name(id);
+}
+#else
+typedef gnutls_digest_algorithm_t fingerprintDigestId_t;
+#define FINGERPRINT_DIGEST_UNKNOWN GNUTLS_DIG_UNKNOWN
+static fingerprintDigestId_t
+fingerprintDigestGetId(const char *const name)
+{
+	return gnutls_digest_get_id(name);
+}
+static const char *
+fingerprintDigestGetName(const fingerprintDigestId_t id)
+{
+	return gnutls_digest_get_name(id);
+}
+#endif
 
-static const fingerprintAlgorithm_t algorithms[] = {
-	{ "SHA1", 4, 20, GNUTLS_DIG_SHA1 },
-	{ "SHA256", 6, 32, GNUTLS_DIG_SHA256 },
-	{ "SHA384", 6, 48, GNUTLS_DIG_SHA384 },
-	{ "SHA512", 6, 64, GNUTLS_DIG_SHA512 }
-};
+#define MAX_FINGERPRINT_DIGESTS 10
+#define MAX_FINGERPRINT_BYTES 126
+#define LEGACY_FINGERPRINT_TEXT_SIZE 256
 
-#define FINGERPRINT_ALGORITHM_COUNT (sizeof(algorithms) / sizeof(algorithms[0]))
-#define MAX_FINGERPRINT_BYTES 64
+static size_t
+collectDigestIds(const size_t pinCount, relpGnuTLSFingerprintPinAt pinAt,
+	const void *const context, fingerprintDigestId_t digestIds[MAX_FINGERPRINT_DIGESTS])
+{
+	char digestName[32];
+	size_t digestCount = 0;
+	size_t i;
 
-typedef struct {
-	size_t algorithmIndex;
-	unsigned char bytes[MAX_FINGERPRINT_BYTES];
-} parsedFingerprint_t;
+	for(i = 0; i < pinCount; ++i) {
+		const char *const pin = pinAt(context, i);
+		const char *colon;
+		size_t nameLength;
+		fingerprintDigestId_t digestId;
+		size_t j;
+		int duplicate = 0;
+
+		if(pin == NULL)
+			continue;
+		colon = strchr(pin, ':');
+		if(colon == NULL)
+			continue;
+		nameLength = (size_t) (colon - pin);
+		if(nameLength > sizeof(digestName) - 1)
+			nameLength = sizeof(digestName) - 1;
+		memcpy(digestName, pin, nameLength);
+		digestName[nameLength] = '\0';
+		digestId = fingerprintDigestGetId(digestName);
+		if(digestId == FINGERPRINT_DIGEST_UNKNOWN)
+			continue;
+
+		for(j = 0; j < digestCount; ++j) {
+			if(digestIds[j] == digestId) {
+				duplicate = 1;
+				break;
+			}
+		}
+		if(!duplicate && digestCount < MAX_FINGERPRINT_DIGESTS)
+			digestIds[digestCount++] = digestId;
+	}
+	return digestCount;
+}
 
 static int
 hexValue(const char c)
@@ -52,92 +104,61 @@ hexValue(const char c)
 	return -1;
 }
 
+/* Require the spelling that GnuTLS itself prints, including uppercase hex.
+ * This retains the old string comparison semantics while comparing the
+ * certificate and pin as bytes. */
 static int
-hasExpectedLength(const char *const text, const size_t expectedLength)
+pinMatchesDigest(const char *const pin, const char *const digestName,
+	const unsigned char *const digest, const size_t digestLength)
 {
-	size_t i;
-	for(i = 0; i < expectedLength; ++i) {
-		if(text[i] == '\0')
-			return 0;
-	}
-	return text[expectedLength] == '\0';
-}
-
-static int
-parseFingerprint(const char *const pin, parsedFingerprint_t *const parsed)
-{
-	const fingerprintAlgorithm_t *algorithm = NULL;
+	const size_t nameLength = strlen(digestName);
 	const char *cursor;
 	size_t i;
 
-	if(pin == NULL)
+	if(pin == NULL || strncmp(pin, digestName, nameLength) != 0 ||
+	   pin[nameLength] != ':')
 		return 0;
-
-	for(i = 0; i < FINGERPRINT_ALGORITHM_COUNT; ++i) {
-		if(strncmp(pin, algorithms[i].name, algorithms[i].nameLength) == 0 &&
-		   pin[algorithms[i].nameLength] == ':') {
-			algorithm = &algorithms[i];
-			parsed->algorithmIndex = i;
-			break;
-		}
-	}
-	if(algorithm == NULL ||
-	   !hasExpectedLength(pin, algorithm->nameLength + 3 * algorithm->digestLength))
-		return 0;
-
-	cursor = pin + algorithm->nameLength + 1;
-	for(i = 0; i < algorithm->digestLength; ++i) {
-		const int high = hexValue(cursor[0]);
-		const int low = hexValue(cursor[1]);
-		if(high < 0 || low < 0)
+	cursor = pin + nameLength;
+	for(i = 0; i < digestLength; ++i) {
+		int high;
+		int low;
+		if(*cursor++ != ':' || cursor[0] == '\0' || cursor[1] == '\0')
 			return 0;
-		parsed->bytes[i] = (unsigned char)((high << 4) | low);
+		high = hexValue(cursor[0]);
+		low = hexValue(cursor[1]);
+		if(high < 0 || low < 0 || digest[i] != (unsigned char) ((high << 4) | low))
+			return 0;
 		cursor += 2;
-		if(i + 1 < algorithm->digestLength) {
-			if(*cursor != ':')
-				return 0;
-			++cursor;
-		}
 	}
-	return 1;
+	return *cursor == '\0';
 }
 
-static int
-fingerprintsEqual(const unsigned char *const left, const unsigned char *const right,
-	const size_t length)
-{
-	unsigned char difference = 0;
-	size_t i;
-	for(i = 0; i < length; ++i)
-		difference |= left[i] ^ right[i];
-	return difference == 0;
-}
-
-/* Produce the existing callback's colon-hex credential text. This is only
- * used after a valid policy fails to match; pin verification compares bytes.
- */
-static int
-formatFingerprint(const size_t algorithmIndex, const unsigned char *const digest,
-	char *const output, const size_t outputLength)
+/* Keep the callback's diagnostic fingerprint in the same canonical form as
+ * the historical GnuTLS path. This text is not used for pin comparison. */
+static void
+writeAuthInfo(const char *const digestName, const unsigned char *const digest,
+	const size_t digestLength, char *const output, const size_t outputLength)
 {
 	static const char hexDigits[] = "0123456789ABCDEF";
-	const fingerprintAlgorithm_t *const algorithm = &algorithms[algorithmIndex];
-	const size_t requiredLength = algorithm->nameLength + 3 * algorithm->digestLength + 1;
-	size_t position = algorithm->nameLength;
+	const size_t nameLength = strlen(digestName);
+	const size_t requiredLength = nameLength + 3 * digestLength + 1;
+	size_t position;
 	size_t i;
 
-	if(output == NULL || outputLength < requiredLength)
-		return 0;
-	memcpy(output, algorithm->name, algorithm->nameLength);
-	output[position++] = ':';
-	for(i = 0; i < algorithm->digestLength; ++i) {
+	if(output == NULL || outputLength == 0)
+		return;
+	output[0] = '\0';
+	if(requiredLength >= LEGACY_FINGERPRINT_TEXT_SIZE ||
+	   requiredLength > outputLength)
+		return;
+	memcpy(output, digestName, nameLength);
+	position = nameLength;
+	for(i = 0; i < digestLength; ++i) {
+		output[position++] = ':';
 		output[position++] = hexDigits[digest[i] >> 4];
 		output[position++] = hexDigits[digest[i] & 0x0f];
-		if(i + 1 < algorithm->digestLength)
-			output[position++] = ':';
 	}
 	output[position] = '\0';
-	return 1;
 }
 
 relpGnuTLSFingerprintResult_t
@@ -145,9 +166,9 @@ relpGnuTLSFingerprintCheck(gnutls_x509_crt_t cert, const size_t pinCount,
 	relpGnuTLSFingerprintPinAt pinAt, const void *const context,
 	char *const authInfo, const size_t authInfoLength, int *const gnutlsError)
 {
-	unsigned char digestValues[FINGERPRINT_ALGORITHM_COUNT][MAX_FINGERPRINT_BYTES] = {{0}};
-	unsigned char algorithmNeeded[FINGERPRINT_ALGORITHM_COUNT] = {0};
-	parsedFingerprint_t parsed;
+	fingerprintDigestId_t digestIds[MAX_FINGERPRINT_DIGESTS];
+	unsigned char digest[MAX_FINGERPRINT_BYTES];
+	size_t digestCount;
 	size_t i;
 	int gnuRet;
 
@@ -155,50 +176,38 @@ relpGnuTLSFingerprintCheck(gnutls_x509_crt_t cert, const size_t pinCount,
 		authInfo[0] = '\0';
 	if(gnutlsError != NULL)
 		*gnutlsError = GNUTLS_E_SUCCESS;
-	if(cert == NULL || pinAt == NULL || pinCount == 0)
+	if(cert == NULL || pinAt == NULL)
 		return RELP_GNUTLS_FINGERPRINT_INVALID_POLICY;
 
-	/* Reject the whole policy before computing any digest. A valid matching pin
-	 * cannot mask an unsupported or malformed entry elsewhere in the list.
-	 */
-	for(i = 0; i < pinCount; ++i) {
-		if(!parseFingerprint(pinAt(context, i), &parsed))
-			return RELP_GNUTLS_FINGERPRINT_INVALID_POLICY;
-		algorithmNeeded[parsed.algorithmIndex] = 1;
-	}
-	const size_t diagnosticAlgorithmIndex = parsed.algorithmIndex;
+	/* Recognized digest prefixes consume a slot even when their pin text is
+	 * malformed. Unknown prefixes and malformed entries remain nonmatching. */
+	digestCount = collectDigestIds(pinCount, pinAt, context, digestIds);
+	for(i = 0; i < digestCount; ++i) {
+		const char *digestName = fingerprintDigestGetName(digestIds[i]);
+		size_t digestLength = sizeof(digest);
+		size_t j;
+		if(digestName == NULL)
+			digestName = "0000";
 
-	/* Each digest selected by the validated policy is calculated once. */
-	for(i = 0; i < FINGERPRINT_ALGORITHM_COUNT; ++i) {
-		size_t digestLength;
-		if(!algorithmNeeded[i])
-			continue;
-		digestLength = algorithms[i].digestLength;
-		gnuRet = gnutls_x509_crt_get_fingerprint(cert, algorithms[i].algorithm,
-			digestValues[i], &digestLength);
+		gnuRet = gnutls_x509_crt_get_fingerprint(cert,
+			(gnutls_digest_algorithm_t) digestIds[i], digest, &digestLength);
 		if(gnuRet != GNUTLS_E_SUCCESS) {
 			if(gnutlsError != NULL)
 				*gnutlsError = gnuRet;
 			return RELP_GNUTLS_FINGERPRINT_ERROR;
 		}
-		if(digestLength != algorithms[i].digestLength) {
-			if(gnutlsError != NULL)
-				*gnutlsError = GNUTLS_E_CERTIFICATE_ERROR;
-			return RELP_GNUTLS_FINGERPRINT_ERROR;
+		writeAuthInfo(digestName, digest, digestLength, authInfo, authInfoLength);
+
+		/* The legacy fixed text buffer produced an empty string for a digest
+		 * too large to format. Treat that unrepresentable value as nonmatching. */
+		if(strlen(digestName) + 3 * digestLength + 1 >= LEGACY_FINGERPRINT_TEXT_SIZE) {
+			continue;
+		}
+		for(j = 0; j < pinCount; ++j) {
+			if(pinMatchesDigest(pinAt(context, j), digestName, digest, digestLength))
+				return RELP_GNUTLS_FINGERPRINT_MATCH;
 		}
 	}
-
-	for(i = 0; i < pinCount; ++i) {
-		const fingerprintAlgorithm_t *algorithm;
-		if(!parseFingerprint(pinAt(context, i), &parsed))
-			return RELP_GNUTLS_FINGERPRINT_INVALID_POLICY;
-		algorithm = &algorithms[parsed.algorithmIndex];
-		if(fingerprintsEqual(parsed.bytes, digestValues[parsed.algorithmIndex],
-			algorithm->digestLength))
-			return RELP_GNUTLS_FINGERPRINT_MATCH;
-	}
-	(void) formatFingerprint(diagnosticAlgorithmIndex,
-		digestValues[diagnosticAlgorithmIndex], authInfo, authInfoLength);
 	return RELP_GNUTLS_FINGERPRINT_NO_MATCH;
 }
 

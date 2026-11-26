@@ -2532,9 +2532,9 @@ relpTcpChkPeerFingerprint(relpTcp_t *const pThis, gnutls_x509_crt_t cert)
 		authInfo = "GnuTLS certificate fingerprint unavailable";
 		failureReason = "unable to compute certificate fingerprint";
 	} else if(result == RELP_GNUTLS_FINGERPRINT_INVALID_POLICY) {
-		pThis->pEngine->dbgprint((char*)"invalid or unsupported GnuTLS fingerprint policy\n");
+		pThis->pEngine->dbgprint((char*)"GnuTLS fingerprint policy check unavailable\n");
 		authInfo = "GnuTLS fingerprint policy";
-		failureReason = "malformed or unsupported fingerprint pin";
+		failureReason = "GnuTLS fingerprint policy check unavailable";
 	} else {
 		failureReason = "non-permitted fingerprint";
 	}

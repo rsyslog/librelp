@@ -17,17 +17,19 @@ typedef enum {
 	RELP_GNUTLS_FINGERPRINT_ERROR
 } relpGnuTLSFingerprintResult_t;
 
-#define RELP_GNUTLS_FINGERPRINT_AUTHINFO_SIZE 199
+#define RELP_GNUTLS_FINGERPRINT_AUTHINFO_SIZE 256
 
-/* GnuTLS fingerprint pins use the exact uppercase forms SHA1, SHA256, SHA384,
- * or SHA512 followed by a colon and colon-separated uppercase hex bytes. Use
- * SHA256 for new pins; SHA1 remains accepted for existing pins. A malformed
- * or unsupported pin rejects the complete allowlist, even if another entry
- * would match.
+/* GnuTLS fingerprint pins use any digest name recognized by the active
+ * GnuTLS runtime, followed by a colon and the canonical uppercase colon-hex
+ * fingerprint. SHA1 and additional runtime-supported digest names remain
+ * available when GnuTLS recognizes them. Unknown and malformed entries do
+ * not match and do not invalidate valid siblings. Only the first ten distinct
+ * recognized digest IDs are considered, in their order of appearance; a
+ * recognized but malformed entry still consumes its digest's slot.
  *
- * Check a complete fingerprint allowlist before accepting any matching pin.
- * The callback lets callers supply pins from their existing storage without
- * allocating a second list. gnutlsError is set only for digest API failures.
+ * Digests are computed in that same order and only as needed. The callback
+ * lets callers supply pins from their existing storage without allocating a
+ * second list. gnutlsError is set only for digest API failures.
  */
 relpGnuTLSFingerprintResult_t relpGnuTLSFingerprintCheck(
 	gnutls_x509_crt_t cert,
