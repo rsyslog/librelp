@@ -328,8 +328,8 @@ main(void)
 	}
 
 	onePin[0] = sha1;
-	ok &= expectResult("SHA1 compatibility", cert, onePin, 1,
-		RELP_GNUTLS_FINGERPRINT_MATCH);
+	ok &= expectAuthInfo("SHA1 match leaves authinfo empty", cert, onePin, 1,
+		RELP_GNUTLS_FINGERPRINT_MATCH, "");
 	onePin[0] = sha256;
 	ok &= expectResult("SHA256", cert, onePin, 1, RELP_GNUTLS_FINGERPRINT_MATCH);
 	onePin[0] = sha384;

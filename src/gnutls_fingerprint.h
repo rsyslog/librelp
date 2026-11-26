@@ -29,7 +29,8 @@ typedef enum {
  *
  * Digests are computed in that same order and only as needed. The callback
  * lets callers supply pins from their existing storage without allocating a
- * second list. gnutlsError is set only for digest API failures.
+ * second list. With no match, authInfo receives the last attempted fingerprint
+ * if it fits. Otherwise authInfo is empty. gnutlsError reports digest API failures.
  */
 relpGnuTLSFingerprintResult_t relpGnuTLSFingerprintCheck(
 	gnutls_x509_crt_t cert,

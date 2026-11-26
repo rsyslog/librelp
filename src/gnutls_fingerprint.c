@@ -15,7 +15,6 @@
 
 #if defined(ENABLE_TLS) && defined(HAVE_GNUTLS_CERTIFICATE_SET_VERIFY_FUNCTION)
 
-#include <stdio.h>
 #include <string.h>
 
 /* GnuTLS used the MAC API for digest lookup before 3.2.2. The old matcher
@@ -50,7 +49,6 @@ fingerprintDigestGetName(const fingerprintDigestId_t id)
 
 #define MAX_FINGERPRINT_DIGESTS 10
 #define MAX_FINGERPRINT_BYTES 126
-#define LEGACY_FINGERPRINT_TEXT_SIZE 256
 
 static size_t
 collectDigestIds(const size_t pinCount, relpGnuTLSFingerprintPinAt pinAt,
@@ -60,7 +58,7 @@ collectDigestIds(const size_t pinCount, relpGnuTLSFingerprintPinAt pinAt,
 	size_t digestCount = 0;
 	size_t i;
 
-	for(i = 0; i < pinCount; ++i) {
+	for(i = 0; i < pinCount && digestCount < MAX_FINGERPRINT_DIGESTS; ++i) {
 		const char *const pin = pinAt(context, i);
 		const char *colon;
 		size_t nameLength;
@@ -88,7 +86,7 @@ collectDigestIds(const size_t pinCount, relpGnuTLSFingerprintPinAt pinAt,
 				break;
 			}
 		}
-		if(!duplicate && digestCount < MAX_FINGERPRINT_DIGESTS)
+		if(!duplicate)
 			digestIds[digestCount++] = digestId;
 	}
 	return digestCount;
@@ -108,10 +106,9 @@ hexValue(const char c)
  * This retains the old string comparison semantics while comparing the
  * certificate and pin as bytes. */
 static int
-pinMatchesDigest(const char *const pin, const char *const digestName,
+pinMatchesDigest(const char *const pin, const char *const digestName, const size_t nameLength,
 	const unsigned char *const digest, const size_t digestLength)
 {
-	const size_t nameLength = strlen(digestName);
 	const char *cursor;
 	size_t i;
 
@@ -136,23 +133,14 @@ pinMatchesDigest(const char *const pin, const char *const digestName,
 /* Keep the callback's diagnostic fingerprint in the same canonical form as
  * the historical GnuTLS path. This text is not used for pin comparison. */
 static void
-writeAuthInfo(const char *const digestName, const unsigned char *const digest,
-	const size_t digestLength, char *const output, const size_t outputLength)
+writeAuthInfo(const char *const digestName, const size_t nameLength,
+	const unsigned char *const digest, const size_t digestLength, char *const output)
 {
 	static const char hexDigits[] = "0123456789ABCDEF";
-	const size_t nameLength = strlen(digestName);
-	const size_t requiredLength = nameLength + 3 * digestLength + 1;
-	size_t position;
+	size_t position = nameLength;
 	size_t i;
 
-	if(output == NULL || outputLength == 0)
-		return;
-	output[0] = '\0';
-	if(requiredLength >= LEGACY_FINGERPRINT_TEXT_SIZE ||
-	   requiredLength > outputLength)
-		return;
 	memcpy(output, digestName, nameLength);
-	position = nameLength;
 	for(i = 0; i < digestLength; ++i) {
 		output[position++] = ':';
 		output[position++] = hexDigits[digest[i] >> 4];
@@ -196,17 +184,18 @@ relpGnuTLSFingerprintCheck(gnutls_x509_crt_t cert, const size_t pinCount,
 				*gnutlsError = gnuRet;
 			return RELP_GNUTLS_FINGERPRINT_ERROR;
 		}
-		writeAuthInfo(digestName, digest, digestLength, authInfo, authInfoLength);
+		const size_t nameLength = strlen(digestName);
+		const size_t requiredLength = nameLength + 3 * digestLength + 1;
 
-		/* The legacy fixed text buffer produced an empty string for a digest
-		 * too large to format. Treat that unrepresentable value as nonmatching. */
-		if(strlen(digestName) + 3 * digestLength + 1 >= LEGACY_FINGERPRINT_TEXT_SIZE) {
+		/* Preserve the historical text limit even for callers with larger buffers. */
+		if(requiredLength >= RELP_GNUTLS_FINGERPRINT_AUTHINFO_SIZE)
 			continue;
-		}
 		for(j = 0; j < pinCount; ++j) {
-			if(pinMatchesDigest(pinAt(context, j), digestName, digest, digestLength))
+			if(pinMatchesDigest(pinAt(context, j), digestName, nameLength, digest, digestLength))
 				return RELP_GNUTLS_FINGERPRINT_MATCH;
 		}
+		if(i + 1 == digestCount && authInfo != NULL && requiredLength <= authInfoLength)
+			writeAuthInfo(digestName, nameLength, digest, digestLength, authInfo);
 	}
 	return RELP_GNUTLS_FINGERPRINT_NO_MATCH;
 }
