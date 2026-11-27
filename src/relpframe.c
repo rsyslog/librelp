@@ -64,7 +64,7 @@ finalize_it:
 
 /** Destruct a RELP frame instance
  */
-relpRetVal
+static relpRetVal
 relpFrameDestruct(relpFrame_t **ppThis)
 {
 	relpFrame_t *pThis;
@@ -82,6 +82,15 @@ relpFrameDestruct(relpFrame_t **ppThis)
 	*ppThis = NULL;
 
 	LEAVE_RELPFUNC;
+}
+
+
+/* Release any frame still owned by the session's receive parser. */
+void
+relpFrameDiscardPendingReceive(relpSess_t *const pSess)
+{
+	if(pSess->pCurrRcvFrame != NULL)
+		relpFrameDestruct(&pSess->pCurrRcvFrame);
 }
 
 

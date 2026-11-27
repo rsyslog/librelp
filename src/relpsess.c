@@ -208,8 +208,7 @@ relpSessDestruct(relpSess_t **ppThis)
 		free(pUnackedToDel);
 	}
 
-	if(pThis->pCurrRcvFrame != NULL)
-		relpFrameDestruct(&pThis->pCurrRcvFrame);
+	relpFrameDiscardPendingReceive(pThis);
 
 	free(pThis->srvPort);
 	free(pThis->srvAddr);
@@ -879,9 +878,7 @@ relpSessConnect(relpSess_t *const pThis, int protFamily, unsigned char *port, un
 		}
 	}
 
-	if (pThis->pCurrRcvFrame != NULL) {
-		relpFrameDestruct(&pThis->pCurrRcvFrame);
-	}
+	relpFrameDiscardPendingReceive(pThis);
 
 	/* (re-)init some counters */
 	pThis->txnr = 1;
