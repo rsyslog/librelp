@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* A RELP sender for the testbench.
  *
  * Copyright 2018 Adiscon GmbH
