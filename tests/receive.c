@@ -32,9 +32,11 @@
 #	include <getopt.h>
 #endif
 #include <string.h>
+#include <strings.h>
 #include <limits.h>
 #include <errno.h>
 #include <signal.h>
+#include <sys/select.h>
 #include <sys/time.h>
 #include "librelp.h"
 
