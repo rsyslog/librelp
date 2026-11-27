@@ -1,34 +1,16 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* The mapping for relp over TCP.
  *
- * Copyright 2008-2025 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2026 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
- * Librelp is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Librelp is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with librelp.  If not, see <http://www.gnu.org/licenses/>.
- *
- * A copy of the GPL can be found in the file "COPYING" in this distribution.
- *
- * If the terms of the GPL are unsuitable for your needs, you may obtain
- * a commercial license from Adiscon. Contact sales@adiscon.com for further
- * details.
+ * Licensed under the Apache License, Version 2.0.
+ * See COPYING.ASL20 for the license text.
  *
  * ALL CONTRIBUTORS PLEASE NOTE that by sending contributions, you assign
- * your copyright to Adiscon GmbH, Germany. This is necessary to permit the
- * dual-licensing set forth here. Our apologies for this inconvenience, but
- * we sincerely believe that the dual-licensing model helps us provide great
- * free software while at the same time obtaining some funding for further
- * development.
+ * your copyright to Adiscon GmbH, Germany.
  */
 #ifndef RELPTCP_H_INCLUDED
 #define	RELPTCP_H_INCLUDED
@@ -125,7 +107,7 @@ typedef struct relpTcp_s {
 	int dhBits;	/**< number of bits for Diffie-Hellman key */
 	char *pristring; /**< priority string for GnuTLS */
 	relpAuthMode_t authmode;
-	int connTimeout;
+	int connectTimeoutSec;	/**< seconds relpTcpConnect() waits for the TCP connection */
 	tcpPermittedPeers_t permittedPeers;
 	#ifdef ENABLE_TLS
 	gnutls_anon_client_credentials_t anoncred;	/**< client anon credentials */
@@ -167,7 +149,7 @@ relpTcpRtryOp(relpTcp_t *pThis)
 relpRetVal relpTcpConstruct(relpTcp_t **ppThis, relpEngine_t *pEngine, int connType, void *pParent);
 relpRetVal relpTcpDestruct(relpTcp_t **ppThis);
 relpRetVal relpTcpAbortDestruct(relpTcp_t **ppThis);
-relpRetVal relpTcpLstnInit(relpTcp_t *pThis, unsigned char *pLstnPort, unsigned char *pLstnAddr, int ai_family);
+relpRetVal relpTcpLstnInit(relpTcp_t *pThis, unsigned char *port, unsigned char *bindAddr, int family);
 relpRetVal relpTcpAcceptConnReq(relpTcp_t **ppThis, int sock, relpSrv_t *pSrv);
 relpRetVal relpTcpRcv(relpTcp_t *pThis, relpOctet_t *pRcvBuf, ssize_t *pLenBuf);
 relpRetVal relpTcpSend(relpTcp_t *pThis, relpOctet_t *pBuf, ssize_t *pLenBuf);
@@ -184,7 +166,7 @@ relpRetVal relpTcpSetTlsConfigCmd(relpTcp_t *pThis, char *cfgcmd);
 relpRetVal relpTcpSetPermittedPeers(relpTcp_t *pThis, relpPermittedPeers_t *pPeers);
 relpRetVal LIBRELP_ATTR_NONNULL() relpTcpRtryHandshake(relpTcp_t *pThis);
 relpRetVal relpTcpSetUsrPtr(relpTcp_t *pThis, void *pUsr);
-relpRetVal relpTcpSetConnTimeout(relpTcp_t *pThis, int connTimeout);
+relpRetVal relpTcpSetConnTimeout(relpTcp_t *pThis, int seconds);
 relpRetVal relpTcpSetAuthMode(relpTcp_t *pThis, relpAuthMode_t authmode);
 void relpTcpHintBurstBegin(relpTcp_t *pThis);
 void relpTcpHintBurstEnd(relpTcp_t *pThis);
@@ -193,36 +175,7 @@ int relpTcpWaitWriteable(relpTcp_t *pThis, struct timespec *timeout);
 void relpTcpExitTLS(void);
 
 #ifdef ENABLE_TLS_OPENSSL
-/*-----------------------------------------------------------------------------*/
-#define MUTEX_TYPE       pthread_mutex_t
-#define MUTEX_SETUP(x)   pthread_mutex_init(&(x), NULL)
-#define MUTEX_CLEANUP(x) pthread_mutex_destroy(&(x))
-#define MUTEX_LOCK(x)    pthread_mutex_lock(&(x))
-#define MUTEX_UNLOCK(x)  pthread_mutex_unlock(&(x))
-#define THREAD_ID        pthread_self()
-
-/* This array will store all of the mutexes available to OpenSSL. */
-struct CRYPTO_dynlock_value
-{
-	MUTEX_TYPE mutex;
-};
-
-void dyn_destroy_function(struct CRYPTO_dynlock_value *l,
-	__attribute__((unused)) const char *file, __attribute__((unused)) int line);
-void dyn_lock_function(int mode, struct CRYPTO_dynlock_value *l,
-	__attribute__((unused)) const char *file, __attribute__((unused)) int line);
-struct CRYPTO_dynlock_value * dyn_create_function(
-	__attribute__((unused)) const char *file, __attribute__((unused)) int line);
-unsigned long id_function(void);
-void locking_function(int mode, int n,
-	__attribute__((unused)) const char * file, __attribute__((unused)) int line);
-
-int opensslh_THREAD_setup(void);
-int opensslh_THREAD_cleanup(void);
 void relpTcpLastSSLErrorMsg(int ret, relpTcp_t *const pThis, const char* pszCallSource);
-int verify_callback(int status, X509_STORE_CTX *store);
-
-/*-----------------------------------------------------------------------------*/
 #endif
 
 #endif /* #ifndef RELPTCP_H_INCLUDED */

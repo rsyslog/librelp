@@ -1,38 +1,20 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* This implements the relp mapping onto TCP.
  *
- * Copyright 2008-2025 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2026 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
+ *
+ * Licensed under the Apache License, Version 2.0.
+ * See COPYING.ASL20 for the license text.
+ *
+ * ALL CONTRIBUTORS PLEASE NOTE that by sending contributions, you assign
+ * your copyright to Adiscon GmbH, Germany.
  *
  * Note: gnutls_certificate_set_verify_function is problematic, as it
  *       is not available in old GnuTLS versions, but rather important
  *       for verifying certificates correctly.
- *
- * Librelp is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Librelp is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Librelp.  If not, see <http://www.gnu.org/licenses/>.
- *
- * A copy of the GPL can be found in the file "COPYING" in this distribution.
- *
- * If the terms of the GPL are unsuitable for your needs, you may obtain
- * a commercial license from Adiscon. Contact sales@adiscon.com for further
- * details.
- *
- * ALL CONTRIBUTORS PLEASE NOTE that by sending contributions, you assign
- * your copyright to Adiscon GmbH, Germany. This is necessary to permit the
- * dual-licensing set forth here. Our apologies for this inconvenience, but
- * we sincerely believe that the dual-licensing model helps us provide great
- * free software while at the same time obtaining some funding for further
- * development.
  */
 #include "config.h"
 #include <stdio.h>
@@ -46,6 +28,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
+#include <limits.h>
 #include <poll.h>
 #include <assert.h>
 #include "relp.h"
@@ -72,24 +55,29 @@
 #	if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
 #		include <openssl/bioerr.h>
 #	endif
-/* OpenSSL API differences */
-#	if OPENSSL_VERSION_NUMBER >= 0x10100000L
-#		define RSYSLOG_X509_NAME_oneline(X509CERT) X509_get_subject_name(X509CERT)
-#		define RSYSLOG_BIO_method_name(SSLBIO) BIO_method_name(SSLBIO)
-#		define RSYSLOG_BIO_number_read(SSLBIO) BIO_number_read(SSLBIO)
-#		define RSYSLOG_BIO_number_written(SSLBIO) BIO_number_written(SSLBIO)
-#	else
+#	if OPENSSL_VERSION_NUMBER < 0x10100000L
 #		include <openssl/engine.h>
-#		define RSYSLOG_X509_NAME_oneline(X509CERT) (X509CERT != NULL ? X509CERT->cert_info->subject : NULL)
-#		define RSYSLOG_BIO_method_name(SSLBIO) SSLBIO->method->name
-#		define RSYSLOG_BIO_number_read(SSLBIO) SSLBIO->num
-#		define RSYSLOG_BIO_number_written(SSLBIO) SSLBIO->num
 #	endif
 #endif /* #ifdef ENABLE_TLS_OPENSSL */
 
 
 #ifndef SOL_TCP
 #  define SOL_TCP (getprotobyname("tcp")->p_proto)
+#endif
+
+/* GnuTLS transports the socket descriptor as a pointer-sized value
+ * (gnutls_transport_ptr_t), so the casts in the transport setup are
+ * intentional. Silence the related warning only around that code, and
+ * only for compilers that know GCC diagnostic pragmas.
+ */
+#if defined(__GNUC__) && !defined(_AIX)
+#	define RELP_DIAG_ALLOW_INT_TO_PTR_BEGIN \
+		_Pragma("GCC diagnostic push") \
+		_Pragma("GCC diagnostic ignored \"-Wint-to-pointer-cast\"")
+#	define RELP_DIAG_ALLOW_INT_TO_PTR_END _Pragma("GCC diagnostic pop")
+#else
+#	define RELP_DIAG_ALLOW_INT_TO_PTR_BEGIN
+#	define RELP_DIAG_ALLOW_INT_TO_PTR_END
 #endif
 
 /*  AIX: MSG_DONTWAIT not supported */
@@ -185,219 +173,60 @@ static int called_openssl_global_init = 0;
 static SSL_CTX *ctx = NULL;
 static pthread_mutex_t mutSsl;
 
-/*--------------------------------------MT OpenSSL helpers ------------------------------------------*/
-static MUTEX_TYPE *mutex_buf = NULL;
-
-void locking_function(int mode, int n,
-	LIBRELP_ATTR_UNUSED const char * file, LIBRELP_ATTR_UNUSED int line)
-{
-	if (mode & CRYPTO_LOCK)
-		MUTEX_LOCK(mutex_buf[n]);
-	else
-		MUTEX_UNLOCK(mutex_buf[n]);
-}
-
-unsigned long id_function(void)
-{
-	return ((unsigned long)THREAD_ID);
-}
-
-
-struct CRYPTO_dynlock_value * dyn_create_function(
-	LIBRELP_ATTR_UNUSED const char *file, LIBRELP_ATTR_UNUSED int line)
-{
-	struct CRYPTO_dynlock_value *value;
-	value = (struct CRYPTO_dynlock_value *)malloc(sizeof(struct CRYPTO_dynlock_value));
-	if (!value)
-		return NULL;
-
-	MUTEX_SETUP(value->mutex);
-	return value;
-}
-
-void dyn_lock_function(int mode, struct CRYPTO_dynlock_value *l,
-	LIBRELP_ATTR_UNUSED const char *file, LIBRELP_ATTR_UNUSED int line)
-{
-	if (mode & CRYPTO_LOCK)
-		MUTEX_LOCK(l->mutex);
-	else
-		MUTEX_UNLOCK(l->mutex);
-}
-
-void dyn_destroy_function(struct CRYPTO_dynlock_value *l,
-	LIBRELP_ATTR_UNUSED const char *file, LIBRELP_ATTR_UNUSED int line)
-{
-	MUTEX_CLEANUP(l->mutex);
-	free(l);
-}
-
-/* set up support functions for openssl multi-threading. This must
- * be done at library initialisation. If the function fails,
- * processing can not continue normally. On failure, 0 is
- * returned, on success 1.
+/* Debug trace for the socket BIO of a TLS session. It only reports
+ * which BIO operation ran and, once it finished, its result. The trace
+ * is emitted through the engine debug hook and is therefore silent unless
+ * the caller enabled librelp debugging.
  */
-int opensslh_THREAD_setup(void)
+static const char *
+relpTcpBioOpName(const int oper)
 {
-	int i;
-	mutex_buf = (MUTEX_TYPE *)malloc(CRYPTO_num_locks( ) * sizeof(MUTEX_TYPE));
-	if (mutex_buf == NULL)
-		return 0;
-	for (i = 0; i < CRYPTO_num_locks( ); i++)
-		MUTEX_SETUP(mutex_buf[i]);
-
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
-	CRYPTO_set_id_callback(id_function);
-#endif /* OPENSSL_VERSION_NUMBER < 0x10100000L */
-	CRYPTO_set_locking_callback(locking_function);
-	/* The following three CRYPTO_... functions are the OpenSSL functions
-	for registering the callbacks we implemented above */
-	CRYPTO_set_dynlock_create_callback(dyn_create_function);
-	CRYPTO_set_dynlock_lock_callback(dyn_lock_function);
-	CRYPTO_set_dynlock_destroy_callback(dyn_destroy_function);
-
-	return 1;
-}
-
-/* shut down openssl - do this only when you are totally done
- * with openssl.
- */
-int opensslh_THREAD_cleanup(void)
-{
-	int i;
-	if (!mutex_buf)
-		return 0;
-
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
-	CRYPTO_set_id_callback(NULL);
-#endif /* OPENSSL_VERSION_NUMBER < 0x10100000L */
-	CRYPTO_set_locking_callback(NULL);
-	CRYPTO_set_dynlock_create_callback(NULL);
-	CRYPTO_set_dynlock_lock_callback(NULL);
-	CRYPTO_set_dynlock_destroy_callback(NULL);
-
-	for (i = 0; i < CRYPTO_num_locks( ); i++)
-		MUTEX_CLEANUP(mutex_buf[i]);
-
-	free(mutex_buf);
-	mutex_buf = NULL;
-
-	return 1;
-}
-/*--------------------------------------MT OpenSSL helpers ------------------------------------------*/
-/* OpenSSL Helper functions */
-/* OpenSSL implementation of TLS funtions.
- * alorbach, 2018-06-11
- */
-
-#if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
-long BIO_debug_callback_ex(BIO *bio, int cmd, const char LIBRELP_ATTR_UNUSED *argp,
-			   size_t LIBRELP_ATTR_UNUSED len, int argi, long LIBRELP_ATTR_UNUSED argl,
-			   int ret, size_t LIBRELP_ATTR_UNUSED *processed)
-#else
-long BIO_debug_callback(BIO *bio, int cmd, const char LIBRELP_ATTR_UNUSED *argp,
-			int argi, long LIBRELP_ATTR_UNUSED argl, long ret)
-#endif
-{
-	long ret2 = ret; // Helper value to avoid printf compile errors long<>int
-	long r = 1;
-
-	relpTcp_t* pThis = (relpTcp_t*) (void *) BIO_get_callback_arg(bio);
-
-	if (BIO_CB_RETURN & cmd)
-	r = ret;
-
-	switch (cmd) {
-	case BIO_CB_FREE:
-		pThis->pEngine->dbgprint((char*)"openssl debugmsg: BIO[%p]: Free - %s\n",
-			(void *)bio, RSYSLOG_BIO_method_name(bio));
-		break;
-	/* Disabled due API changes for OpenSSL 1.1.0+ */
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
-	case BIO_CB_READ:
-	if (bio->method->type & BIO_TYPE_DESCRIPTOR)
-		pThis->pEngine->dbgprint((char*)"openssl debugmsg: BIO[%p]: read(%d,%lu) - %s fd=%d\n",
-			(void *)bio,
-			RSYSLOG_BIO_number_read(bio), (unsigned long)argi,
-			RSYSLOG_BIO_method_name(bio), RSYSLOG_BIO_number_read(bio));
-	else
-		pThis->pEngine->dbgprint((char*)"openssl debugmsg: BIO[%p]: read(%d,%lu) - %s\n",
-			(void *)bio,
-			RSYSLOG_BIO_number_read(bio), (unsigned long)argi, RSYSLOG_BIO_method_name(bio));
-	break;
-	case BIO_CB_WRITE:
-	if (bio->method->type & BIO_TYPE_DESCRIPTOR)
-		pThis->pEngine->dbgprint((char*)"openssl debugmsg: BIO[%p]: write(%d,%lu) - %s fd=%d\n",
-			(void *)bio,
-			RSYSLOG_BIO_number_written(bio), (unsigned long)argi,
-			RSYSLOG_BIO_method_name(bio), RSYSLOG_BIO_number_written(bio));
-	else
-		pThis->pEngine->dbgprint((char*)"openssl debugmsg: BIO[%p]: write(%d,%lu) - %s\n",
-			(void *)bio,
-			RSYSLOG_BIO_number_written(bio), (unsigned long)argi, RSYSLOG_BIO_method_name(bio));
-	break;
-#else
-	case BIO_CB_READ:
-		pThis->pEngine->dbgprint((char*)"openssl debugmsg: BIO[%p]: read %s\n",
-			(void *)bio,
-			RSYSLOG_BIO_method_name(bio));
-	break;
-	case BIO_CB_WRITE:
-		pThis->pEngine->dbgprint((char*)"openssl debugmsg: BIO[%p]: write %s\n",
-			(void *)bio,
-			RSYSLOG_BIO_method_name(bio));
-	break;
-#endif
-	case BIO_CB_PUTS:
-		pThis->pEngine->dbgprint((char*)"openssl debugmsg: BIO[%p]: puts() - %s\n",
-			(void *)bio,
-			RSYSLOG_BIO_method_name(bio));
-		break;
-	case BIO_CB_GETS:
-		pThis->pEngine->dbgprint((char*)"openssl debugmsg: BIO[%p]: gets(%lu) - %s\n",
-			(void *)bio,
-			(unsigned long)argi,
-			RSYSLOG_BIO_method_name(bio));
-		break;
-	case BIO_CB_CTRL:
-		pThis->pEngine->dbgprint((char*)"openssl debugmsg: BIO[%p]: ctrl(%lu) - %s\n",
-			(void *)bio,
-			(unsigned long)argi,
-			RSYSLOG_BIO_method_name(bio));
-		break;
-	case BIO_CB_RETURN | BIO_CB_READ:
-		pThis->pEngine->dbgprint((char*)"openssl debugmsg: BIO[%p]: read return %ld\n",
-			(void *)bio,
-			ret2);
-		break;
-	case BIO_CB_RETURN | BIO_CB_WRITE:
-		pThis->pEngine->dbgprint((char*)"openssl debugmsg: BIO[%p]: write return %ld\n",
-			(void *)bio,
-			ret2);
-		break;
-	case BIO_CB_RETURN | BIO_CB_GETS:
-		pThis->pEngine->dbgprint((char*)"openssl debugmsg: BIO[%p]: gets return %ld\n",
-			(void *)bio,
-			ret2);
-		break;
-	case BIO_CB_RETURN | BIO_CB_PUTS:
-		pThis->pEngine->dbgprint((char*)"openssl debugmsg: BIO[%p]: puts return %ld\n",
-			(void *)bio,
-			ret2);
-		break;
-	case BIO_CB_RETURN | BIO_CB_CTRL:
-		pThis->pEngine->dbgprint((char*)"openssl debugmsg: BIO[%p]: ctrl return %ld\n",
-			(void *)bio,
-			ret2);
-		break;
-	default:
-		pThis->pEngine->dbgprint((char*)"openssl debugmsg: BIO[%p]: bio callback - unknown type (%d)\n",
-			(void *)bio,
-			cmd);
-		break;
+	switch(oper & ~BIO_CB_RETURN) {
+	case BIO_CB_FREE:	return "free";
+	case BIO_CB_READ:	return "read";
+	case BIO_CB_WRITE:	return "write";
+	case BIO_CB_PUTS:	return "puts";
+	case BIO_CB_GETS:	return "gets";
+	case BIO_CB_CTRL:	return "ctrl";
+	default:		return "other";
 	}
-
-	return (r);
 }
+
+static void
+relpTcpBioTrace(BIO *const bio, const int oper, const long result)
+{
+	const relpTcp_t *const pThis = (const relpTcp_t *) (void *) BIO_get_callback_arg(bio);
+	if(pThis == NULL)
+		return;
+	if(oper & BIO_CB_RETURN) {
+		pThis->pEngine->dbgprint((char*)"librelp tls bio %p: %s done, result %ld\n",
+			(void *)bio, relpTcpBioOpName(oper), result);
+	} else {
+		pThis->pEngine->dbgprint((char*)"librelp tls bio %p: %s (%s)\n",
+			(void *)bio, relpTcpBioOpName(oper), BIO_method_name(bio));
+	}
+}
+
+#if OPENSSL_VERSION_NUMBER >= 0x10101000L && !defined(LIBRESSL_VERSION_NUMBER)
+static long
+relpTcpBioTraceCb(BIO *bio, int oper, LIBRELP_ATTR_UNUSED const char *argp,
+	LIBRELP_ATTR_UNUSED size_t len, LIBRELP_ATTR_UNUSED int argi,
+	LIBRELP_ATTR_UNUSED long argl, int ret, LIBRELP_ATTR_UNUSED size_t *processed)
+{
+	relpTcpBioTrace(bio, oper, (long) ret);
+	return (oper & BIO_CB_RETURN) ? (long) ret : 1;
+}
+#	define RELP_BIO_SET_TRACE(bio) BIO_set_callback_ex((bio), relpTcpBioTraceCb)
+#else
+static long
+relpTcpBioTraceCb(BIO *bio, int oper, LIBRELP_ATTR_UNUSED const char *argp,
+	LIBRELP_ATTR_UNUSED int argi, LIBRELP_ATTR_UNUSED long argl, long ret)
+{
+	relpTcpBioTrace(bio, oper, ret);
+	return (oper & BIO_CB_RETURN) ? ret : 1;
+}
+#	define RELP_BIO_SET_TRACE(bio) BIO_set_callback((bio), relpTcpBioTraceCb)
+#endif
 
 void relpTcpLastSSLErrorMsg(int ret, relpTcp_t *const pThis, const char* pszCallSource)
 {
@@ -535,7 +364,7 @@ relpTcpChkPeerName_ossl(relpTcp_t *const pThis, void *vcert)
 	bFoundPositiveMatch = 0;
 
 	/* Obtain Namex509 name from subject */
-	x509name = X509_NAME_oneline(RSYSLOG_X509_NAME_oneline(cert), NULL, 0);
+	x509name = X509_NAME_oneline(X509_get_subject_name(cert), NULL, 0);
 
 	pThis->pEngine->dbgprint((char*)"relpTcpChkPeerName_ossl: checking - peername '%s'\n", x509name);
 	if((r = relpTcpGetCN(allNames, sizeof(allNames), x509name)) == 0) {
@@ -603,58 +432,53 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 
-int verify_callback(int status, X509_STORE_CTX *store)
+/* Format the subject or issuer name of a certificate for diagnostics.
+ * A missing certificate or name yields "(none)".
+ */
+static void
+relpTcpCertNameText(X509_NAME *const name, char *const buf, const size_t lenBuf)
 {
-	char szdbgdata1[256];
-	char szdbgdata2[256];
-	char szdberrmsg[1024];
+	if(name == NULL || X509_NAME_oneline(name, buf, (int) lenBuf) == NULL) {
+		snprintf(buf, lenBuf, "(none)");
+	}
+}
 
-	/* Get current SSL object in order to obtain relpTcp_t obj */
-	SSL* ssl = X509_STORE_CTX_get_ex_data(store, SSL_get_ex_data_X509_STORE_CTX_idx());
-	relpTcp_t *pThis = (relpTcp_t *) SSL_get_ex_data(ssl, 0);
+/* OpenSSL chain verification hook. It reports every certificate that
+ * failed verification through the auth error callback. An expired
+ * certificate is reported but does not abort the chain walk here; the
+ * final verdict is taken from the stored verify result after the
+ * handshake. All other errors keep OpenSSL's failure status.
+ */
+static int
+relpTcpVerifyCb_ossl(const int preverifyOk, X509_STORE_CTX *const store)
+{
+	SSL *const ssl = X509_STORE_CTX_get_ex_data(store, SSL_get_ex_data_X509_STORE_CTX_idx());
+	relpTcp_t *const pThis = (relpTcp_t *) SSL_get_ex_data(ssl, 0);
 	assert(pThis != NULL);
 
-	X509 *cert = X509_STORE_CTX_get_current_cert(store);
-	int depth = X509_STORE_CTX_get_error_depth(store);
-	int err = X509_STORE_CTX_get_error(store);
-
-	/* Already failed ? */
-	if(status == 0) {
-		pThis->pEngine->dbgprint((char*)"verify_callback: certificate validation failed!\n");
-		X509_NAME_oneline(X509_get_issuer_name(cert), szdbgdata1, sizeof(szdbgdata1));
-		X509_NAME_oneline(RSYSLOG_X509_NAME_oneline(cert), szdbgdata2, sizeof(szdbgdata2));
-
-		/* Log Warning only on EXPIRED */
-		if (err == X509_V_OK || err == X509_V_ERR_CERT_HAS_EXPIRED) {
-			snprintf(szdberrmsg, sizeof(szdberrmsg),
-				"Certificate expired in verify_callback at depth: %d \n\t"
-				"issuer  = %s\n\t"
-				"subject = %s\n\t"
-				"err %d:%s\n",
-				depth, szdbgdata1, szdbgdata2, err, X509_verify_cert_error_string(err));
-			pThis->pEngine->dbgprint((char*)"verify_callback: %s", szdberrmsg);
-
-			callOnAuthErr(pThis, (char*)X509_verify_cert_error_string(err),
-				szdberrmsg, RELP_RET_AUTH_CERT_INVL);
-
-			/* Set Status to OK ?!*/
-			status = 1;
-		} else {
-			snprintf(szdberrmsg, sizeof(szdberrmsg),
-				"Certificate error in verify_callback at depth: %d \n\t"
-				"issuer  = %s\n\t"
-				"subject = %s\n\t"
-				"err %d:%s\n",
-				depth, szdbgdata1, szdbgdata2, err, X509_verify_cert_error_string(err));
-			pThis->pEngine->dbgprint((char*)"verify_callback: %s", szdberrmsg);
-
-			callOnAuthErr(pThis, (char*)X509_verify_cert_error_string(err),
-				szdberrmsg, RELP_RET_AUTH_CERT_INVL);
-		}
-	} else {
-		pThis->pEngine->dbgprint((char*)"verify_callback: certificate validation success!\n");
+	if(preverifyOk) {
+		pThis->pEngine->dbgprint((char*)"relpTcpVerifyCb_ossl: certificate verified\n");
+		return preverifyOk;
 	}
-	return status;
+
+	X509 *const cert = X509_STORE_CTX_get_current_cert(store);
+	const int depth = X509_STORE_CTX_get_error_depth(store);
+	const int verr = X509_STORE_CTX_get_error(store);
+	const char *const verrText = X509_verify_cert_error_string(verr);
+	const int onlyExpired = (verr == X509_V_OK || verr == X509_V_ERR_CERT_HAS_EXPIRED);
+	char issuer[256];
+	char subject[256];
+	char msg[1024];
+
+	relpTcpCertNameText((cert == NULL) ? NULL : X509_get_issuer_name(cert), issuer, sizeof(issuer));
+	relpTcpCertNameText((cert == NULL) ? NULL : X509_get_subject_name(cert), subject, sizeof(subject));
+	snprintf(msg, sizeof(msg), "%s at chain depth %d: subject '%s', issuer '%s', error %d: %s",
+		onlyExpired ? "Certificate expired" : "Certificate error",
+		depth, subject, issuer, verr, verrText);
+	pThis->pEngine->dbgprint((char*)"relpTcpVerifyCb_ossl: certificate validation failed: %s\n", msg);
+	callOnAuthErr(pThis, verrText, msg, RELP_RET_AUTH_CERT_INVL);
+
+	return onlyExpired ? 1 : 0;
 }
 #endif /* #ifdef ENABLE_TLS_OPENSSL */
 
@@ -1112,14 +936,38 @@ relpTcpSetAuthMode(relpTcp_t *const pThis, relpAuthMode_t authmode)
 	LEAVE_RELPFUNC;
 }
 
+/* Set how many seconds relpTcpConnect() waits for the TCP connection
+ * to be established. The session passes its effective value right
+ * before it connects.
+ */
 relpRetVal
-relpTcpSetConnTimeout(relpTcp_t *const pThis, const int connTimeout)
+relpTcpSetConnTimeout(relpTcp_t *const pThis, const int seconds)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
-	pThis->connTimeout = connTimeout;
+	pThis->connectTimeoutSec = seconds;
 	LEAVE_RELPFUNC;
 }
+
+#if defined(WITH_TLS)
+/* relpTcpConnect() leaves the socket in non-blocking mode. The client
+ * side TLS setup of both libraries runs its handshake on a blocking
+ * socket, so it clears O_NONBLOCK first.
+ */
+static relpRetVal LIBRELP_ATTR_NONNULL()
+relpTcpClearNonBlocking(relpTcp_t *const pThis)
+{
+	ENTER_RELPFUNC;
+	const int flags = fcntl(pThis->sock, F_GETFL);
+	if(flags == -1 || fcntl(pThis->sock, F_SETFL, flags & ~O_NONBLOCK) == -1) {
+		pThis->pEngine->dbgprint((char*)"librelp: cannot switch fd %d to blocking mode, errno %d\n",
+			pThis->sock, errno);
+		ABORT_FINALIZE(RELP_RET_IO_ERR);
+	}
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+#endif /* #if defined(WITH_TLS) */
 
 relpRetVal
 relpTcpSetGnuTLSPriString(relpTcp_t *const pThis, char *pristr)
@@ -1251,44 +1099,39 @@ relpTcpSetDHBits(relpTcp_t *const pThis, const int bits)
 static relpRetVal LIBRELP_ATTR_NONNULL()
 relpTcpTLSSetPrio_gtls(relpTcp_t *const pThis)
 {
-	int r;
-	char pristringBuf[4096];
-	char *pristring;
+	const char *prioSource;
+	int gnuRet;
 	ENTER_RELPFUNC;
-	/* Set default priority string (in simple cases where the user does not care...) */
-	if(pThis->pristring == NULL) {
-		if (pThis->authmode == eRelpAuthMode_None) {
-			if(pThis->bEnableTLSZip) {
-				strncpy(pristringBuf, "NORMAL:+ANON-DH:+COMP-ALL", sizeof(pristringBuf));
-			} else {
-				strncpy(pristringBuf, "NORMAL:+ANON-DH:+COMP-NULL", sizeof(pristringBuf));
-			}
-			pristringBuf[sizeof(pristringBuf)-1] = '\0';
-			pristring = pristringBuf;
-			r = gnutls_priority_set_direct(pThis->session, pristring, NULL);
-		} else {
-			r = gnutls_set_default_priority(pThis->session);
-			strncpy(pristringBuf, "to recommended system default", sizeof(pristringBuf));
-			pristringBuf[sizeof(pristringBuf)-1] = '\0';
-			pristring = pristringBuf;
-		}
 
+	if(pThis->pristring != NULL) {
+		/* the caller configured an explicit priority string */
+		prioSource = pThis->pristring;
+		gnuRet = gnutls_priority_set_direct(pThis->session, pThis->pristring, NULL);
+	} else if(pThis->authmode == eRelpAuthMode_None) {
+		/* anonymous sessions need the anon DH key exchange enabled */
+		prioSource = pThis->bEnableTLSZip ? "NORMAL:+ANON-DH:+COMP-ALL"
+						  : "NORMAL:+ANON-DH:+COMP-NULL";
+		gnuRet = gnutls_priority_set_direct(pThis->session, prioSource, NULL);
 	} else {
-		pristring = pThis->pristring;
-		r = gnutls_priority_set_direct(pThis->session, pristring, NULL);
+		/* certificate based sessions follow the system crypto policy */
+		prioSource = "to recommended system default";
+		gnuRet = gnutls_set_default_priority(pThis->session);
 	}
 
-	if(r == GNUTLS_E_INVALID_REQUEST) {
+	switch(gnuRet) {
+	case GNUTLS_E_SUCCESS:
+		break;
+	case GNUTLS_E_INVALID_REQUEST:
 		ABORT_FINALIZE(RELP_RET_INVLD_TLS_PRIO);
-	} else if(r != GNUTLS_E_SUCCESS) {
+	default:
 		ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
 	}
 
 finalize_it:
-	pThis->pEngine->dbgprint((char*)"relpTcpTLSSetPrio_gtls: Setting ciphers '%s' iRet=%d\n", pristring, iRet);
-
+	pThis->pEngine->dbgprint((char*)"relpTcpTLSSetPrio_gtls: Setting ciphers '%s' iRet=%d\n",
+		prioSource, iRet);
 	if(iRet != RELP_RET_OK) {
-		chkGnutlsCode(pThis, "Failed to set GnuTLS priority", iRet, r);
+		chkGnutlsCode(pThis, "Failed to set GnuTLS priority", iRet, gnuRet);
 	}
 	LEAVE_RELPFUNC;
 }
@@ -1348,11 +1191,7 @@ relpTcpTLSSetPrio_ossl(LIBRELP_ATTR_UNUSED relpTcp_t *const pThis)
 
 
 #ifdef ENABLE_TLS
-#ifndef _AIX
-#pragma GCC diagnostic push
-/* per https://lists.gnupg.org/pipermail/gnutls-help/2004-August/000154.html This is expected */
-#pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
-#endif
+RELP_DIAG_ALLOW_INT_TO_PTR_BEGIN
 static relpRetVal LIBRELP_ATTR_NONNULL()
 relpTcpAcceptConnReqInitTLS_gtls(relpTcp_t *const pThis, relpSrv_t *const pSrv)
 {
@@ -1404,9 +1243,7 @@ relpTcpAcceptConnReqInitTLS_gtls(relpTcp_t *const pThis, relpSrv_t *const pSrv)
 finalize_it:
 	LEAVE_RELPFUNC;
 }
-#ifndef _AIX
-#pragma GCC diagnostic pop
-#endif
+RELP_DIAG_ALLOW_INT_TO_PTR_END
 
 #else /* #ifdef ENABLE_TLS */
 static relpRetVal LIBRELP_ATTR_NONNULL()
@@ -1417,11 +1254,67 @@ relpTcpAcceptConnReqInitTLS_gtls(LIBRELP_ATTR_UNUSED relpTcp_t *const pThis, LIB
 #endif /* #ifdef ENABLE_TLS */
 
 #ifdef ENABLE_TLS_OPENSSL
-#ifndef _AIX
-#pragma GCC diagnostic push
-/* per https://lists.gnupg.org/pipermail/gnutls-help/2004-August/000154.html This is expected */
-#pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
+RELP_DIAG_ALLOW_INT_TO_PTR_BEGIN
+
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+/* OpenSSL releases before 1.1.0 are not thread-safe on their own: the
+ * application must provide a lock table and a thread id function. The
+ * table is created once and kept for the lifetime of the process, as
+ * other users of the library may still rely on the callbacks.
+ */
+static pthread_mutex_t *relpOsslLegacyLocks = NULL;
+
+static void
+relpOsslLegacyLock(const int mode, const int idx, LIBRELP_ATTR_UNUSED const char *file,
+	LIBRELP_ATTR_UNUSED const int line)
+{
+	if(mode & CRYPTO_LOCK) {
+		pthread_mutex_lock(&relpOsslLegacyLocks[idx]);
+	} else {
+		pthread_mutex_unlock(&relpOsslLegacyLocks[idx]);
+	}
+}
+
+static unsigned long
+relpOsslLegacyThreadId(void)
+{
+	return (unsigned long) pthread_self();
+}
+
+static int
+relpOsslLegacyLocking(void)
+{
+	if(relpOsslLegacyLocks != NULL)
+		return 1;
+	const int nLocks = CRYPTO_num_locks();
+	pthread_mutex_t *const locks = calloc((size_t) nLocks, sizeof(*locks));
+	if(locks == NULL)
+		return 0;
+	for(int k = 0 ; k < nLocks ; ++k) {
+		pthread_mutex_init(&locks[k], NULL);
+	}
+	relpOsslLegacyLocks = locks;
+	CRYPTO_set_id_callback(relpOsslLegacyThreadId);
+	CRYPTO_set_locking_callback(relpOsslLegacyLock);
+	return 1;
+}
 #endif
+
+/* One-time OpenSSL library setup including readable error strings.
+ * Returns 1 on success, 0 on failure.
+ */
+static int
+relpOsslLibraryInit(void)
+{
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+	return OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS | OPENSSL_INIT_LOAD_CRYPTO_STRINGS, NULL) == 1;
+#else
+	if(!relpOsslLegacyLocking() || !SSL_library_init())
+		return 0;
+	SSL_load_error_strings();
+	return 1;
+#endif
+}
 
 /* global init OpenSSL */
 static relpRetVal
@@ -1430,27 +1323,11 @@ relpTcpInitTLS(relpTcp_t *const pThis)
 	ENTER_RELPFUNC;
 	pThis->pEngine->dbgprint((char*)"relpTcpInitTLS: Init OpenSSL library\n");
 
-	/* Setup OpenSSL library */
-	if((opensslh_THREAD_setup() == 0) || !SSL_library_init()) {
+	if(!relpOsslLibraryInit()) {
 		pThis->pEngine->dbgprint((char*)"relpTcpInitTLS: Error OpenSSL initialization failed\n");
 		ABORT_FINALIZE(RELP_RET_IO_ERR);
 	}
 
-	/* Load readable error strings */
-	SSL_load_error_strings();
-#if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
-	/*
-	* ERR_load_*(), ERR_func_error_string(), ERR_get_error_line(), ERR_get_error_line_data(), ERR_get_state()
-	* OpenSSL now loads error strings automatically so these functions are not needed.
-	* SEE FOR MORE:
-	*	https://www.openssl.org/docs/manmaster/man7/migration_guide.html
-	*
-	*/
-#else
-	/* Load error strings into mem*/
-	ERR_load_BIO_strings();
-	ERR_load_crypto_strings();
-#endif
 	/* Create main CTX Object */
 	ctx = SSL_CTX_new(SSLv23_method());
 
@@ -1473,7 +1350,7 @@ relpTcpInitTLS(relpTcp_t *const pThis)
 	SSL_CTX_set_mode(ctx, SSL_MODE_AUTO_RETRY);
 
 	/* After CA Cert Init, set default VERIFY Options for OpenSSL CTX - and CALLBACK */
-	SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, verify_callback);
+	SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, relpTcpVerifyCb_ossl);
 
 	/* Init CA Certificate first */
 	if(	pThis->caCertFile != NULL ) {
@@ -1856,10 +1733,10 @@ relpTcpAcceptConnReqInitTLS_ossl(relpTcp_t *const pThis, relpSrv_t *const pSrv)
 	if (pThis->authmode != eRelpAuthMode_None) {
 		pThis->pEngine->dbgprint((char*)"relpTcpAcceptConnReqInitTLS_ossl: enable certificate checking\n");
 		/* Enable certificate valid checking */
-		SSL_set_verify(pThis->ssl, SSL_VERIFY_PEER|SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verify_callback);
+		SSL_set_verify(pThis->ssl, SSL_VERIFY_PEER|SSL_VERIFY_FAIL_IF_NO_PEER_CERT, relpTcpVerifyCb_ossl);
 		SSL_set_verify_depth(pThis->ssl, 4);
 	} else {
-		SSL_set_verify(pThis->ssl, SSL_VERIFY_NONE, verify_callback);
+		SSL_set_verify(pThis->ssl, SSL_VERIFY_NONE, relpTcpVerifyCb_ossl);
 	}
 
 	/*set Server state */
@@ -1869,13 +1746,9 @@ relpTcpAcceptConnReqInitTLS_ossl(relpTcp_t *const pThis, relpSrv_t *const pSrv)
 	client = relpTcpNewSocketBio_ossl(pThis->sock);
 	pThis->pEngine->dbgprint((char*)"relpTcpAcceptConnReqInitTLS_ossl: Init client BIO[%p] done\n", (void *)client);
 
-	/* Set debug Callback for client BIO as well! */
-#if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
-	BIO_set_callback_ex(client, BIO_debug_callback_ex);
-#else
-	BIO_set_callback(client, BIO_debug_callback);
-#endif
+	/* debug trace of BIO operations */
 	BIO_set_callback_arg(client, (char *)pThis);
+	RELP_BIO_SET_TRACE(client);
 
 /* TODO: still needed? Set to NON blocking ! */
 BIO_set_nbio( client, 1 );
@@ -1917,36 +1790,28 @@ relpTcpConnectTLSInit_ossl(relpTcp_t *const pThis)
 	/* SSL Objects */
 	BIO *conn = NULL;
 
-	/* We expect a non blocking socket to establish a tls session */
-	if((sockflags = fcntl(pThis->sock, F_GETFL)) != -1) {
-		sockflags &= ~O_NONBLOCK;
-		sockflags = fcntl(pThis->sock, F_SETFL, sockflags);
-	}
-
-	if(sockflags == -1) {
-		pThis->pEngine->dbgprint((char*)"error %d unsetting fcntl(O_NONBLOCK) on relp socket\n", errno);
-		ABORT_FINALIZE(RELP_RET_IO_ERR);
-	}
+	CHKRet(relpTcpClearNonBlocking(pThis));
 
 	if(called_openssl_global_init == 0) {
-		MUTEX_SETUP(mutSsl);
-		MUTEX_LOCK(mutSsl);
+		pthread_mutex_init(&mutSsl, NULL);
+		pthread_mutex_lock(&mutSsl);
 		/* Init OpenSSL lib */
 		CHKRet(relpTcpInitTLS(pThis));
 		called_openssl_global_init = 1;
-		MUTEX_UNLOCK(mutSsl);
+		pthread_mutex_unlock(&mutSsl);
 	} else {
-		MUTEX_LOCK(mutSsl);
+		pthread_mutex_lock(&mutSsl);
 		/*Increment OpenSSL Usage by 1*/
 		called_openssl_global_init++;
-		MUTEX_UNLOCK(mutSsl);
+		pthread_mutex_unlock(&mutSsl);
 	}
 
 	/*if we reach this point we are in tls mode */
 	pThis->pEngine->dbgprint((char*)"relpTcpConnectTLSInit: TLS Mode\n");
 
-	/* set before relpTcpSetSslConfCmd_ossl: tlsConfigCmd may contain
-	 * flag-restricted commands that require SSL_CONF_FLAG_CLIENT */
+	/* The client role must be known before the configured TLS commands
+	 * are applied below, as some of them are only valid for clients.
+	 */
 	pThis->sslState = osslClient;
 
 	if(!(pThis->ssl = SSL_new(ctx))) {
@@ -1976,13 +1841,9 @@ relpTcpConnectTLSInit_ossl(relpTcp_t *const pThis)
 	conn = relpTcpNewSocketBio_ossl(pThis->sock);
 	pThis->pEngine->dbgprint((char*)"relpTcpConnectTLSInit: Init conn BIO[%p] done\n", (void *)conn);
 
-	/* Set debug Callback for client BIO as well! */
-#if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
-	BIO_set_callback_ex(conn, BIO_debug_callback_ex);
-#else
-	BIO_set_callback(conn, BIO_debug_callback);
-#endif
+	/* debug trace of BIO operations */
 	BIO_set_callback_arg(conn, (char *)pThis);
+	RELP_BIO_SET_TRACE(conn);
 
 /* TODO: still needed? Set to NON blocking ! */
 BIO_set_nbio( conn, 1 );
@@ -2031,17 +1892,17 @@ relpTcpLstnInitTLS_ossl(relpTcp_t *const pThis)
 	RELPOBJ_assert(pThis, Tcp);
 
 	if(called_openssl_global_init == 0) {
-		MUTEX_SETUP(mutSsl);
-		MUTEX_LOCK(mutSsl);
+		pthread_mutex_init(&mutSsl, NULL);
+		pthread_mutex_lock(&mutSsl);
 		/* Init OpenSSL lib */
 		CHKRet(relpTcpInitTLS(pThis));
 		called_openssl_global_init = 1;
-		MUTEX_UNLOCK(mutSsl);
+		pthread_mutex_unlock(&mutSsl);
 	} else {
-		MUTEX_LOCK(mutSsl);
+		pthread_mutex_lock(&mutSsl);
 		/*Increment OpenSSL Usage by 1*/
 		called_openssl_global_init++;
-		MUTEX_UNLOCK(mutSsl);
+		pthread_mutex_unlock(&mutSsl);
 	}
 
 	/* Set TLS Options if configured */
@@ -2057,7 +1918,7 @@ static void
 relpTcpExitTLS_ossl(void)
 {
 	if(called_openssl_global_init == 1) {
-		MUTEX_LOCK(mutSsl);
+		pthread_mutex_lock(&mutSsl);
 		if (ctx != NULL) {
 			SSL_CTX_free(ctx);
 			ctx = NULL;
@@ -2071,19 +1932,17 @@ relpTcpExitTLS_ossl(void)
 		/* Reset global init state*/
 		called_openssl_global_init = 0;
 
-		MUTEX_UNLOCK(mutSsl);
+		pthread_mutex_unlock(&mutSsl);
 		pthread_mutex_destroy(&mutSsl);
 	} else if (called_openssl_global_init > 0) {
-		MUTEX_LOCK(mutSsl);
+		pthread_mutex_lock(&mutSsl);
 		/* OpenSSL library still in use */
 		called_openssl_global_init--;
-		MUTEX_UNLOCK(mutSsl);
+		pthread_mutex_unlock(&mutSsl);
 	}
 }
 
-#ifndef _AIX
-#pragma GCC diagnostic pop
-#endif
+RELP_DIAG_ALLOW_INT_TO_PTR_END
 
 
 
@@ -2942,17 +2801,43 @@ finalize_it:
 #endif /*  defined(WITH_TLS) */
 
 
-/* initialize the tcp socket for a listner
- * pLstnPort is a pointer to a port name. NULL is not permitted.
- * gerhards, 2008-03-17
- * pLstnAddr is a pointer to a bind address. NULL is permitted.
- * perlei, 2018-04-19
+/* Resolve the local endpoint(s) a listener binds to. The service must
+ * be given; a NULL node selects the wildcard address of every enabled
+ * family. On success the caller owns *pList and frees it with
+ * freeaddrinfo().
+ */
+static relpRetVal LIBRELP_ATTR_NONNULL(1, 2, 5)
+relpTcpResolveListenEndpoints(relpTcp_t *const pThis, const char *const service,
+	const char *const node, const int family, struct addrinfo **const pList)
+{
+	struct addrinfo want;
+	ENTER_RELPFUNC;
+
+	memset(&want, 0, sizeof(want));
+	want.ai_family = family;
+	want.ai_socktype = SOCK_STREAM;
+	want.ai_flags = AI_PASSIVE;
+	const int gaiRet = getaddrinfo(node, service, &want, pList);
+	if(gaiRet != 0) {
+		pThis->pEngine->dbgprint((char*)"error %d querying port '%s'\n", gaiRet, service);
+		*pList = NULL;
+		ABORT_FINALIZE(RELP_RET_INVALID_PORT);
+	}
+
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+/* Open the listen socket(s) of a server.
+ * pLstnPort names the port or service and must not be NULL.
+ * pLstnAddr names the local address to bind; NULL means all local
+ * addresses. ai_family restricts the address family (AF_UNSPEC for any).
  */
 relpRetVal
 relpTcpLstnInit(relpTcp_t *const pThis, unsigned char *pLstnPort, unsigned char *pLstnAddr, int ai_family)
 {
-	struct addrinfo hints, *res = NULL, *r;
-	int error, maxs, *s, on = 1;
+	struct addrinfo *res = NULL, *r;
+	int maxs, *s, on = 1;
 	int sockflags;
 	unsigned char *pLstnPt;
 
@@ -2964,16 +2849,8 @@ relpTcpLstnInit(relpTcp_t *const pThis, unsigned char *pLstnPort, unsigned char 
 
 	pThis->pEngine->dbgprint((char*)"creating relp tcp listen socket on port %s\n", pLstnPt);
 
-	memset(&hints, 0, sizeof(hints));
-	hints.ai_flags = AI_PASSIVE;
-	hints.ai_family = ai_family;
-	hints.ai_socktype = SOCK_STREAM;
-
-	error = getaddrinfo((char*)pLstnAddr, (char*) pLstnPt, &hints, &res);
-	if(error) {
-		pThis->pEngine->dbgprint((char*)"error %d querying port '%s'\n", error, pLstnPt);
-		ABORT_FINALIZE(RELP_RET_INVALID_PORT);
-	}
+	CHKRet(relpTcpResolveListenEndpoints(pThis, (const char *) pLstnPt, (const char *) pLstnAddr,
+		ai_family, &res));
 
 	/* Count max number of sockets we may open */
 	for(maxs = 0, r = res; r != NULL ; r = r->ai_next, maxs++)
@@ -3409,11 +3286,7 @@ finalize_it:
 }
 
 #ifdef ENABLE_TLS
-#ifndef _AIX
-#pragma GCC diagnostic push /* we need to disable a warning below */
-/* per https://lists.gnupg.org/pipermail/gnutls-help/2004-August/000154.html This is expected */
-#pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
-#endif
+RELP_DIAG_ALLOW_INT_TO_PTR_BEGIN
 /* this is only called for client-initiated sessions */
 static relpRetVal LIBRELP_ATTR_NONNULL()
 relpTcpConnectTLSInit_gtls(relpTcp_t *const pThis)
@@ -3424,16 +3297,7 @@ relpTcpConnectTLSInit_gtls(relpTcp_t *const pThis)
 	RELPOBJ_assert(pThis, Tcp);
 	pThis->pEngine->dbgprint((char*)"relpTcpConnectTLSInit_gnutls\n");
 
-	/* We expect a non blocking socket to establish a tls session */
-	if((sockflags = fcntl(pThis->sock, F_GETFL)) != -1) {
-		sockflags &= ~O_NONBLOCK;
-		sockflags = fcntl(pThis->sock, F_SETFL, sockflags);
-	}
-
-	if(sockflags == -1) {
-		pThis->pEngine->dbgprint((char*)"error %d unsetting fcntl(O_NONBLOCK) on relp socket", errno);
-		ABORT_FINALIZE(RELP_RET_IO_ERR);
-	}
+	CHKRet(relpTcpClearNonBlocking(pThis));
 
 	if(!called_gnutls_global_init) {
 		#if GNUTLS_VERSION_NUMBER <= 0x020b00
@@ -3533,9 +3397,7 @@ relpTcpConnectTLSInit_gtls(relpTcp_t *const pThis)
 finalize_it:
 	LEAVE_RELPFUNC;
 }
-#ifndef _AIX
-#pragma GCC diagnostic pop
-#endif
+RELP_DIAG_ALLOW_INT_TO_PTR_END
 
 #else /* #ifdef ENABLE_TLS */
 static relpRetVal LIBRELP_ATTR_NONNULL()
@@ -3643,6 +3505,71 @@ relpTcpLstnInitTLS(NOTLS_UNUSED relpTcp_t *const pThis)
 
 
 
+/* Wait for a non-blocking connect() started on pThis->sock to finish.
+ * The wait is limited to connectTimeoutSec seconds, measured on the
+ * monotonic clock; interrupted waits resume with the remaining time.
+ * Returns RELP_RET_TIMED_OUT if the connection was not established in
+ * time and RELP_RET_IO_ERR if it failed.
+ */
+static relpRetVal LIBRELP_ATTR_NONNULL()
+relpTcpAwaitConnect(relpTcp_t *const pThis)
+{
+	struct timespec deadline;
+	struct timespec now;
+	struct pollfd pfd;
+	int sockErr = 0;
+	socklen_t lenSockErr = sizeof(sockErr);
+	int ready;
+	ENTER_RELPFUNC;
+
+	if(clock_gettime(CLOCK_MONOTONIC, &deadline) != 0)
+		ABORT_FINALIZE(RELP_RET_IO_ERR);
+	deadline.tv_sec += (pThis->connectTimeoutSec > 0) ? pThis->connectTimeoutSec : 0;
+
+	pfd.fd = pThis->sock;
+	pfd.events = POLLOUT;
+	for(;;) {
+		if(clock_gettime(CLOCK_MONOTONIC, &now) != 0)
+			ABORT_FINALIZE(RELP_RET_IO_ERR);
+		long long waitMs = (long long) (deadline.tv_sec - now.tv_sec) * 1000
+			+ (deadline.tv_nsec - now.tv_nsec) / 1000000;
+		if(waitMs < 0)
+			waitMs = 0;
+		/* poll() takes an int; very long timeouts are waited in slices */
+		const int slice = (waitMs > INT_MAX) ? INT_MAX : (int) waitMs;
+		pfd.revents = 0;
+		ready = poll(&pfd, 1, slice);
+		if(ready == -1 && errno == EINTR)
+			continue;
+		if(ready == 0 && slice == INT_MAX)
+			continue;
+		break;
+	}
+
+	if(ready == -1) {
+		pThis->pEngine->dbgprint((char*)"librelp: waiting for connect failed, errno %d\n", errno);
+		ABORT_FINALIZE(RELP_RET_IO_ERR);
+	}
+	if(ready == 0) {
+		pThis->pEngine->dbgprint((char*)"librelp: connect did not complete within %d seconds\n",
+			pThis->connectTimeoutSec);
+		ABORT_FINALIZE(RELP_RET_TIMED_OUT);
+	}
+
+	if(getsockopt(pThis->sock, SOL_SOCKET, SO_ERROR, &sockErr, &lenSockErr) == -1) {
+		pThis->pEngine->dbgprint((char*)"librelp: cannot read connect result, errno %d\n", errno);
+		ABORT_FINALIZE(RELP_RET_IO_ERR);
+	}
+	if(sockErr != 0) {
+		pThis->pEngine->dbgprint((char*)"librelp: connect failed, socket error %d\n", sockErr);
+		ABORT_FINALIZE(RELP_RET_IO_ERR);
+	}
+
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+
 /* open a connection to a remote host (server).
  * This is only use for client initiated connections.
  * rgerhards, 2008-03-19
@@ -3657,12 +3584,8 @@ relpTcpConnect(relpTcp_t *const pThis,
 	struct addrinfo *res = NULL;
 	struct addrinfo hints;
 	const struct addrinfo *destination;
-	struct pollfd pfd;
 	char errmsg[1424];
-	int so_error;
 	int bindError;
-	socklen_t len = sizeof so_error;
-	int r;
 
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
@@ -3722,19 +3645,7 @@ relpTcpConnect(relpTcp_t *const pThis,
 		}
 	}
 
-	pfd.fd = pThis->sock;
-	pfd.events = POLLOUT;
-
-	if (poll(&pfd, 1, pThis->connTimeout * 1000) != 1) {
-		pThis->pEngine->dbgprint((char*)"connection timed out after %d seconds\n", pThis->connTimeout);
-		ABORT_FINALIZE(RELP_RET_TIMED_OUT);
-	}
-
-	r = getsockopt(pThis->sock, SOL_SOCKET, SO_ERROR, &so_error, &len);
-	if (r == -1 || so_error != 0) {
-		pThis->pEngine->dbgprint((char*)"socket has an error %d\n", so_error);
-		ABORT_FINALIZE(RELP_RET_IO_ERR);
-	}
+	CHKRet(relpTcpAwaitConnect(pThis));
 
 	CHKRet(relpTcpConnectTLSInit(pThis));
 
@@ -3815,7 +3726,7 @@ relpTcpWaitWriteable(relpTcp_t *const pThis, struct timespec *const tTimeout)
 
 	clock_gettime(CLOCK_REALTIME, &tCurr);
 	const int timeout =   (tTimeout->tv_sec - tCurr.tv_sec) * 1000
-			    + (tTimeout->tv_nsec - tCurr.tv_nsec) / 1000000000;
+			    + (tTimeout->tv_nsec - tCurr.tv_nsec) / 1000000;
 	if(timeout < 0) {
 		r = 0; goto done;
 	}
