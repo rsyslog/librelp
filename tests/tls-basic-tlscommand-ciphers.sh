@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 . ${srcdir:=$(pwd)}/test-framework.sh
 export errorlog="error.$LIBRELP_DYN.log"
 export TLSLIB="-l openssl"

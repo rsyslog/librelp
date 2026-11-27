@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This file contains the test framework, that is common code
 # used by all tests.
 # Copyright (C) 2018 by Rainer Gerhards

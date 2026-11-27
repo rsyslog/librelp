@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 . ${srcdir:=$(pwd)}/test-framework.sh
 
 ERROR_FILE=${TESTDIR}/dummyserver-error.log

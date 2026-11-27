@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # ***
 # *** TEST currently UNSTABLE because SSL Server sometimes discard connection before certificate can even be checked for length!
 # ***

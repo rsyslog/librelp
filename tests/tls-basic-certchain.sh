@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 . ${srcdir:=$(pwd)}/test-framework.sh
 function actual_test() {
 	startup_receiver -l $TEST_TLS_LIB -T -a "certvalid" -x ${srcdir}/tls-certs/ossl-ca.pem -y ${srcdir}/tls-certs/ossl-server-certchain.pem -z ${srcdir}/tls-certs/ossl-server-key.pem  -e error.out.log

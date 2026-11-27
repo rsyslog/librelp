@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: Apache-2.0
 # a very simple "dummy" server for testing purposes
 # written 2018-11-19 by Rainer Gerhards, released under ASL 2.0
 import socket

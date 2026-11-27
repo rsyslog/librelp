@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This is a self test for the testbench! It does NOT test Relp.
 . ${srcdir:=$(pwd)}/test-framework.sh
 

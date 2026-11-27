@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # check that failed connect to receiver is gracefully handled and error
 # message emitted.
 # written 2018-11-20 by Rainer Gerhards, released under ASL 2.0

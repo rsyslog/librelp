@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # written 2018-11-28 by Rainer Gerhards, released under ASL 2.0
 . ${srcdir:=$(pwd)}/test-framework.sh
 printf 'starting receive, waiting for watchdog timeout to occur\n'
