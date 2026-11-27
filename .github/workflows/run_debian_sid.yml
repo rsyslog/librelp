@@ -29,7 +29,7 @@ on:
 
 jobs:
   check_run:
-    runs-on: ${{ github.event.repository.private && (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-latest' }}
+    runs-on: ${{ github.event.repository.private && !github.event.pull_request.head.repo.fork && (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-latest' }}
     timeout-minutes: 10
 
     steps:
