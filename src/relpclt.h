@@ -45,6 +45,7 @@ struct relpClt_s {
 	relpSourceBind_t sourceBind;
 	unsigned timeout;	/**< session timeout */
 	int connectTimeoutOverride; /**< connection timeout in seconds (0 means default) */
+	int reconnectTimeoutSeconds; /**< effective socket timeout captured by relpCltConnect() */
 };
 
 

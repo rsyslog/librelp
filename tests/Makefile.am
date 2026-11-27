@@ -4,11 +4,11 @@ check_PROGRAMS=receive send chkseq have_tlslib msleep
 if BUILD_STATIC
 if OS_SOLARIS_WRAP
 else
-# Observe the session binding at reconnect using the linker's wrap option.
+# Observe connection settings using the linker's wrap option.
 check_PROGRAMS+=client_source_reconnect
 client_source_reconnect_SOURCES=client-source-reconnect.c
 client_source_reconnect_LDADD=../src/.libs/librelp.a $(GNUTLS_LIBS) $(OPENSSL_LIBS) $(rt_libs) $(socket_libs) $(pthread_libs)
-client_source_reconnect_LDFLAGS=-Wl,--wrap=relpSessTryReestablish -Wl,--wrap=getaddrinfo -Wl,--wrap=bind
+client_source_reconnect_LDFLAGS=-Wl,--wrap=relpSessConnect -Wl,--wrap=relpSessTryReestablish -Wl,--wrap=getaddrinfo -Wl,--wrap=bind
 client_source_reconnect_CFLAGS=$(AM_CFLAGS) -I${top_srcdir}/src $(WARN_CFLAGS)
 SOURCE_BIND_TESTS=client-source-reconnect.sh
 endif

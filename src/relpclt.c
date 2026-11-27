@@ -103,7 +103,7 @@ relpCltConnect(relpClt_t *const pThis, int protFamily, unsigned char *port, unsi
 	CHKRet(relpSessConstruct(&pThis->pSess, pThis->pEngine, RELP_CLT_CONN, pThis, pThis->pUsr));
 	CHKRet(relpSessSetTimeout(pThis->pSess, pThis->timeout));
 	CHKRet(relpSessSetWindowSize(pThis->pSess, pThis->sizeWindow));
-	pThis->pSess->connTimeout = pThis->connectTimeoutOverride ? pThis->connectTimeoutOverride
+	pThis->reconnectTimeoutSeconds = pThis->connectTimeoutOverride ? pThis->connectTimeoutOverride
 		: RELP_DFLT_CONN_TIMEOUT;
 	pThis->pSess->sourceBind = pThis->sourceBind;
 	if(pThis->bEnableTLS) {
@@ -119,7 +119,7 @@ relpCltConnect(relpClt_t *const pThis, int protFamily, unsigned char *port, unsi
 		CHKRet(relpSessSetAuthMode(pThis->pSess, pThis->authmode));
 		CHKRet(relpSessSetPermittedPeers(pThis->pSess, &pThis->permittedPeers));
 	}
-	CHKRet(relpSessConnect(pThis->pSess, protFamily, port, host));
+	CHKRet(relpSessConnect(pThis->pSess, protFamily, port, host, pThis->reconnectTimeoutSeconds));
 
 finalize_it:
 	if(iRet != RELP_RET_OK) {
@@ -146,7 +146,7 @@ relpCltReconnect(relpClt_t *const pThis)
 
 	/* A reconnect opens a new socket and uses the latest source binding. */
 	pThis->pSess->sourceBind = pThis->sourceBind;
-	CHKRet(relpSessTryReestablish(pThis->pSess));
+	CHKRet(relpSessTryReestablish(pThis->pSess, pThis->reconnectTimeoutSeconds));
 
 finalize_it:
 	LEAVE_RELPFUNC;

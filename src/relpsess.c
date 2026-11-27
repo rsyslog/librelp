@@ -707,7 +707,7 @@ finalize_it:
  * rgerhards, 2008-03-22
  */
 relpRetVal
-relpSessTryReestablish(relpSess_t *const pThis)
+relpSessTryReestablish(relpSess_t *const pThis, int connectTimeoutSeconds)
 {
 	relpSessUnacked_t *pUnackedEtry;
 
@@ -716,7 +716,7 @@ relpSessTryReestablish(relpSess_t *const pThis)
 	assert(pThis->sessState == eRelpSessState_BROKEN);
 
 	CHKRet(relpTcpAbortDestruct(&pThis->pTcp));
-	CHKRet(relpSessConnect(pThis, pThis->protFamily, pThis->srvPort, pThis->srvAddr));
+	CHKRet(relpSessConnect(pThis, pThis->protFamily, pThis->srvPort, pThis->srvAddr, connectTimeoutSeconds));
 	/* if we reach this point, we could re-establish the session. We now
 	 * need to resend any unacked data. Note that we need to patch in new txnr's
 	 * into the existing frames. We need to do a special send command, as the usual
@@ -859,7 +859,8 @@ finalize_it:
  * rgerhards, 2008-03-19
  */
 relpRetVal
-relpSessConnect(relpSess_t *const pThis, int protFamily, unsigned char *port, unsigned char *host)
+relpSessConnect(relpSess_t *const pThis, int protFamily, unsigned char *port, unsigned char *host,
+		int connectTimeoutSeconds)
 {
 	relpOffers_t *pOffers;
 	unsigned char *pszOffers = NULL;
@@ -886,7 +887,7 @@ relpSessConnect(relpSess_t *const pThis, int protFamily, unsigned char *port, un
 
 	CHKRet(relpTcpConstruct(&pThis->pTcp, pThis->pEngine, RELP_CLT_CONN, pThis->pClt));
 	CHKRet(relpTcpSetUsrPtr(pThis->pTcp, pThis->pUsr));
-	CHKRet(relpTcpSetConnTimeout(pThis->pTcp, pThis->connTimeout));
+	CHKRet(relpTcpSetConnTimeout(pThis->pTcp, connectTimeoutSeconds));
 	if(pThis->bEnableTLS) {
 		CHKRet(relpTcpEnableTLS(pThis->pTcp));
 		if(pThis->bEnableTLSZip) {

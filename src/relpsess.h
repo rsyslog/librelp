@@ -1,34 +1,16 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* The RELPSESS object.
  *
  * Copyright 2008-2016 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
- * Librelp is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Librelp is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with librelp.  If not, see <http://www.gnu.org/licenses/>.
- *
- * A copy of the GPL can be found in the file "COPYING" in this distribution.
- *
- * If the terms of the GPL are unsuitable for your needs, you may obtain
- * a commercial license from Adiscon. Contact sales@adiscon.com for further
- * details.
+ * Licensed under the Apache License, Version 2.0.
+ * See COPYING.ASL20 for the license text.
  *
  * ALL CONTRIBUTORS PLEASE NOTE that by sending contributions, you assign
- * your copyright to Adiscon GmbH, Germany. This is necessary to permit the
- * dual-licensing set forth here. Our apologies for this inconvenience, but
- * we sincerely believe that the dual-licensing model helps us provide great
- * free software while at the same time obtaining some funding for further
- * development.
+ * your copyright to Adiscon GmbH, Germany.
  */
 #ifndef RELPSESS_H_INCLUDED
 #define	RELPSESS_H_INCLUDED
@@ -76,7 +58,7 @@ struct relpSess_s {
 	relpTcp_t *pTcp;	/**< our sockt to the remote peer */
 	struct relpFrame_s *pCurrRcvFrame; /**< the current receive frame (a buffer) */
 	relpTxnr_t txnr;	/**< next txnr expected when receiving or to be used when sending */
-	size_t maxDataSize;  /**< maximum size of a DATA element */
+	size_t maxDataSize;
 	size_t maxCharsStore;  /**< maximum number of message chars to store - support for truncation mode */
 	pthread_mutex_t mutSend; /**< mutex for send operation (make sure txnr is correct) */
 	relpSrv_t *pSrv;	   /**< a pointer to our server object, if NULL, we belong to a client */
@@ -108,7 +90,6 @@ struct relpSess_s {
 	/* properties needed for client operation */
 	int sizeWindow;	/**< size of our app-level communications window */
 	unsigned timeout; /**< timeout after which session is to be considered broken */
-	int connTimeout; /**< connection timeout */
 	relpSessState_t sessState; /**< state of our session */
 	/* linked list of frames with outstanding "rsp" */
 	relpSessUnacked_t *pUnackedLstRoot;
@@ -142,10 +123,11 @@ relpRetVal relpSessSendResponse(relpSess_t *pThis, relpTxnr_t txnr, unsigned cha
 relpRetVal relpSessSndData(relpSess_t *pThis);
 relpRetVal relpSessSendCommand(relpSess_t *pThis, unsigned char *pCmd, size_t lenCmd,
 		    unsigned char *pData, size_t lenData, relpRetVal (*rspHdlr)(relpSess_t*,relpFrame_t*));
-relpRetVal relpSessConnect(relpSess_t *pThis, int protFamily, unsigned char *port, unsigned char *host);
+relpRetVal relpSessConnect(relpSess_t *pThis, int protFamily, unsigned char *port, unsigned char *host,
+			 int connectTimeoutSeconds);
 relpRetVal relpSessAddUnacked(relpSess_t *pThis, relpSendbuf_t *pSendbuf);
 relpRetVal relpSessGetUnacked(relpSess_t *pThis, relpSendbuf_t **ppSendbuf, relpTxnr_t txnr);
-relpRetVal relpSessTryReestablish(relpSess_t *pThis);
+relpRetVal relpSessTryReestablish(relpSess_t *pThis, int connectTimeoutSeconds);
 relpRetVal relpSessSetProtocolVersion(relpSess_t *pThis, int protocolVersion);
 relpRetVal relpSessSetTimeout(relpSess_t *pThis, unsigned timeout);
 relpRetVal relpSessSetWindowSize(relpSess_t *pThis, int sizeWindow);
