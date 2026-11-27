@@ -2039,6 +2039,8 @@ finalize_it:
 		} else if(conn != NULL) {
 			BIO_free(conn);
 		}
+		SSL_CTX_free(pThis->ctx);
+		pThis->ctx = NULL;
 	}
 	LEAVE_RELPFUNC;
 }
@@ -2058,6 +2060,10 @@ relpTcpLstnInitTLS_ossl(relpTcp_t *const pThis)
 	pThis->pEngine->dbgprint((char*)"relpTcpLstnInitTLS openssl init done \n");
 
 finalize_it:
+	if(iRet != RELP_RET_OK) {
+		SSL_CTX_free(pThis->ctx);
+		pThis->ctx = NULL;
+	}
 	LEAVE_RELPFUNC;
 }
 
