@@ -1,6 +1,11 @@
 ----------------------------------------------------------------------
 Version 1.15.0 - unreleased
 
+- licensing: librelp is now completely under the Apache License 2.0
+  The remaining files (src/tcp.c, src/tcp.h, src/relpsess.c, build files,
+  tests and the RELP specification) moved to Apache-2.0; COPYING and
+  README now state the license. Earlier releases keep the licenses they
+  were published under.
 ----------------------------------------------------------------------
 Version 1.14.0 - 2026-11-26
 This release contains important security fixes for TLS users (see the
