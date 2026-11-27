@@ -95,6 +95,7 @@ TLS_TESTS=  \
 	tls-receiver-abort.sh \
 	tls-missing-param-sender.sh \
 	tls-missing-param-receiver.sh
+GNUTLS_TESTS=tls-gnutls-sha256-fingerprint.sh
 TLS_VALGRIND_TESTS= \
 	tls-basic-vg.sh \
 	tls-ossl-connect-failure-vg.sh
@@ -137,6 +138,15 @@ if ENABLE_TLS_GENERIC
 TESTS+=$(TLS_TESTS)
 endif
 if ENABLE_TLS
+TESTS+=$(GNUTLS_TESTS)
+# The policy test compiles the matcher directly so that it also runs in
+# shared-only builds; the matcher is not part of the exported library API.
+check_PROGRAMS+=gnutls_fingerprint_policy
+gnutls_fingerprint_policy_SOURCES=gnutls-fingerprint-policy.c ../src/gnutls_fingerprint.c
+gnutls_fingerprint_policy_LDADD=$(GNUTLS_LIBS)
+gnutls_fingerprint_policy_CFLAGS=$(AM_CFLAGS) $(GNUTLS_CFLAGS) -I${top_srcdir}/src $(WARN_CFLAGS)
+gnutls_fingerprint_policy_CPPFLAGS=-DTEST_CERT_DIR=\"$(srcdir)/tls-certs\"
+TESTS+=gnutls-fingerprint-policy.sh
 if BUILD_STATIC
 TESTS+=$(TLS_STATIC_TESTS)
 if OS_SOLARIS_WRAP
@@ -172,6 +182,7 @@ endif # HAVE_VALGRIND
 
 EXTRA_DIST=$(TESTS) \
 	$(TLS_TESTS) \
+	$(GNUTLS_TESTS) \
 	$(GTLS_STATIC_TESTS) \
 	$(OSSL_TESTS) \
 	$(OSSL_STATIC_TESTS) \
@@ -191,6 +202,8 @@ EXTRA_DIST=$(TESTS) \
 	tls-ossl-retry-state.c \
 	tcp-accept-fd-reuse.c \
 	tls-gtls-lifecycle.c \
+	gnutls-fingerprint-policy.c \
+	gnutls-fingerprint-policy.sh \
 	permitted-peer-lifetime.c \
 	tls-openssl-retry-state.sh \
 	tls-openssl-retry-state.c \
