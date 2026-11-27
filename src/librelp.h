@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* The RELP (reliable event logging protocol) core protocol library.
  *
  * This file is meant to be included by applications using the relp library.
@@ -7,34 +9,16 @@
  *
  * This file is part of librelp.
  *
- * Librelp is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Librelp is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with librelp.  If not, see <http://www.gnu.org/licenses/>.
- *
- * A copy of the GPL can be found in the file "COPYING" in this distribution.
- *
- * If the terms of the GPL are unsuitable for your needs, you may obtain
- * a commercial license from Adiscon. Contact sales@adiscon.com for further
- * details.
+ * Licensed under the Apache License, Version 2.0.
+ * See COPYING.ASL20 for the license text.
  *
  * ALL CONTRIBUTORS PLEASE NOTE that by sending contributions, you assign
- * your copyright to Adiscon GmbH, Germany. This is necessary to permit the
- * dual-licensing set forth here. Our apologies for this inconvenience, but
- * we sincerely believe that the dual-licensing model helps us provide great
- * free software while at the same time obtaining some funding for further
- * development.
+ * your copyright to Adiscon GmbH, Germany.
  */
 #ifndef LIBRELP_H_INCLUDED
 #define	LIBRELP_H_INCLUDED
+
+#include <stddef.h>
 
 #if defined(__GNUC__)
 	#define LIBRELP_ATTR_NORETURN __attribute__ ((noreturn))
@@ -90,16 +74,14 @@ typedef enum relpAuthMode_e {
 	eRelpAuthMode_CertValid = 3
 } relpAuthMode_t;
 
-enum relpCmdEnaState_e { /* command enabled state - what are we permitted to do/request? */
+typedef enum relpCmdEnaState_e { /* command enabled state - what are we permitted to do/request? */
 	eRelpCmdState_Unset = 0, /**< calloc default, not desired, not forbidden */
 	eRelpCmdState_Forbidden = 1, /**< command is not permitted to be used */
 	eRelpCmdState_Desired = 2, /**< client/server intends to use this feature */
 	eRelpCmdState_Required = 3, /**< client/server requires the use of this feature */
 	eRelpCmdState_Enabled = 4, /**< feature can be used (set during open handshake) */
 	eRelpCmdState_Disabled = 5  /**< feature can NOT be used (set during open handshake) */
-};
-
-typedef enum relpCmdEnaState_e relpCmdEnaState_t;
+} relpCmdEnaState_t;
 
 /* macro to assert we are dealing with the right relp object */
 #ifdef NDEBUG
@@ -148,7 +130,8 @@ typedef enum relpCmdEnaState_e relpCmdEnaState_t;
 #define RELP_RET_CMD_DISABLED	RELPERR_BASE + 23	/**< tried to use a cmd that is disabled in this session */
 #define RELP_RET_INVALID_HDL	RELPERR_BASE + 24	/**< invalid object handle (pointer) provided by caller */
 #define RELP_RET_INCOMPAT_OFFERS RELPERR_BASE + 25	/**< client and server offers are incompatible */
-#define RELP_RET_RQD_FEAT_MISSING RELPERR_BASE + 26	/**< the remote peer does not support a required feature */
+/** The remote peer does not support a feature required by us. */
+#define RELP_RET_RQD_FEAT_MISSING RELPERR_BASE + 26
 #define RELP_RET_MALICIOUS_HNAME RELPERR_BASE + 27	/**< remote peer is trying malicious things with its hostname */
 #define RELP_RET_INVALID_HNAME	RELPERR_BASE + 28	/**< remote peer's hostname invalid or unobtainable */
 #define RELP_RET_ADDR_UNKNOWN 	RELPERR_BASE + 29	/**< remote peer's IP address could not be obtained */
@@ -171,7 +154,7 @@ typedef enum relpCmdEnaState_e relpCmdEnaState_t;
 #define RELP_RET_ERR_NO_TLS	RELPERR_BASE + 45	/**< librelp compiled without TLS support */
 #define RELP_RET_ERR_NO_TLS_AUTH RELPERR_BASE + 46	/**< platform does not provide TLS auth support */
 #define RELP_RET_SESSION_OPEN	RELPERR_BASE + 47	/**< RELP session is (already) open */
-#define RELP_RET_EAGAIN		RELPERR_BASE + 48	/**< I/O operation would block; try again later */
+#define RELP_RET_EAGAIN		RELPERR_BASE + 48	/**< transport write made no progress */
 #define RELP_RET_NOT_SUPPORTED	RELPERR_BASE + 49	/**< requested feature/param not supported */
 
 /* relp frame oversize modes */
@@ -187,6 +170,10 @@ typedef enum relpCmdEnaState_e relpCmdEnaState_t;
 #define CHKRet(code) if((iRet = code) != RELP_RET_OK) goto finalize_it
 /* macro below is to be used if we need our own handling, eg for cleanup */
 #define CHKRet_Hdlr(code) if((iRet = code) != RELP_RET_OK)
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /* prototypes needed by library users */
 const char *relpEngineGetVersion(void); /* use this entry point for configure check */
@@ -324,5 +311,9 @@ relpRetVal relpCltSetUsrPtr(relpClt_t *pThis, void *pUsr);
 relpRetVal relpCltReconnect(relpClt_t *pThis);
 void relpCltHintBurstBegin(relpClt_t *pThis);
 void relpCltHintBurstEnd(relpClt_t *pThis);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* #ifndef RELP_H_INCLUDED */
