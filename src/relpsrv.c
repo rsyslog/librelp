@@ -1,44 +1,28 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* The relp server.
  *
  * Copyright 2008-2018 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
- * Librelp is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Librelp is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Librelp.  If not, see <http://www.gnu.org/licenses/>.
- *
- * A copy of the GPL can be found in the file "COPYING" in this distribution.
- *
- * If the terms of the GPL are unsuitable for your needs, you may obtain
- * a commercial license from Adiscon. Contact sales@adiscon.com for further
- * details.
+ * Licensed under the Apache License, Version 2.0.
+ * See COPYING.ASL20 for the license text.
  *
  * ALL CONTRIBUTORS PLEASE NOTE that by sending contributions, you assign
- * your copyright to Adiscon GmbH, Germany. This is necessary to permit the
- * dual-licensing set forth here. Our apologies for this inconvenience, but
- * we sincerely believe that the dual-licensing model helps us provide great
- * free software while at the same time obtaining some funding for further
- * development.
+ * your copyright to Adiscon GmbH, Germany.
  */
 #include "config.h"
 #include <stdlib.h>
 #include <string.h>
-#include <netinet/in.h>
 #include <assert.h>
 #include <sys/socket.h>
 #include "relp.h"
 #include "relpsrv.h"
 #include "tcp.h"
+
+#define RELP_STRINGIFY_INNER(value) #value
+#define RELP_STRINGIFY(value) RELP_STRINGIFY_INNER(value)
 
 
 
@@ -54,24 +38,19 @@ relpSrvConstruct(relpSrv_t **ppThis, relpEngine_t *pEngine)
 
 	ENTER_RELPFUNC;
 	assert(ppThis != NULL);
-	if((pThis = calloc(1, sizeof(relpSrv_t))) == NULL) {
+	if((pThis = malloc(sizeof(*pThis))) == NULL) {
 		ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
 	}
 
+	*pThis = (relpSrv_t) {
+		.pEngine = pEngine,
+		.stateCmdSyslog = pEngine->stateCmdSyslog,
+		.ai_family = AF_UNSPEC,
+		.dhBits = DEFAULT_DH_BITS,
+		.authmode = eRelpAuthMode_None,
+		.oversizeMode = RELP_DFLT_OVERSIZE_MODE
+	};
 	RELP_CORE_CONSTRUCTOR(pThis, Srv);
-	pThis->pEngine = pEngine;
-	pThis->stateCmdSyslog = pEngine->stateCmdSyslog;
-	pThis->ai_family = PF_UNSPEC;
-	pThis->dhBits = DEFAULT_DH_BITS;
-	pThis->pristring = NULL;
-	pThis->authmode = eRelpAuthMode_None;
-	pThis->caCertFile = NULL;
-	pThis->ownCertFile = NULL;
-	pThis->privKey = NULL;
-	pThis->tlsConfigCmd = NULL;
-	pThis->permittedPeers.nmemb = 0;
-	pThis->maxDataSize = RELP_DFLT_MAX_DATA_SIZE;
-	pThis->oversizeMode = RELP_DFLT_OVERSIZE_MODE;
 
 	*ppThis = pThis;
 
@@ -97,7 +76,7 @@ relpSrvDestruct(relpSrv_t **ppThis)
 		relpTcpDestruct(&pThis->pTcp);
 
 	free(pThis->pLstnPort);
-	free(pThis->pLstnAddr);
+	free(pThis->bindNode);
 	free(pThis->pristring);
 	free(pThis->caCertFile);
 	free(pThis->ownCertFile);
@@ -162,12 +141,20 @@ relpSrvSetUsrPtr(relpSrv_t *const pThis, void *pUsr)
 }
 
 PART_OF_API relpRetVal
-relpSrvSetMaxDataSize(relpSrv_t *const pThis, size_t maxSize)
+relpSrvSetMaxDataSize(relpSrv_t *const pThis, size_t bytes)
 {
-	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Srv);
-	pThis->maxDataSize = maxSize;
-	LEAVE_RELPFUNC;
+	pThis->receiveLimit.bytes = bytes;
+	pThis->receiveLimit.configured = true;
+	return RELP_RET_OK;
+}
+
+size_t
+relpSrvGetReceiveLimit(const relpSrv_t *const pThis)
+{
+	RELPOBJ_assert(pThis, Srv);
+	/* Both zero and SIZE_MAX are valid explicit limits. */
+	return pThis->receiveLimit.configured ? pThis->receiveLimit.bytes : RELP_DFLT_MAX_DATA_SIZE;
 }
 
 PART_OF_API relpRetVal LIBRELP_ATTR_NONNULL()
@@ -185,52 +172,39 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 
-/* set the listen port inside the relp server. If NULL is provided, the default port
- * is used. The provided string is always copied, it is the caller's duty to
- * free the passed-in string.
- * rgerhards, 2008-03-17
+/* Update the owned endpoint string only after the copy succeeds.
+ * NULL clears the setting and restores the listener default.
  */
+static relpRetVal
+relpSrvSetEndpointString(unsigned char **const current, const unsigned char *const value)
+{
+	unsigned char *copy = NULL;
+
+	if(value != NULL) {
+		copy = (unsigned char*)strdup((const char*)value);
+		if(copy == NULL)
+			return RELP_RET_OUT_OF_MEMORY;
+	}
+
+	free(*current);
+	*current = copy;
+	return RELP_RET_OK;
+}
+
+/* NULL selects the default RELP service. */
 PART_OF_API relpRetVal
 relpSrvSetLstnPort(relpSrv_t *const pThis, unsigned char *pLstnPort)
 {
-	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Srv);
-
-	/* first free old value */
-	free(pThis->pLstnPort);
-	pThis->pLstnPort = NULL;
-
-	if(pLstnPort != NULL) {
-		if((pThis->pLstnPort = (unsigned char*) strdup((char*)pLstnPort)) == NULL)
-			ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
-	}
-
-finalize_it:
-	LEAVE_RELPFUNC;
+	return relpSrvSetEndpointString(&pThis->pLstnPort, pLstnPort);
 }
 
-/* set the address inside the relp server. If NULL is provided, the server
- * will bind to all interfaces. The provided string is always copied, it is the caller's duty to
- * free the passed-in string.
- * perlei, 2018-04-19
- */
+/* NULL leaves the node unspecified so the listener can bind wildcard addresses. */
 PART_OF_API relpRetVal
 relpSrvSetLstnAddr(relpSrv_t *const pThis, unsigned char *pLstnAddr)
 {
-	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Srv);
-
-	/* first free old value */
-	free(pThis->pLstnAddr);
-	pThis->pLstnAddr = NULL;
-
-	if(pLstnAddr != NULL) {
-		if((pThis->pLstnAddr = (unsigned char*) strdup((char*)pLstnAddr)) == NULL)
-			ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
-	}
-
-finalize_it:
-	LEAVE_RELPFUNC;
+	return relpSrvSetEndpointString(&pThis->bindNode, pLstnAddr);
 }
 
 /* mode==NULL is valid and means "no change" */
@@ -404,7 +378,9 @@ relpSrvSetKeepAlive(relpSrv_t *const pThis,
 relpRetVal
 relpSrvRun(relpSrv_t *const pThis)
 {
-	relpTcp_t *pTcp;
+	relpTcp_t *pTcp = NULL;
+	unsigned char defaultPort[] = RELP_STRINGIFY(RELP_DFLT_PORT);
+	unsigned char *port;
 
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Srv);
@@ -425,18 +401,16 @@ relpSrvRun(relpSrv_t *const pThis)
 		CHKRet(relpTcpSetPrivKey(pTcp, pThis->privKey));
 		CHKRet(relpTcpSetPermittedPeers(pTcp, &(pThis->permittedPeers)));
 	}
-	CHKRet(relpTcpLstnInit(pTcp, (pThis->pLstnPort == NULL) ?
-		(unsigned char*) RELP_DFLT_PORT : pThis->pLstnPort,
-		(unsigned char*) pThis->pLstnAddr,
-		pThis->ai_family));
+	port = pThis->pLstnPort;
+	if(port == NULL)
+		port = defaultPort;
+	CHKRet(relpTcpLstnInit(pTcp, port, pThis->bindNode, pThis->ai_family));
 
 	pThis->pTcp = pTcp;
+	pTcp = NULL;
 
 finalize_it:
-	if(iRet != RELP_RET_OK) {
-		if(pThis->pTcp != NULL)
-			relpTcpDestruct(&pTcp);
-	}
-
+	if(pTcp != NULL)
+		relpTcpDestruct(&pTcp);
 	LEAVE_RELPFUNC;
 }
