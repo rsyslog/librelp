@@ -1,34 +1,16 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* The RELP (reliable event logging protocol) core protocol library.
  *
  * Copyright 2008-2025 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
- * Librelp is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Librelp is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Librelp.  If not, see <http://www.gnu.org/licenses/>.
- *
- * A copy of the GPL can be found in the file "COPYING" in this distribution.
- *
- * If the terms of the GPL are unsuitable for your needs, you may obtain
- * a commercial license from Adiscon. Contact sales@adiscon.com for further
- * details.
+ * Licensed under the Apache License, Version 2.0.
+ * See COPYING.ASL20 for the license text.
  *
  * ALL CONTRIBUTORS PLEASE NOTE that by sending contributions, you assign
- * your copyright to Adiscon GmbH, Germany. This is necessary to permit the
- * dual-licensing set forth here. Our apologies for this inconvenience, but
- * we sincerely believe that the dual-licensing model helps us provide great
- * free software while at the same time obtaining some funding for further
- * development.
+ * your copyright to Adiscon GmbH, Germany.
  */
 #include "config.h"
 #include <stdio.h>
@@ -71,22 +53,17 @@ relpEngineCallOnGenericErr(relpEngine_t *const pThis, const char *eobj, relpRetV
 
 const char *
 _relpEngine_strerror_r(const int errnum, char *buf, const size_t buflen) {
-#ifndef HAVE_STRERROR_R
-	char *p;
-	p = strerror(errnum);
-	strncpy(buf, p, buflen);
-	buf[buflen-1] = '\0';
-#else
-#	ifdef STRERROR_R_CHAR_P
-	char *p;
-	p = strerror_r(errnum, buf, buflen);
-	if(p != buf) {
-		strncpy(buf, p, buflen);
-		buf[buflen - 1] = '\0';
-	}
+#if !defined(HAVE_STRERROR_R) || defined(STRERROR_R_CHAR_P)
+#	if defined(HAVE_STRERROR_R)
+	const char *const message = strerror_r(errnum, buf, buflen);
 #	else
-	strerror_r(errnum, buf, buflen);
+	const char *const message = strerror(errnum);
 #	endif
+	if(message != buf) {
+		snprintf(buf, buflen, "%s", message);
+	}
+#else
+	strerror_r(errnum, buf, buflen);
 #endif
 	return buf;
 }
@@ -98,7 +75,7 @@ addToEpollSet(relpEngine_t *const pThis, epolld_type_t typ, void *ptr, int sock,
 	epolld_t *epd = NULL;
 	ENTER_RELPFUNC;
 
-	CHKmalloc(epd = calloc(1, sizeof(epolld_t)));
+	CHKmalloc(epd = calloc(1, sizeof *epd));
 	epd->typ = typ;
 	epd->ptr = ptr;
 	epd->sock = sock;
@@ -351,67 +328,63 @@ relpEngineSetDbgprint(relpEngine_t *const pThis, void (*dbgprint)(char *fmt, ...
 
 
 PART_OF_API relpRetVal
-relpEngineSetTLSLib(relpEngine_t *const pThis, NOTLS_UNUSED const int tls_lib)
+relpEngineSetTLSLib(relpEngine_t *const pThis, const int tls_lib)
 {
-	ENTER_RELPFUNC;
+	if(pThis == NULL) {
+		return RELP_RET_PARAM_ERROR;
+	}
 	RELPOBJ_assert(pThis, Engine);
 
-	if(pThis == NULL) {
-		ABORT_FINALIZE(RELP_RET_PARAM_ERROR);
-	}
-
 	pThis->dbgprint((char*)"relpEngineSetTLSLib, req lib is %d\n", tls_lib);
-	#if defined(WITH_TLS)
-		if(tls_lib == RELP_USE_GNUTLS) {
-			#if defined(ENABLE_TLS)
-				pThis->tls_lib = RELP_USE_GNUTLS;
-			#else
-				ABORT_FINALIZE(RELP_RET_NOT_SUPPORTED);
-			#endif
-		} else if(tls_lib == RELP_USE_OPENSSL) {
-			#if defined(ENABLE_TLS_OPENSSL)
-				pThis->tls_lib = RELP_USE_OPENSSL;
-			#else
-				ABORT_FINALIZE(RELP_RET_NOT_SUPPORTED);
-			#endif
-		} else {
-			ABORT_FINALIZE(RELP_RET_PARAM_ERROR);
-		}
-	#else /* defined(WITH_TLS) */
-		pThis->dbgprint((char*)"relpEngineSetTLSLib, error, librelp not with TLS support\n");
-		ABORT_FINALIZE(RELP_RET_NOT_SUPPORTED);
-	#endif
-
-finalize_it:
-	if (pThis)
-		pThis->dbgprint((char*)"relpEngineSetTLSLib, lib now %d, ret %d\n", pThis->tls_lib, iRet);
-	LEAVE_RELPFUNC;
+	relpRetVal result = RELP_RET_NOT_SUPPORTED;
+#if defined(WITH_TLS)
+	switch(tls_lib) {
+	case RELP_USE_GNUTLS:
+#	if defined(ENABLE_TLS)
+		result = RELP_RET_OK;
+#	endif
+		break;
+	case RELP_USE_OPENSSL:
+#	if defined(ENABLE_TLS_OPENSSL)
+		result = RELP_RET_OK;
+#	endif
+		break;
+	default:
+		result = RELP_RET_PARAM_ERROR;
+		break;
+	}
+#else
+	pThis->dbgprint((char*)"relpEngineSetTLSLib, error, librelp not with TLS support\n");
+#endif
+	if(result == RELP_RET_OK) {
+		pThis->tls_lib = tls_lib;
+	}
+	pThis->dbgprint((char*)"relpEngineSetTLSLib, lib now %d, ret %d\n", pThis->tls_lib, result);
+	return result;
 }
 
 
 PART_OF_API relpRetVal
 relpEngineSetTLSLibByName(relpEngine_t *const pThis, const char *const name)
 {
-	ENTER_RELPFUNC;
+	if(pThis == NULL || name == NULL) {
+		return RELP_RET_PARAM_ERROR;
+	}
 	RELPOBJ_assert(pThis, Engine);
 
-	if(pThis == NULL || name == NULL) {
-		ABORT_FINALIZE(RELP_RET_PARAM_ERROR);
-	}
-
+	int tls_lib;
 	if(!strcasecmp(name, "gnutls")) {
-		CHKRet(relpEngineSetTLSLib(pThis, RELP_USE_GNUTLS));
-	}else if(!strcasecmp(name, "openssl")) {
-		CHKRet(relpEngineSetTLSLib(pThis, RELP_USE_OPENSSL));
+		tls_lib = RELP_USE_GNUTLS;
+	} else if(!strcasecmp(name, "openssl")) {
+		tls_lib = RELP_USE_OPENSSL;
 	} else {
 		relpEngineCallOnGenericErr(pThis, "librelp", RELP_RET_PARAM_ERROR,
 				"invalid tls lib '%s' requested; this version of "
 				"librelp only supports 'gnutls', 'openssl'", name);
-		ABORT_FINALIZE(RELP_RET_NOT_SUPPORTED);
+		return RELP_RET_NOT_SUPPORTED;
 	}
 
-finalize_it:
-	LEAVE_RELPFUNC;
+	return relpEngineSetTLSLib(pThis, tls_lib);
 }
 
 /* create a new listener to be added to the engine. This is the new-style
