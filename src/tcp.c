@@ -561,6 +561,8 @@ relpTcpChkPeerName_ossl(relpTcp_t *const pThis, void *vcert)
 				asDnsName = GENERAL_NAME_get0_value(gnDnsName, &gtype);
 				if(gtype != GEN_DNS)
 					continue;
+				if(asDnsName == NULL)
+					ABORT_FINALIZE(RELP_RET_AUTH_CERT_INVL);
 				sanLen = ASN1_STRING_length(asDnsName);
 
 #				if OPENSSL_VERSION_NUMBER >= 0x10100000L
@@ -1514,6 +1516,10 @@ relpTcpInitTLS(relpTcp_t *const pThis)
 		pThis->pEngine->dbgprint((char*)"relpTcpInitTLS: CA certificate MISSING\n");
 	}
 finalize_it:
+	if(iRet != RELP_RET_OK) {
+		SSL_CTX_free(pThis->ctx);
+		pThis->ctx = NULL;
+	}
 	LEAVE_RELPFUNC;
 }
 

@@ -40,6 +40,24 @@
 	fprintf(stderr, "receive: FAILURE %d in '%s'\n", TRY_r, #f); ret = 1; goto done; }\
 	}
 
+static unsigned
+positive_option(const char *value)
+{
+	char *end;
+	unsigned long result;
+	if(value[0] < '0' || value[0] > '9') {
+		fprintf(stderr, "invalid positive integer: %s\n", value);
+		exit(1);
+	}
+	errno = 0;
+	result = strtoul(value, &end, 10);
+	if(errno || *end || result == 0 || result > UINT_MAX) {
+		fprintf(stderr, "invalid positive integer: %s\n", value);
+		exit(1);
+	}
+	return (unsigned)result;
+}
+
 static FILE *errFile = NULL;
 static FILE *outFile = NULL;
 static FILE *sessFile = NULL;
@@ -296,7 +314,7 @@ int main(int argc, char *argv[]) {
 	const char* outfile_name = NULL;
 
 #if defined(_AIX)
-	while((c = getopt(argc, argv, "a:c:Ae:F:l:m:No:O:P:p:qQTvW:C:x:y:z:")) != EOF) {
+	while((c = getopt(argc, argv, "1:2:3:a:c:Ae:F:l:m:No:O:P:p:qQTvW:C:x:y:z:")) != EOF) {
 #else
 	static struct option long_options[] =
 	{
@@ -314,25 +332,25 @@ int main(int argc, char *argv[]) {
 		{"tlsconfcmd", required_argument, 0, 'c'},
 		{"watchdog-timeout", required_argument, 0, 'W'},
 		{"no-exit-on-error", no_argument, 0, 'N'},
-		{"max-sessions", required_argument, 0, 1001},
-		{"open-timeout", required_argument, 0, 1002},
-		{"idle-timeout", required_argument, 0, 1003},
+		{"max-sessions", required_argument, 0, '1'},
+		{"open-timeout", required_argument, 0, '2'},
+		{"idle-timeout", required_argument, 0, '3'},
 		{"fail-syslog-callback", no_argument, 0, 'q'},
 		{"omit-syslog-callback", no_argument, 0, 'Q'},
 		{0, 0, 0, 0}
 	};
 
-	while((c = getopt_long(argc, argv, "a:c:Ae:F:l:m:No:O:P:p:qQTvW:C:x:y:z:", long_options, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "1:2:3:a:c:Ae:F:l:m:No:O:P:p:qQTvW:C:x:y:z:", long_options, &option_index)) != -1) {
 #endif
 		switch(c) {
-		case 1001:
-			maxSessions = (unsigned)atoi(optarg);
+		case '1':
+			maxSessions = positive_option(optarg);
 			break;
-		case 1002:
-			openTimeout = (unsigned)atoi(optarg);
+		case '2':
+			openTimeout = positive_option(optarg);
 			break;
-		case 1003:
-			idleTimeout = (unsigned)atoi(optarg);
+		case '3':
+			idleTimeout = positive_option(optarg);
 			break;
 		case 'a':
 			authMode = optarg;

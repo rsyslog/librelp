@@ -36,8 +36,8 @@ BEGINcommand(S, Syslog)
 	pSess->pEngine->dbgprint((char*)"in 'syslog' command handler\n");
 
 	if(pSess->stateCmdSyslog != eRelpCmdState_Enabled) {
-		relpSessSendResponse(pSess, pFrame->txnr, (unsigned char*) "500 command disabled", 20);
-		ABORT_FINALIZE(RELP_RET_CMD_DISABLED);
+		CHKRet(relpSessSendResponse(pSess, pFrame->txnr, (unsigned char*) "500 command disabled", 20));
+		goto finalize_it;
 	}
 
        /* only highest version callback is called */

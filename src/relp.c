@@ -757,6 +757,10 @@ expireServerSessions(relpEngine_t *const pThis)
 	for(relpEngSessLst_t *entry = pThis->pSessLstRoot, *next; entry != NULL; entry = next) {
 		next = entry->pNext;
 		relpSess_t *const sess = entry->pSess;
+		if(sess->acceptedAt == (time_t)-1) {
+			sess->acceptedAt = sess->lastActivity = now.tv_sec;
+			continue;
+		}
 		const time_t since = sess->bServerConnOpen ? sess->lastActivity : sess->acceptedAt;
 		const unsigned limit = sess->bServerConnOpen ? pThis->idleTimeout : pThis->openTimeout;
 		if(now.tv_sec >= since && (unsigned long)(now.tv_sec - since) >= limit) {

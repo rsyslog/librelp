@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Exercise server admission and both session deadlines with real TCP sockets."""
 
+import errno
 import os
 import socket
 import sys
@@ -69,7 +70,9 @@ def main():
                 break
         except socket.timeout:
             pass
-        except socket.error:
+        except socket.error as exc:
+            if exc.errno not in (errno.EPIPE, errno.ECONNRESET, errno.ENOTCONN):
+                raise
             closed = True
             break
     if not closed:
@@ -83,7 +86,16 @@ def main():
     rejected.close()
     time.sleep(1.4)
     established.sendall(b"2 syslog 5 hello\n")
-    response = established.recv(4096)
+    response = b""
+    deadline = now() + 2
+    while b"200 OK" not in response and now() < deadline:
+        try:
+            chunk = established.recv(4096)
+        except socket.timeout:
+            continue
+        if not chunk:
+            break
+        response += chunk
     if b"200 OK" not in response:
         raise AssertionError("established session did not accept syslog: " + repr(response))
     time.sleep(1.5)

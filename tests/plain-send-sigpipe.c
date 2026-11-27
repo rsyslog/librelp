@@ -1,6 +1,7 @@
 /* A disconnected peer must produce an I/O error, not terminate the process. */
 #include "config.h"
 
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/socket.h>
@@ -32,6 +33,8 @@ main(void)
 		goto done;
 	}
 
+	if(signal(SIGPIPE, SIG_DFL) == SIG_ERR)
+		goto done;
 	tcp->sock = sockets[0];
 	sockets[0] = -1;
 	close(sockets[1]);
