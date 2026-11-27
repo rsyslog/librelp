@@ -1,40 +1,21 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* The relp client.
  *
  * Copyright 2008-2020 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
- * Librelp is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Librelp is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Librelp.  If not, see <http://www.gnu.org/licenses/>.
- *
- * A copy of the GPL can be found in the file "COPYING" in this distribution.
- *
- * If the terms of the GPL are unsuitable for your needs, you may obtain
- * a commercial license from Adiscon. Contact sales@adiscon.com for further
- * details.
+ * Licensed under the Apache License, Version 2.0.
+ * See COPYING.ASL20 for the license text.
  *
  * ALL CONTRIBUTORS PLEASE NOTE that by sending contributions, you assign
- * your copyright to Adiscon GmbH, Germany. This is necessary to permit the
- * dual-licensing set forth here. Our apologies for this inconvenience, but
- * we sincerely believe that the dual-licensing model helps us provide great
- * free software while at the same time obtaining some funding for further
- * development.
+ * your copyright to Adiscon GmbH, Germany.
  */
 #include "config.h"
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
-#include <sys/types.h>
 #include "relp.h"
 #include "relpsess.h"
 #include "relpclt.h"
@@ -59,7 +40,6 @@ relpCltConstruct(relpClt_t **ppThis, relpEngine_t *const pEngine)
 	RELP_CORE_CONSTRUCTOR(pThis, Clt);
 	pThis->pEngine = pEngine;
 	pThis->timeout = 90; /* 90-second timeout is the default */
-	pThis->connTimeout = 10;
 	pThis->pUsr = NULL;
 	pThis->authmode = eRelpAuthMode_None;
 	pThis->pristring = NULL;
@@ -122,8 +102,9 @@ relpCltConnect(relpClt_t *const pThis, int protFamily, unsigned char *port, unsi
 
 	CHKRet(relpSessConstruct(&pThis->pSess, pThis->pEngine, RELP_CLT_CONN, pThis, pThis->pUsr));
 	CHKRet(relpSessSetTimeout(pThis->pSess, pThis->timeout));
-	CHKRet(relpSessSetConnTimeout(pThis->pSess, pThis->connTimeout));
 	CHKRet(relpSessSetWindowSize(pThis->pSess, pThis->sizeWindow));
+	pThis->pSess->connTimeout = pThis->connectTimeoutOverride ? pThis->connectTimeoutOverride
+		: RELP_DFLT_CONN_TIMEOUT;
 	pThis->pSess->sourceBind = pThis->sourceBind;
 	if(pThis->bEnableTLS) {
 		CHKRet(relpSessEnableTLS(pThis->pSess));
@@ -198,20 +179,16 @@ relpCltSetTimeout(relpClt_t *const pThis, unsigned timeout)
 	LEAVE_RELPFUNC;
 }
 
-/** Set the timeout value for this client socket connection.  */
+/** Set the client socket connection timeout in seconds. Zero leaves it unchanged. */
 PART_OF_API relpRetVal
-relpCltSetConnTimeout(relpClt_t *const pThis, int connTimeout)
+relpCltSetConnTimeout(relpClt_t *const pThis, const int seconds)
 {
-	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Clt);
-	if (connTimeout < 0) {
-		ABORT_FINALIZE(RELP_RET_ERR_INVAL);
+
+	if(seconds > 0) {
+		pThis->connectTimeoutOverride = seconds;
 	}
-	if (connTimeout != 0) {
-		pThis->connTimeout = connTimeout;
-	}
-finalize_it:
-	LEAVE_RELPFUNC;
+	return seconds < 0 ? RELP_RET_ERR_INVAL : RELP_RET_OK;
 }
 
 PART_OF_API relpRetVal

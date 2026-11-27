@@ -1005,15 +1005,6 @@ relpSessSetTimeout(relpSess_t *const pThis, unsigned timeout)
 	LEAVE_RELPFUNC;
 }
 
-relpRetVal
-relpSessSetConnTimeout(relpSess_t *const pThis, int connTimeout)
-{
-	ENTER_RELPFUNC;
-	RELPOBJ_assert(pThis, Sess);
-	pThis->connTimeout = connTimeout;
-	LEAVE_RELPFUNC;
-}
-
 /* this copies a *complete* permitted peers structure into the
  * session object.
  */
