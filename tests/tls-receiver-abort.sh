@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2018-11-15 by Rainer Gerhards, released under ASL 2.0
 # check that receiver abort is handled gracefully
 # of messages

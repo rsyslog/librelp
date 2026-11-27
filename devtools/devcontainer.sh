@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This scripts uses an rsyslog development container to execute given
 # command inside it.
 # Note: command line parameters are passed as parameters to the container,

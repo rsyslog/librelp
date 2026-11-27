@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # run compile-only tests under Travis
 # This is specifically written to support Travis CI
 set -e

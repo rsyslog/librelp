@@ -4,11 +4,11 @@ This is the specification for the reliable event logging protocol, called
 "RELP".
 
 Version: 0.0.1\
-Date: 2008-03-19\
+Date:  2008-03-19\
 Author: [Rainer Gerhards](http://www.gerhards.net/rainer)
 
-Copyright (C) 2008 by Rainer Gerhards and Adiscon GmbH. Released under the
-terms of the GNU FDL.
+Copyright (C) 2008-2026 by Rainer Gerhards and Adiscon GmbH. Released under
+the Apache License, Version 2.0.
 
 ## DESCRIPTION OF THE RELP PROTOCOL
 
@@ -34,20 +34,20 @@ to tell the client of its shutdown intension, especially if the client does
 not send any data at that moment. The same situation arises when the server
 times out a session where the client has not sent any data for an extended
 period of time (this probably is a good thing to conserve server resources).
-Of course, an obvious answer to that need is that the server simply closes the
-connection after having sent all responses (or all that it is still capable
-of). The client will notice the closed connection at latest when it tries to
-send new commands. However, it may be worth considering an alternate mode
-where the server can issue commands to the client. One potential way to do
-this would be to reserve a specific txnr (0, for example) for this use. That
-txnr is only to be used by the server and only to send "out-of-band" commands.
-These commands must not be acknowledged by the client, because that would
-complicate the protocol more than useful for this case. So out-of-band-commands
-have a "hint" status - they hint the client about something, but if they do not
-arrive at the client, nothing fatal should happen. The ultimate session
-closure indication would still be the tcp session close. [Please see the
-"High Latency Environment" use case below for some implications this hinting
-process may have].
+ Of course, an obvious answer to that need is that the server simply closes
+the connection after having sent all responses (or all that it is still
+capable of). The client will notice the closed connection at latest when it
+tries to send new commands. However, it may be worth considering an alternate
+mode where the server can issue commands to the client. One potential way to
+do this would be to reserve a specific txnr (0, for example) for this use.
+That txnr is only to be used by the server and only to send "out-of-band"
+commands. These commands must not be acknowledged by the client, because that
+would complicate the protocol more than useful for this case. So
+out-of-band-commands have a "hint" status - they hint the client about
+something, but if they do not arrive at the client, nothing fatal should
+happen. The ultimate session closure indication would still be the tcp session
+close. \[Please see the "High Latency Environment" use case below for some
+implications this hinting process may have\].
 
 For the time being, it has been decided that such out of band hints be not
 supported.
@@ -89,28 +89,26 @@ acknowledgement.
 
 All relp transaction are carried out over a consistent framing.
 
-```text
-RELP-FRAME = HEADER DATA TRAILER
-DATA = [SP 1*OCTET] ; command-defined data, if DATALEN is 0, no data is present
-HEADER = TXNR SP COMMAND SP DATALEN
-TXNR = NUMBER ; relp transaction number, monotonically increases, starts at 1
-DATALEN = NUMBER
-#old:COMMAND = "open" / "syslog" / "close" / "rsp" / "abort" ; max length = 32
-COMMAND = 1*32ALPHA
-TRAILER = LF ; to detect framing errors and enhance human readibility
-ALPHA = letter ; ('a'..'z', 'A'..'Z')
-NUMBER = 1*9DIGIT
-DIGIT = %d48-57
-LF = %d10
-SP = %d32
+    RELP-FRAME = HEADER DATA TRAILER
+    DATA = [SP 1*OCTET] ; command-defined data, if DATALEN is 0, no data is present
+    HEADER = TXNR SP COMMAND SP DATALEN
+    TXNR = NUMBER ; relp transaction number, monotonically increases, starts at 1
+    DATALEN = NUMBER
+    #old:COMMAND = "open" / "syslog" / "close" / "rsp" / "abort" ; max length = 32
+    COMMAND = 1*32ALPHA
+    TRAILER = LF ; to detect framing errors and enhance human readibility
+    ALPHA = letter ; ('a'..'z', 'A'..'Z')
+    NUMBER = 1*9DIGIT
+    DIGIT = %d48-57
+    LF = %d10
+    SP = %d32
 
-RSP DATA CONTENT:
-RSP-HEADER = TXNR SP RSP-CODE [SP HUMANMSG] LF [CMDDATA]
-RSP-CODE = 200 / 500 ; 200 is ok, all the rest currently errors
-HUMANMSG = *OCTET ; a human-readable message without LF in it
-CMDDATA = *OCTET ; semantics depend on original command
-TXNR is as in the relp frame, it is the TXNR of the frame being responded to.
-```
+    RSP DATA CONTENT:
+    RSP-HEADER = TXNR SP RSP-CODE [SP HUMANMSG] LF [CMDDATA]
+    RSP-CODE = 200 / 500 ; 200 is ok, all the rest currently errors
+    HUMANMSG = *OCTET ; a human-readable message without LF in it
+    CMDDATA = *OCTET ; semantics depend on original command
+    TXNR is as in the relp frame, it is the TXNR of the frame being responded to.
 
 DATALEN is the number of octets in DATA (so the frame length excluding the
 length of HEADER and TRAILER). Please note that the theoretical maximum
@@ -121,7 +119,7 @@ operator-configurable.
 
 TXNR 0 is reserved for hint commands. A RELP connection start with TXNR 1.
 Note that TXNR montonically increases but is latched at 999,999,999. After
-that TXNR, the next TXNR is 1.
+that TXNR, the next TXNR is 1. 
 
 ### COMMAND SEMANTICS
 
@@ -139,14 +137,12 @@ defined above. It is a response code, optionally followed by a space and
 additional data (depending on the client's command). Return state values are:
 200 - OK, 500 - error.
 
-The ABNF for a "rsp"'s data portion is as follows:
+The ABNF for a "rsp"'s  data portion is as follows:
 
-```text
-RSPDATA = STATUS SP HUMAN-TEXT [LF DATA]
-STATUS = 3DIGIT
-HUMAN-TEXT = *80ALPHA
-DATA = 1*OCTET
-```
+    RSPDATA = STATUS SP HUMAN-TEXT [LF DATA]
+    STATUS = 3DIGIT
+    HUMAN-TEXT = *80ALPHA
+    DATA = 1*OCTET
 
 #### Command "open"
 
@@ -168,7 +164,7 @@ back to the client that it is happy to accept. So the client can only select
 from those. As such, even though the client makes the final feature selection,
 the server is dictating what needs to be used.
 
-Note that the connection is only ready AFTER the client has received the
+Note that the connection is only ready AFTER the client has received the
 "open" response.
 
 #### Command "close"
@@ -204,20 +200,18 @@ format) is contained within the commands data portion.
 
 During session setup, "offers" are exchanged between client and server. An
 "offer" describes a specific feature or operation mode. Always present must be
-the "relp_version" offer which tells the other side which version of relp is in
-use.
+the "relp_version" offer which tells the other side which version of relp is
+in use.
 
 ABNF for offer strings
 
-```text
-OFFER = LF FEATURENAME ["=" VALUE *("," VALUE)]
-FEATURENAME = *32OCTET
-VALUE = *255OCTET
+    OFFER = LF FEATURENAME ["=" VALUE *("," VALUE)]
+    FEATURENAME = *32OCTET
+    VALUE = *255OCTET
 
-Currently defined values:
-FEATURENAME VALUE
-relp_version 1 (this specification)
-```
+    Currently defined values:
+    FEATURENAME VALUE
+    relp_version 1 (this specification)
 
 #### relp_version
 
@@ -229,9 +223,9 @@ practice.
 #### commands
 
 This offer describes which commands are supported by the remote peer. Command
-that must be specified to drive the RELP protocol itself (e.g. "open", "close",
-"rsp") MUST NOT be specified. Optional commands must be specified. There may be
-multiple commands specified.
+that must be specified to drive the RELP protocol itself (e.g. "open",
+"close", "rsp") MUST NOT be specified. Optional commands must be specified.
+There may be multiple commands specified.
 
 Sample: commands=syslog,eventlog (eventlog is a hypothetical, not yet known
 command).
@@ -247,35 +241,33 @@ terminate the relp connection.
 This offer describes the software (library) that is processing the relp
 protocol. It is an optional offer. The idea is that when each peer knows which
 software on the other peer is handling the protocol, it may be able to
-work-around some known software issues. The "relp_software" has two parameters,
-the first one being the name of the software as it calls itself, the second one
-the version as it calls itself and the third one being an URL where information
-about this software may be found. It is suggested that all three parameters are
-given, but only the first one MUST actually be provided.
+work-around some known software issues. The "relp_software" has two
+parameters, the first one being the name of the software as it calls itself,
+the second one the version as it calls itself and the third one being an URL
+where information about this software may be found. It is suggested that all
+three parameters are given, but only the first one MUST actually be provided.
 
 ### STATE DIAGRAMS
 
 ... detailing some communications scenarios:
 
-```text
-Session Startup:
-C S
-cmd: "open", data: offer -----> (selects supported offers)
-(selects offers to use) <----- cmd: "rsp", data "accepted offers"
+    Session Startup:
+    C S
+    cmd: "open", data: offer -----> (selects supported offers)
+    (selects offers to use) <----- cmd: "rsp", data "accepted offers"
 
- ... transmission channel is ready to use ....
+     ... transmission channel is ready to use ....
 
-Message Transmission
-C S
-cmd: "syslog", data: syslogmsg -----> (processes message)
-(indicates syslog as processed) <----- cmd: "rsp", data OK/Error
+    Message Transmission
+    C S
+    cmd: "syslog", data: syslogmsg -----> (processes message)
+    (indicates syslog as processed) <----- cmd: "rsp", data OK/Error
 
-Session Termination
-C S
-cmd: "close", data: none? -----> (processes termination request)
-(terminates session) <----- cmd: "rsp", data OK/Error
- (terminates session)
-```
+    Session Termination
+    C S
+    cmd: "close", data: none? -----> (processes termination request)
+    (terminates session) <----- cmd: "rsp", data OK/Error
+     (terminates session)
 
 ### SECURITY CONSIDERATIONS
 
@@ -304,16 +296,16 @@ Rsyslog utilizes highly threaded design, among others to take advantage of
 multicore-machines. On the other hand, it conserves resources by only running
 as many worker threads as actually needed. So if there is no traffic, it may
 even be running no workers at all. The RELP client will be implemented as an
-output plugin and will be executed on a worker thread. So in low-traffic cases,
-the RELP client kind of hibernates, maybe even for hours (if no new message is
-scheduled for transmission).
+output plugin and will be executed on a worker thread. So in low-traffic
+cases, the RELP client kind of hibernates, maybe even for hours (if no new
+message is scheduled for transmission).
 
 In this use case, I examine a typical scenario in a low-message volume case.
 Here, the client is asked to transmit a message every now and than, at a pace
-of at most one message every few seconds. It may also happen that no message is
-to be sent for several minutes or even hours. Such a scenario is not as extreme
-as it sounds - it may, for example, to be used for error notifications, which
-hopefully happen very infrequently.
+of at most one message every few seconds. It may also happen that no message
+is to be sent for several minutes or even hours. Such a scenario is not as
+extreme as it sounds - it may, for example, to be used for error
+notifications, which hopefully happen very infrequently.
 
 In this scenario, the client sends a command, but will usually not receive an
 immediate response, because client processing is already terminated when the
@@ -326,23 +318,23 @@ to that packet will not be processed by the invocation that sent the command
 but by the next one. So we always have one outstanding response inside the OS
 buffers. Now consider the server is shutting down the connection due to
 timeout or due to the fact that it needs to shutdown itself (maybe even on an
-urgent case, like power failure - the point is it can not wait). On next client
-invocation, the client finds an outstanding response and processes it. Then,
-it tries to send a new command. That will fail, because the connection has been
-terminated. The usual session recovery logic is used to re-establish the
-connection when the server is back online. The command in question is
+urgent case, like power failure - the point is it can not wait). On next
+client invocation, the client finds an outstanding response and processes it.
+Then, it tries to send a new command. That will fail, because the connection
+has been terminated. The usual session recovery logic is used to re-establish
+the connection when the server is back online. The command in question is
 transferred after session re-establishment.
 
 ### High Latency Environment
 
-We have a high latency environment that is otherwise quite reliable
-(satellite link). We have a high traffic load. To cover this, a large
-transmission window has been selected (let's say 1000 messages). Now the client
-sends a burst of messages but then has nothing to do and falls asleep. Then,
-the server starts sending acks. These acks are not taken off the wire by the
-client (as it is inactive - rsyslog case). Eventually, the tcp window fills.
-Thus the server can no longer send acks. This does not immediately pose any
-problems, as the server adds the ack frames to its internal send queue.
+We have a high latency environment that is otherwise quite reliable (satellite
+link). We have a high traffic load. To cover this, a large\
+transmission window has been selected (let's say 1000 messages). Now the
+client sends a burst of messages but then  has nothing to do and falls asleep.
+Then, the server starts sending acks. These acks are not taken off the wire by
+the client (as it is inactive - rsyslog case). Eventually, the tcp window
+fills. Thus the server can no longer send acks. This does not immediately pose
+any problems, as the server adds the ack frames to its internal send queue.
 
 If the client comes out of hibernation, it receives all previous sent frames,
 freeing the server's tcp send window. Thus, the server can continue to send
@@ -350,7 +342,7 @@ data from its send queue (and drain it). The client, having received the
 server's acks, will not stall because its own RELP window has been cleared by
 the acks.
 
-The situation is more complicated if the server intends to shut down while
+The situation is  more complicated if the server intends to shut down while
 the client is in hibernation. To do so, the server usually sends a
 "adviseclose" command followed by a "close" command. However, neither of these
 commands can be sent because the client does not take them off the wire. The
@@ -358,17 +350,17 @@ close operation is now stalled. The only option left to the server is an
 unconditional termination of the session. While everything that has already
 been sent to the client will be picked up by it when it comes out of
 hibernation, anything left in the server's send queue will be lost in this
-case. As such, acks are potentially lost. This will lead to message duplication
-as the client assumes that the frames unacked at time of force-close were not
-processed (there is no other safe assumption). Consequently, the client will
-re-send these frames in the next session.
+case. As such, acks are potentially lost. This will lead to message
+duplication as the client assumes that the frames unacked at time of
+force-close were not processed (there is no other safe assumption).
+Consequently, the client will re-send these frames in the next session.
 
 A cure to this situation is to have the client concurrently listen to server
 requests, e.g. by running a receiver on a separate thread. The RELP protocol
 does not demand this behaviour. However, it can be used to solve the above
 server stall. Let's assume this is being done. Do we now have a sufficient
-guarantee that the server does not stall? Under normal conditions, it is a safe
-assumption that the client will be able to receive all frames sent by the
+guarantee that the server does not stall? Under normal conditions, it is a
+safe assumption that the client will be able to receive all frames sent by the
 server. So a buildup of server queues should, if at all, happen only for a
 short instant. However, if something goes wrong on the transmission line
 (especially in high-latency cases), there may be a somewhat extended period of
@@ -386,20 +378,14 @@ not cause message loss.
 
 ## Feedback and Discussion
 
-Feedback on this document and the RELP protocol is appreciated. The
-[RELP mailing list](http://lists.adiscon.net/mailman/listinfo/relp) is probably
-a good place to provide it. Questions are also happily accepted.
+Feedback on this document and the RELP protocol is appreciated. The [RELP
+mailing list](http://lists.adiscon.net/mailman/listinfo/relp) is probably a
+good place to provide it. Questions are also happily accepted.
 
 ## Copyright
 
-Copyright (C) 2008, 2009 Rainer Gerhards and Adiscon.
+Copyright (C) 2008-2026 Rainer Gerhards and Adiscon GmbH.
 
-Permission is granted to copy, distribute and/or modify this document under
-the terms of the GNU Free Documentation License, Version 1.3 or any later
-version published by the Free Software Foundation; with no Invariant Sections,
-no Front-Cover Texts, and no Back-Cover Texts. A copy of the license can be
-obtained from
-[http://www.gnu.org/copyleft/fdl.html](http://www.gnu.org/copyleft/fdl.html)
-and is also included in the [license file](gfdl.html) (if there is any
-difference in those two, the one contained in the license file is the one that
-this work is licensed under).
+This specification is licensed under the Apache License, Version 2.0. See the
+file COPYING.ASL20 in the librelp distribution or
+<https://www.apache.org/licenses/LICENSE-2.0>.

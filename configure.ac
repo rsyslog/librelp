@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -248,11 +249,10 @@ if test "$enable_debug" = "no"; then
         AC_DEFINE(NDEBUG, 1, [Defined if debug mode is disabled.])
 fi
 
-#Compiler does not inline any functions when not optimizing(-Og).
-#Hence, remove -Winline flag when DEBUG is enabled.
-#ifdef DEBUG
+# -Winline only reports where the compiler declined to inline a function.
+# That depends on the optimization level (debug builds inline nothing), so
+# it carries no useful signal here and is dropped from the warning set.
 WARN_CFLAGS="$(echo "$WARN_CFLAGS" | sed s/-Winline//g)"
-#endif
 
 # valgrind
 AC_ARG_ENABLE(valgrind,

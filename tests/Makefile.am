@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 TEST_EXTENSIONS=.sh
 check_PROGRAMS=receive send chkseq have_tlslib msleep
 

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Get the process which listens on port
 # $1 is the port we are looking for
 if [ $# -lt 1 ]

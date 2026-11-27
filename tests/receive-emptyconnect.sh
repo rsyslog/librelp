@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # checks if server handles connection request by clients which are immediately
 # closed (without sending data) validly. This also means an error message must
 # be emitted. This situation can frequently happen in Proxy configurations.

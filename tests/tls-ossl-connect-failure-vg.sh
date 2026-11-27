@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 . ${srcdir:=$(pwd)}/test-framework.sh
 check_command_available valgrind
 if [ "$VALGRIND" == "NO" ] ; then

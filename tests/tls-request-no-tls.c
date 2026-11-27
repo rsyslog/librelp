@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: Apache-2.0 */
 /*
  * Regression test: in a build without TLS support, a server TLS request must
  * be recorded even though the enable call reports RELP_RET_ERR_NO_TLS, so that

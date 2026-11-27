@@ -1,1 +1,2 @@
-EXTRA_DIST = relp.md gfdl.html
+# SPDX-License-Identifier: Apache-2.0
+EXTRA_DIST = relp.md

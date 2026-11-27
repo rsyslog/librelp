@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 . ${srcdir:=$(pwd)}/test-framework.sh
 export errorlog="error.$LIBRELP_DYN.log"
 startup_receiver -o truncate -m 144 -e $TESTDIR/$errorlog

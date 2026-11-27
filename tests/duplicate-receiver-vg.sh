@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This test checks that when a second receiver is started it properly
 # terminates.
 cat << EOF

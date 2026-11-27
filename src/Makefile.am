@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 if OS_SOLARIS
 then
 	PTHREADS_CFLAGS = -pthread

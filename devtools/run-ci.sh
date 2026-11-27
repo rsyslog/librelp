@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # script for generic CI runs via container
 printf 'running CI with\n'
 printf 'container: %s\n' $DEV_CONTAINER

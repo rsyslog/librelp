@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: Apache-2.0 */
 /*
  * Regression test for OpenSSL send retry state. An SSL_write() that starts a
  * nonblocking client handshake returns WANT_READ. librelp must wait for read
