@@ -14,10 +14,13 @@
 #include "tcp.h"
 
 static const char *expectedAddress;
+static int expectedTimeoutSeconds;
 static int resolverError;
 static unsigned int bindCalls;
 
-relpRetVal __wrap_relpSessTryReestablish(relpSess_t *session);
+relpRetVal __wrap_relpSessConnect(relpSess_t *session, int family, unsigned char *port, unsigned char *host,
+                                 int connectTimeoutSeconds);
+relpRetVal __wrap_relpSessTryReestablish(relpSess_t *session, int connectTimeoutSeconds);
 int __wrap_getaddrinfo(const char *node, const char *service, const struct addrinfo *hints, struct addrinfo **result);
 int __real_getaddrinfo(const char *node, const char *service, const struct addrinfo *hints, struct addrinfo **result);
 int __wrap_bind(int socketFd, const struct sockaddr *address, socklen_t length);
@@ -42,14 +45,26 @@ __wrap_bind(int socketFd, const struct sockaddr *address, socklen_t length)
 	return -1;
 }
 
-/* Observe the binding given to the reconnect path without opening a socket. */
+/* Observe settings passed to session setup without opening a socket. */
 relpRetVal
-__wrap_relpSessTryReestablish(relpSess_t *session)
+__wrap_relpSessConnect(relpSess_t LIBRELP_ATTR_UNUSED *session, int LIBRELP_ATTR_UNUSED family,
+                      unsigned char LIBRELP_ATTR_UNUSED *port, unsigned char LIBRELP_ATTR_UNUSED *host,
+                      int connectTimeoutSeconds)
+{
+	return connectTimeoutSeconds == expectedTimeoutSeconds ? RELP_RET_OK : RELP_RET_ERR_INVAL;
+}
+relpRetVal
+__wrap_relpSessTryReestablish(relpSess_t *session, int connectTimeoutSeconds)
 {
 	const relpSourceBind_t *const binding = &session->sourceBind;
 	struct sockaddr_in actual;
 	struct in_addr expected;
 
+	if(connectTimeoutSeconds != expectedTimeoutSeconds) {
+		fprintf(stderr, "reconnect timeout was %d seconds, expected %d\n",
+			connectTimeoutSeconds, expectedTimeoutSeconds);
+		return RELP_RET_ERR_INVAL;
+	}
 	if(expectedAddress == NULL)
 		return binding->ipv4.length == 0 && binding->ipv6.length == 0
 			? RELP_RET_OK : RELP_RET_ERR_INVAL;
@@ -68,6 +83,8 @@ main(void)
 {
 	relpEngine_t *engine = NULL;
 	relpClt_t *client = NULL;
+	unsigned char port[] = "20514";
+	unsigned char host[] = "127.0.0.1";
 	unsigned char initialAddress[] = "127.0.0.2";
 	unsigned char changedAddress[] = "127.0.0.3";
 	const struct {
@@ -84,12 +101,15 @@ main(void)
 	if(relpEngineConstruct(&engine) != RELP_RET_OK ||
 	   relpEngineSetDbgprint(engine, NULL) != RELP_RET_OK ||
 	   relpCltConstruct(&client, engine) != RELP_RET_OK ||
-	   relpSessConstruct(&client->pSess, engine, RELP_CLT_CONN, client, NULL) != RELP_RET_OK ||
 	   relpCltSetClientIP(client, initialAddress) != RELP_RET_OK)
 		goto done;
 
-	/* Start with the binding that an earlier successful connect captured. */
-	client->pSess->sourceBind = client->sourceBind;
+	expectedTimeoutSeconds = RELP_DFLT_CONN_TIMEOUT;
+	if(relpCltConnect(client, AF_INET, port, host) != RELP_RET_OK ||
+	   relpCltSetConnTimeout(client, 15) != RELP_RET_OK) {
+		fprintf(stderr, "initial connection did not use the default timeout or setting the override failed\n");
+		goto done;
+	}
 	expectedAddress = (const char *)changedAddress;
 	if(relpCltSetClientIP(client, changedAddress) != RELP_RET_OK ||
 	   relpCltReconnect(client) != RELP_RET_OK) {
@@ -119,6 +139,12 @@ main(void)
 	   relpCltReconnect(client) != RELP_RET_OK ||
 	   relpSourceBindApply(&client->sourceBind, -1, AF_INET) != 0 || bindCalls != 1) {
 		fprintf(stderr, "reconnect retained the cleared source address\n");
+		goto done;
+	}
+	expectedTimeoutSeconds = 15;
+	if(relpSessDestruct(&client->pSess) != RELP_RET_OK ||
+	   relpCltConnect(client, AF_INET, port, host) != RELP_RET_OK) {
+		fprintf(stderr, "fresh connection did not use the new timeout\n");
 		goto done;
 	}
 	result = EXIT_SUCCESS;
