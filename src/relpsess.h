@@ -148,7 +148,6 @@ relpRetVal relpSessGetUnacked(relpSess_t *pThis, relpSendbuf_t **ppSendbuf, relp
 relpRetVal relpSessTryReestablish(relpSess_t *pThis);
 relpRetVal relpSessSetProtocolVersion(relpSess_t *pThis, int protocolVersion);
 relpRetVal relpSessSetTimeout(relpSess_t *pThis, unsigned timeout);
-relpRetVal relpSessSetConnTimeout(relpSess_t *pThis, int connTimeout);
 relpRetVal relpSessSetWindowSize(relpSess_t *pThis, int sizeWindow);
 relpRetVal relpSessEnableTLS(relpSess_t *pThis);
 relpRetVal relpSessEnableTLSZip(relpSess_t *pThis);
