@@ -1,0 +1,39 @@
+# Build librelp without any TLS library and run the testbench.
+# Purpose: exercise code paths that only exist in no-TLS builds, most
+# notably tests/tls-request-no-tls (a TLS request must make the server
+# refuse to start instead of falling back to plaintext). No other job
+# builds without TLS, so without this job that test never runs in CI.
+---
+name: no-tls build
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  no_tls_check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: git checkout project
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: autoreconf
+        run: autoreconf -fvi
+
+      - name: configure without TLS
+        run: ./configure --disable-tls --disable-tls-openssl
+
+      - name: make check
+        run: make -j"$(nproc)" check
+
+      - name: show error logs (if we errored)
+        if: ${{ failure() || cancelled() }}
+        run: |
+          devtools/gather-check-logs.sh
+          cat failed-tests.log

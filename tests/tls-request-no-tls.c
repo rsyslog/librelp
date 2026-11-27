@@ -32,6 +32,10 @@ main(void)
 
 	ret = relpEngineConstruct(&engine);
 	CHECK(ret == RELP_RET_OK, "relpEngineConstruct failed");
+	/* like every real caller, install the debug hook; without it the engine's
+	 * dbgprint pointer stays NULL and the first debug call crashes */
+	ret = relpEngineSetDbgprint(engine, NULL);
+	CHECK(ret == RELP_RET_OK, "relpEngineSetDbgprint failed");
 	ret = relpEngineListnerConstruct(engine, &server);
 	CHECK(ret == RELP_RET_OK, "relpEngineListnerConstruct failed");
 
