@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* A minimal RELP receiver using librelp
  *
  * Copyright 2014 Mathias Nyman
