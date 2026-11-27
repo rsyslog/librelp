@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /*
  * Deterministic reproducer for OpenSSL BIO socket ownership.
  *

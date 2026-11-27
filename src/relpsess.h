@@ -37,6 +37,7 @@
 #include <time.h>
 
 #include "relpsrv.h"
+#include "sourcebind.h"
 
 /* unacked msgs linked list */
 typedef struct replSessUnacked_s {
@@ -102,7 +103,7 @@ struct relpSess_s {
 	int protFamily;
 	unsigned char *srvPort;
 	unsigned char *srvAddr;
-	unsigned char *clientIP;	/* ar */
+	relpSourceBind_t sourceBind;
 
 	/* properties needed for server operation */
 	struct relpSendq_s *pSendq; /**< our send queue */
@@ -152,7 +153,6 @@ relpRetVal relpSessSetProtocolVersion(relpSess_t *pThis, int protocolVersion);
 relpRetVal relpSessSetTimeout(relpSess_t *pThis, unsigned timeout);
 relpRetVal relpSessSetConnTimeout(relpSess_t *pThis, int connTimeout);
 relpRetVal relpSessSetWindowSize(relpSess_t *pThis, int sizeWindow);
-relpRetVal relpSessSetClientIP(relpSess_t *pThis, unsigned char *ip);
 relpRetVal relpSessEnableTLS(relpSess_t *pThis);
 relpRetVal relpSessEnableTLSZip(relpSess_t *pThis);
 relpRetVal relpSessSetAuthMode(relpSess_t *pThis, relpAuthMode_t authmode);

@@ -91,7 +91,6 @@ relpCltDestruct(relpClt_t **ppThis)
 
 	if(pThis->pSess != NULL)
 		relpSessDestruct(&pThis->pSess);
-	free(pThis->clientIP);
 	free(pThis->pristring);
 	free(pThis->caCertFile);
 	free(pThis->ownCertFile);
@@ -125,7 +124,7 @@ relpCltConnect(relpClt_t *const pThis, int protFamily, unsigned char *port, unsi
 	CHKRet(relpSessSetTimeout(pThis->pSess, pThis->timeout));
 	CHKRet(relpSessSetConnTimeout(pThis->pSess, pThis->connTimeout));
 	CHKRet(relpSessSetWindowSize(pThis->pSess, pThis->sizeWindow));
-	CHKRet(relpSessSetClientIP(pThis->pSess, pThis->clientIP));
+	pThis->pSess->sourceBind = pThis->sourceBind;
 	if(pThis->bEnableTLS) {
 		CHKRet(relpSessEnableTLS(pThis->pSess));
 		if(pThis->bEnableTLSZip) {
@@ -154,8 +153,7 @@ finalize_it:
 
 /** Try to reconnect a broken session to the remote
  * server. The main difference to relpCltConnect() is that the
- * session object is already existing and session parameters (like
- * remote host) can not be changed.
+ * session already exists and retains the original destination.
  * rgerhards, 2008-03-23
  */
 PART_OF_API relpRetVal
@@ -165,6 +163,8 @@ relpCltReconnect(relpClt_t *const pThis)
 	RELPOBJ_assert(pThis, Clt);
 	RELPOBJ_assert(pThis->pSess, Sess);
 
+	/* A reconnect opens a new socket and uses the latest source binding. */
+	pThis->pSess->sourceBind = pThis->sourceBind;
 	CHKRet(relpSessTryReestablish(pThis->pSess));
 
 finalize_it:
@@ -214,17 +214,11 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 
-/** Set the local IP address to be used when acting as a client.
- */
 PART_OF_API relpRetVal
 relpCltSetClientIP(relpClt_t *const pThis, unsigned char *ipAddr)
 {
-	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Clt);
-	free(pThis->clientIP);
-	pThis->clientIP = ipAddr == NULL ? NULL :
-					   (unsigned char*)strdup((char*) ipAddr);
-	LEAVE_RELPFUNC;
+	return relpSourceBindResolve(&pThis->sourceBind, (const char *)ipAddr);
 }
 
 PART_OF_API relpRetVal

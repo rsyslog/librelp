@@ -6,6 +6,16 @@ check_PROGRAMS+=plain_send_sigpipe
 plain_send_sigpipe_SOURCES=plain-send-sigpipe.c
 plain_send_sigpipe_LDADD=../src/.libs/librelp.a $(GNUTLS_LIBS) $(OPENSSL_LIBS) $(rt_libs) $(socket_libs) $(pthread_libs)
 plain_send_sigpipe_CFLAGS=$(AM_CFLAGS) -I${top_srcdir}/src $(WARN_CFLAGS)
+if OS_SOLARIS_WRAP
+else
+# Observe the session binding at reconnect using the linker's wrap option.
+check_PROGRAMS+=client_source_reconnect
+client_source_reconnect_SOURCES=client-source-reconnect.c
+client_source_reconnect_LDADD=../src/.libs/librelp.a $(GNUTLS_LIBS) $(OPENSSL_LIBS) $(rt_libs) $(socket_libs) $(pthread_libs)
+client_source_reconnect_LDFLAGS=-Wl,--wrap=relpSessTryReestablish -Wl,--wrap=getaddrinfo -Wl,--wrap=bind
+client_source_reconnect_CFLAGS=$(AM_CFLAGS) -I${top_srcdir}/src $(WARN_CFLAGS)
+SOURCE_BIND_TESTS=client-source-reconnect.sh
+endif
 endif
 
 if ENABLE_TLS_OPENSSL
@@ -89,6 +99,7 @@ TLS_TESTS=  \
 	tls-receiver-abort.sh \
 	tls-missing-param-sender.sh \
 	tls-missing-param-receiver.sh
+GNUTLS_TESTS=tls-gnutls-sha256-fingerprint.sh
 TLS_VALGRIND_TESTS= \
 	tls-basic-vg.sh \
 	tls-ossl-connect-failure-vg.sh
@@ -126,7 +137,8 @@ TESTS=  selftest_receive_watchdog.sh \
 	truncate-oversize-msg.sh \
 	send-noconnect.sh \
 	send-dummyserver-no-waitstate-errmsg.sh \
-	receive-emptyconnect.sh
+	receive-emptyconnect.sh \
+	$(SOURCE_BIND_TESTS)
 TESTS+=session-limits.sh
 TESTS+=syslog-callback-failure.sh
 if BUILD_STATIC
@@ -136,6 +148,15 @@ if ENABLE_TLS_GENERIC
 TESTS+=$(TLS_TESTS)
 endif
 if ENABLE_TLS
+TESTS+=$(GNUTLS_TESTS)
+# The policy test compiles the matcher directly so that it also runs in
+# shared-only builds; the matcher is not part of the exported library API.
+check_PROGRAMS+=gnutls_fingerprint_policy
+gnutls_fingerprint_policy_SOURCES=gnutls-fingerprint-policy.c ../src/gnutls_fingerprint.c
+gnutls_fingerprint_policy_LDADD=$(GNUTLS_LIBS)
+gnutls_fingerprint_policy_CFLAGS=$(AM_CFLAGS) $(GNUTLS_CFLAGS) -I${top_srcdir}/src $(WARN_CFLAGS)
+gnutls_fingerprint_policy_CPPFLAGS=-DTEST_CERT_DIR=\"$(srcdir)/tls-certs\"
+TESTS+=gnutls-fingerprint-policy.sh
 if BUILD_STATIC
 TESTS+=$(TLS_STATIC_TESTS)
 if OS_SOLARIS_WRAP
@@ -171,6 +192,7 @@ endif # HAVE_VALGRIND
 
 EXTRA_DIST=$(TESTS) \
 	$(TLS_TESTS) \
+	$(GNUTLS_TESTS) \
 	$(GTLS_STATIC_TESTS) \
 	$(OSSL_TESTS) \
 	$(OSSL_STATIC_TESTS) \
@@ -182,6 +204,7 @@ EXTRA_DIST=$(TESTS) \
 	dummyserver.py \
 	invalid-open.py \
 	session-limits.py \
+	client-source-reconnect.sh \
 	session-callbacks.sh \
 	test-framework.sh \
 	receive.c \
@@ -190,6 +213,8 @@ EXTRA_DIST=$(TESTS) \
 	tls-ossl-retry-state.c \
 	tcp-accept-fd-reuse.c \
 	tls-gtls-lifecycle.c \
+	gnutls-fingerprint-policy.c \
+	gnutls-fingerprint-policy.sh \
 	permitted-peer-lifetime.c \
 	tls-openssl-retry-state.sh \
 	tls-openssl-retry-state.c \

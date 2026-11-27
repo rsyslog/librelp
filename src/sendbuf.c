@@ -1,34 +1,16 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* The relp send buffer object.
  *
  * Copyright 2008-2018 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
- * Librelp is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Librelp is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Librelp.  If not, see <http://www.gnu.org/licenses/>.
- *
- * A copy of the GPL can be found in the file "COPYING" in this distribution.
- *
- * If the terms of the GPL are unsuitable for your needs, you may obtain
- * a commercial license from Adiscon. Contact sales@adiscon.com for further
- * details.
+ * Licensed under the Apache License, Version 2.0.
+ * See COPYING.ASL20 for the license text.
  *
  * ALL CONTRIBUTORS PLEASE NOTE that by sending contributions, you assign
- * your copyright to Adiscon GmbH, Germany. This is necessary to permit the
- * dual-licensing set forth here. Our apologies for this inconvenience, but
- * we sincerely believe that the dual-licensing model helps us provide great
- * free software while at the same time obtaining some funding for further
- * development.
+ * your copyright to Adiscon GmbH, Germany.
  */
 #include "config.h"
 #include <stdlib.h>
@@ -88,6 +70,25 @@ relpSendbufDestruct(relpSendbuf_t **ppThis)
 }
 
 
+/* Convert a transport write result into the corresponding send-buffer state.
+ * Only a positive short write advances the offset; zero means that the
+ * transport made no progress and these bytes must be retried later.
+ */
+static relpRetVal
+relpSendbufRecordWriteResult(relpSendbuf_t *pThis, ssize_t lenToWrite, ssize_t lenWritten)
+{
+	if(lenWritten < 0 || lenWritten > lenToWrite)
+		return RELP_RET_IO_ERR;
+	if(lenWritten == lenToWrite)
+		return RELP_RET_OK;
+	if(lenWritten == 0)
+		return RELP_RET_EAGAIN;
+
+	pThis->bufPtr += (size_t) lenWritten;
+	return RELP_RET_PARTIAL_WRITE;
+}
+
+
 /* Sends as much data from the send buffer as possible.
  * This function tries to send as much data from the send buffer
  * as possible. For partial writes, the sendbuffer is updated to
@@ -109,12 +110,7 @@ relpSendbufSend(relpSendbuf_t *pThis, relpTcp_t *pTcp)
 
 	CHKRet(relpTcpSend(pTcp, pThis->pData + (9 - pThis->lenTxnr) + pThis->bufPtr, &lenWritten));
 
-	if(lenWritten == 0) {
-		iRet = RELP_RET_EAGAIN;
-	} else if(lenWritten != lenToWrite) {
-		pThis->bufPtr += lenWritten;
-		iRet = RELP_RET_PARTIAL_WRITE;
-	}
+	iRet = relpSendbufRecordWriteResult(pThis, lenToWrite, lenWritten);
 
 finalize_it:
 	LEAVE_RELPFUNC;

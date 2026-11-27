@@ -28,6 +28,8 @@ librelp_la_SOURCES = \
 	relpframe.h \
 	tcp.c \
 	tcp.h \
+	sourcebind.c \
+	sourcebind.h \
 	sendq.c \
 	sendq.h \
 	sendbuf.c \
@@ -46,10 +48,13 @@ librelp_la_SOURCES = \
 	dbllinklist.h \
 	cmdif.h \
 	compat/strndup.c
+if ENABLE_TLS
+librelp_la_SOURCES += gnutls_fingerprint.c gnutls_fingerprint.h
+endif
 librelp_la_CPPFLAGS = $(AM_CLFAGS) $(PTHREADS_CFLAGS) $(GNUTLS_CFLAGS) $(OPENSSL_CFLAGS) $(WARN_CFLAGS)
 librelp_la_LIBADD = $(rt_libs) $(GNUTLS_LIBS) $(OPENSSL_LIBS)
 # info on version-info:
 # http://www.gnu.org/software/libtool/manual/html_node/Updating-version-info.html
-librelp_la_LDFLAGS = -version-info 5:1:5 -export-symbols-regex '^relp[^_]*$$'
+librelp_la_LDFLAGS = -version-info 5:2:5 -export-symbols-regex '^relp[^_]*$$'
 
 include_HEADERS = librelp.h
