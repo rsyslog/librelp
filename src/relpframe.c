@@ -1,34 +1,16 @@
-/* This module implements the relp frame object.
+/* SPDX-License-Identifier: Apache-2.0 */
+
+/* This module implements the RELP frame object.
  *
  * Copyright 2008-2020 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
- * Librelp is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Librelp is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Librelp.  If not, see <http://www.gnu.org/licenses/>.
- *
- * A copy of the GPL can be found in the file "COPYING" in this distribution.
- *
- * If the terms of the GPL are unsuitable for your needs, you may obtain
- * a commercial license from Adiscon. Contact sales@adiscon.com for further
- * details.
+ * Licensed under the Apache License, Version 2.0.
+ * See COPYING.ASL20 for the license text.
  *
  * ALL CONTRIBUTORS PLEASE NOTE that by sending contributions, you assign
- * your copyright to Adiscon GmbH, Germany. This is necessary to permit the
- * dual-licensing set forth here. Our apologies for this inconvenience, but
- * we sincerely believe that the dual-licensing model helps us provide great
- * free software while at the same time obtaining some funding for further
- * development.
+ * your copyright to Adiscon GmbH, Germany.
  */
 #include "config.h"
 #include <stdlib.h>
@@ -38,6 +20,64 @@
 #include <assert.h>
 #include "relp.h"
 #include "relpframe.h"
+
+/* Decide how many incoming payload bytes the session will retain before
+ * allocating a buffer. The wire length still controls when the payload ends.
+ */
+static relpRetVal
+relpFramePlanPayload(relpSess_t *const pSess, const size_t wireLen)
+{
+	pSess->maxCharsStore = wireLen;
+	if(wireLen <= pSess->maxDataSize)
+		return RELP_RET_OK;
+
+	if(pSess->pSrv == NULL) {
+		relpEngineCallOnGenericErr(pSess->pEngine,
+			"librelp", RELP_RET_DATA_TOO_LONG,
+			"server response frame too long, size %zu, "
+			"configured max %zu - "
+			"session will be closed (aborted)",
+			wireLen, pSess->maxDataSize);
+		return RELP_RET_DATA_TOO_LONG;
+	}
+
+	switch(pSess->pSrv->oversizeMode) {
+		case RELP_OVERSIZE_ABORT:
+			relpEngineCallOnGenericErr(pSess->pEngine,
+				"librelp", RELP_RET_DATA_TOO_LONG,
+				"frame too long, size %zu, configured max %zu - "
+				"session will be closed (aborted)",
+				wireLen, pSess->maxDataSize);
+			return RELP_RET_DATA_TOO_LONG;
+		case RELP_OVERSIZE_TRUNCATE:
+			relpEngineCallOnGenericErr(pSess->pEngine,
+				"librelp", RELP_RET_DATA_TOO_LONG,
+				"frame too long, size %zu, configured max %zu - "
+				"frame will be truncated, but session continues",
+				wireLen, pSess->maxDataSize);
+			pSess->maxCharsStore = pSess->maxDataSize;
+			break;
+		case RELP_OVERSIZE_ACCEPT:
+			relpEngineCallOnGenericErr(pSess->pEngine,
+				"librelp", RELP_RET_DATA_TOO_LONG,
+				"frame too long, size %zu, configured max %zu - "
+				"frame will still be accepted and session continues. "
+				"An oversized frame can indicate an attack.",
+				wireLen, pSess->maxDataSize);
+			break;
+		default:
+			relpEngineCallOnGenericErr(pSess->pEngine,
+				"librelp", RELP_RET_ERR_INTERNAL,
+				"librelp error: invalid oversizeMode in %s:%d "
+				"mode currently is %d - session aborted",
+				__FILE__, __LINE__, pSess->pSrv->oversizeMode);
+			assert(0);
+			return RELP_RET_ERR_INTERNAL;
+	}
+
+	return RELP_RET_OK;
+}
+
 
 /** Construct a RELP frame instance
  */
@@ -160,76 +200,26 @@ relpFrameProcessOctetRcvd(relpFrame_t **const ppThis,
 			break;
 		case eRelpFrameRcvState_IN_DATALEN:
 			if(isdigit(c)) {
-				if(pThis->iRcv++ == 9) { /* more than max permitted nbr of digits? */
+				if(pThis->iRcv++ == 9)
 					ABORT_FINALIZE(RELP_RET_INVALID_FRAME);
-				}
 				pThis->lenData = pThis->lenData * 10 + c - '0';
-			} else {
-				/* first check if we have no data, in which case
-				 * we need to continue with the trailer check and skip
-				 * the (non-present) data part. -- rgerhards, 2008-03-23
-				 */
-				if(pThis->lenData == 0) {
-					pThis->rcvState = eRelpFrameRcvState_IN_TRAILER;
-					pThis->iRcv = 0;
-					goto do_trailer; /* not very clean, but... */
-				}
-				/* ok, we have data, so now let's do the usual checks... */
-				if(c == ' ') { /* field terminator */
-					pSess->maxCharsStore = pThis->lenData;
-					if(pThis->lenData > pSess->maxDataSize) {
-						if(pSess->pSrv == NULL) {
-							/* we are a client */
-							relpEngineCallOnGenericErr(pSess->pEngine,
-								"librelp", RELP_RET_DATA_TOO_LONG,
-								"server response frame too long, size %zu, "
-								"configured max %zu -"
-								"session will be closed (aborted)",
-								pThis->lenData, pSess->maxDataSize);
-							ABORT_FINALIZE(RELP_RET_DATA_TOO_LONG);
-						}
-						if(pSess->pSrv->oversizeMode == RELP_OVERSIZE_ABORT) {
-							relpEngineCallOnGenericErr(pSess->pEngine,
-								"librelp", RELP_RET_DATA_TOO_LONG,
-								"frame too long, size %zu, configured max %zu -"
-								"session will be closed (aborted)",
-								pThis->lenData, pSess->maxDataSize);
-							ABORT_FINALIZE(RELP_RET_DATA_TOO_LONG);
-						} else if(pSess->pSrv->oversizeMode == RELP_OVERSIZE_TRUNCATE) {
-							relpEngineCallOnGenericErr(pSess->pEngine,
-								"librelp", RELP_RET_DATA_TOO_LONG,
-								"frame too long, size %zu, configured max %zu -"
-								"frame will be truncated, but session continues",
-								pThis->lenData, pSess->maxDataSize);
-							pSess->maxCharsStore = pSess->maxDataSize;
-						} else if(pSess->pSrv->oversizeMode == RELP_OVERSIZE_ACCEPT) {
-							relpEngineCallOnGenericErr(pSess->pEngine,
-								"librelp", RELP_RET_DATA_TOO_LONG,
-								"frame too long, size %zu, configured max %zu -"
-								"frame will still be accepted and session "
-								"continues. Note that this can be caused by an "
-								"attack on your system.",
-								pThis->lenData, pSess->maxDataSize);
-						} else {
-							relpEngineCallOnGenericErr(pSess->pEngine,
-								"librelp", RELP_RET_ERR_INTERNAL,
-								"librelp error: invalid oversizeMode in %s:%d "
-								"mode currently is %d - session aborted",
-								__FILE__, __LINE__, pSess->pSrv->oversizeMode);
-							assert(0); /* ensure termination in debug mode! */
-						}
-					}
-					/* we now can assign the buffer for our data */
-					if(pThis->lenData > 0) {
-						if((pThis->pData = malloc(pSess->maxCharsStore)) == NULL)
-							ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
-					}
-					pThis->rcvState = eRelpFrameRcvState_IN_DATA;
-					pThis->iRcv = 0;
-				} else { /* oh, oh, invalid char! */
-					ABORT_FINALIZE(RELP_RET_INVALID_FRAME);
-				}
+				break;
 			}
+			if(pThis->lenData == 0) {
+				pThis->rcvState = eRelpFrameRcvState_IN_TRAILER;
+				pThis->iRcv = 0;
+				goto do_trailer;
+			}
+			if(c != ' ')
+				ABORT_FINALIZE(RELP_RET_INVALID_FRAME);
+
+			CHKRet(relpFramePlanPayload(pSess, pThis->lenData));
+			pThis->pData = malloc(pSess->maxCharsStore);
+			if(pThis->pData == NULL)
+				ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+
+			pThis->rcvState = eRelpFrameRcvState_IN_DATA;
+			pThis->iRcv = 0;
 			break;
 		case eRelpFrameRcvState_IN_DATA:
 			if(pThis->iRcv < pThis->lenData) {
