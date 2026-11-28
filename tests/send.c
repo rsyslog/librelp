@@ -299,11 +299,15 @@ int main(int argc, char *argv[]) {
 			tlsConfigCmd = optarg;
 			break;
 		case 'e':
-			if((errFile = fopen(optarg, "w")) == NULL) {
+			if((errFile = fopen(optarg, "a")) == NULL) {
 				perror(optarg);
 				fprintf(stderr, "error opening error file\n");
 				exit(1);
 			}
+			/* sender and receiver may share one error file: append, and
+			 * write each line at once so neither overwrites the other and
+			 * tests can wait for a line while the process still runs */
+			setvbuf(errFile, NULL, _IOLBF, 0);
 			break;
 		case DBGFILE:
 			if((dbgFile = fopen(optarg, "w")) == NULL) {

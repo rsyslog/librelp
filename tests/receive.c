@@ -373,11 +373,15 @@ int main(int argc, char *argv[]) {
 			}
 			break;
 		case 'e':
-			if((errFile = fopen((char*) optarg, "w")) == NULL) {
+			if((errFile = fopen((char*) optarg, "a")) == NULL) {
 				perror(optarg);
 				fprintf(stderr, "receive: error opening error file\n");
 				exit(1);
 			}
+			/* sender and receiver may share one error file: append, and
+			 * write each line at once so neither overwrites the other and
+			 * tests can wait for a line while the process still runs */
+			setvbuf(errFile, NULL, _IOLBF, 0);
 			break;
 		case 'v':
 			verbose = 1;
