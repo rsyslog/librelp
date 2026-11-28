@@ -3,6 +3,10 @@ TEST_EXTENSIONS=.sh
 check_PROGRAMS=receive send chkseq have_tlslib msleep
 
 if BUILD_STATIC
+check_PROGRAMS+=plain_send_sigpipe
+plain_send_sigpipe_SOURCES=plain-send-sigpipe.c
+plain_send_sigpipe_LDADD=../src/.libs/librelp.a $(GNUTLS_LIBS) $(OPENSSL_LIBS) $(rt_libs) $(socket_libs) $(pthread_libs)
+plain_send_sigpipe_CFLAGS=$(AM_CFLAGS) -I${top_srcdir}/src $(WARN_CFLAGS)
 if OS_SOLARIS_WRAP
 else
 # Observe connection settings using the linker's wrap option.
@@ -113,7 +117,8 @@ OSSL_TESTS= \
 	tls-ossl-certvalid-no-trust-anchor.sh \
 	tls-wrong-permittedPeer.sh \
 	tls-wrong-authname.sh \
-	tls-wrong-signedcert.sh
+	tls-wrong-signedcert.sh \
+	tls-ossl-client-untrusted-server.sh
 OSSL_STATIC_TESTS= \
 	tls-ossl-fd-reuse.sh
 OSSL_WRAP_STATIC_TESTS= \
@@ -135,6 +140,11 @@ TESTS=  selftest_receive_watchdog.sh \
 	send-dummyserver-no-waitstate-errmsg.sh \
 	receive-emptyconnect.sh \
 	$(SOURCE_BIND_TESTS)
+TESTS+=session-limits.sh
+TESTS+=syslog-callback-failure.sh
+if BUILD_STATIC
+TESTS+=plain-send-sigpipe.sh
+endif
 if !ENABLE_TLS_GENERIC
 check_PROGRAMS+=tls-request-no-tls
 tls_request_no_tls_SOURCES=tls-request-no-tls.c
@@ -201,6 +211,7 @@ EXTRA_DIST=$(TESTS) \
 	dummyclient.py \
 	dummyserver.py \
 	invalid-open.py \
+	session-limits.py \
 	client-source-reconnect.sh \
 	session-callbacks.sh \
 	test-framework.sh \

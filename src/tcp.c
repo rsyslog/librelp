@@ -30,6 +30,7 @@
 #include <errno.h>
 #include <limits.h>
 #include <poll.h>
+#include <signal.h>
 #include <assert.h>
 #include "relp.h"
 #include "relpsrv.h"
@@ -169,9 +170,7 @@ callOnAuthErr(relpTcp_t *const pThis, const char *authdata, const char *emsg, re
 #ifdef ENABLE_TLS_OPENSSL
 /* Helper to detect when OpenSSL is initialized */
 static int called_openssl_global_init = 0;
-/* Main OpenSSL CTX pointer */
-static SSL_CTX *ctx = NULL;
-static pthread_mutex_t mutSsl;
+static pthread_mutex_t mutSsl = PTHREAD_MUTEX_INITIALIZER;
 
 /* Debug trace for the socket BIO of a TLS session. It only reports
  * which BIO operation ran and, once it finished, its result. The trace
@@ -357,11 +356,14 @@ relpTcpChkPeerName_ossl(relpTcp_t *const pThis, void *vcert)
 	GENERAL_NAME *gnDnsName;
 	int gtype;
 	ASN1_STRING *asDnsName;
-	const char *szAltName;
+	const unsigned char *sanData;
+	int sanLen;
+	char sanName[1024];
 
 	ENTER_RELPFUNC;
 
 	bFoundPositiveMatch = 0;
+	allNames[0] = '\0';
 
 	/* Obtain Namex509 name from subject */
 	x509name = X509_NAME_oneline(X509_get_subject_name(cert), NULL, 0);
@@ -386,23 +388,33 @@ relpTcpChkPeerName_ossl(relpTcp_t *const pThis, void *vcert)
 				/* Get DNSName from san_names */
 				gnDnsName = sk_GENERAL_NAME_value(san_names, iLoop);
 				asDnsName = GENERAL_NAME_get0_value(gnDnsName, &gtype);
+				if(gtype != GEN_DNS)
+					continue;
+				if(asDnsName == NULL)
+					ABORT_FINALIZE(RELP_RET_AUTH_CERT_INVL);
+				sanLen = ASN1_STRING_length(asDnsName);
 
 #				if OPENSSL_VERSION_NUMBER >= 0x10100000L
-				szAltName = (const char *)ASN1_STRING_get0_data(asDnsName);
+				sanData = ASN1_STRING_get0_data(asDnsName);
 #				else
-				szAltName = (const char *)ASN1_STRING_data(asDnsName);
+				sanData = ASN1_STRING_data(asDnsName);
 #				endif
+				if(sanLen <= 0 || (size_t)sanLen >= sizeof(sanName) || sanData == NULL
+				   || memchr(sanData, '\0', sanLen) != NULL)
+					ABORT_FINALIZE(RELP_RET_AUTH_CERT_INVL);
+				memcpy(sanName, sanData, sanLen);
+				sanName[sanLen] = '\0';
 
 				pThis->pEngine->dbgprint((char*)"relpTcpChkPeerName_ossl: checking - "
-					"altName: '%s'\n", szAltName);
+					"altName: '%s'\n", sanName);
 
 				/* Add to Names Buffer first */
 				if (relpTcpAddToCertNamesBuffer(pThis, allNames, sizeof(allNames),
-						&iAllNames, (char *)szAltName) != 0)
+						&iAllNames, sanName) != 0)
 					ABORT_FINALIZE(RELP_RET_AUTH_CERT_INVL);
 
 				/* Perform PeerName check on AltName */
-				relpTcpChkOnePeerName(pThis, (char *)szAltName, &bFoundPositiveMatch);
+				relpTcpChkOnePeerName(pThis, sanName, &bFoundPositiveMatch);
 
 				/* Stop if match was found */
 				if (bFoundPositiveMatch)
@@ -698,6 +710,12 @@ relpTcpDestructInternal(relpTcp_t **ppThis, const int sendCloseNotify)
 			free(pThis->socks);
 		}
 		relpTcpDestructTLSAfterSocketClose(pThis);
+		#ifdef ENABLE_TLS_OPENSSL
+		if(pThis->ctx != NULL) {
+			SSL_CTX_free(pThis->ctx);
+			pThis->ctx = NULL;
+		}
+		#endif
 
 		free(pThis->pRemHostIP);
 		free(pThis->pRemHostName);
@@ -1323,38 +1341,46 @@ relpTcpInitTLS(relpTcp_t *const pThis)
 	ENTER_RELPFUNC;
 	pThis->pEngine->dbgprint((char*)"relpTcpInitTLS: Init OpenSSL library\n");
 
-	if(!relpOsslLibraryInit()) {
-		pThis->pEngine->dbgprint((char*)"relpTcpInitTLS: Error OpenSSL initialization failed\n");
-		ABORT_FINALIZE(RELP_RET_IO_ERR);
+	/* Setup OpenSSL library once per process */
+	pthread_mutex_lock(&mutSsl);
+	if(!called_openssl_global_init) {
+		if(!relpOsslLibraryInit()) {
+			pthread_mutex_unlock(&mutSsl);
+			pThis->pEngine->dbgprint((char*)"relpTcpInitTLS: Error OpenSSL initialization failed\n");
+			ABORT_FINALIZE(RELP_RET_IO_ERR);
+		}
+		called_openssl_global_init = 1;
 	}
-
-	/* Create main CTX Object */
-	ctx = SSL_CTX_new(SSLv23_method());
+	pthread_mutex_unlock(&mutSsl);
+	/* Each client or listener owns the context containing its trust store. */
+	pThis->ctx = SSL_CTX_new(SSLv23_method());
+	if(pThis->ctx == NULL)
+		ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
 
 	/* Set CTX Options */
-	SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv2);		/* Disable insecure SSLv2 Protocol */
-	SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv3);		/* Disable insecure SSLv3 Protocol */
-	SSL_CTX_sess_set_cache_size(ctx,1024);			/* TODO: make configurable? */
+	SSL_CTX_set_options(pThis->ctx, SSL_OP_NO_SSLv2);		/* Disable insecure SSLv2 Protocol */
+	SSL_CTX_set_options(pThis->ctx, SSL_OP_NO_SSLv3);		/* Disable insecure SSLv3 Protocol */
+	SSL_CTX_sess_set_cache_size(pThis->ctx,1024);			/* TODO: make configurable? */
 
 	#if OPENSSL_VERSION_NUMBER >= 0x10002000L
 	/* Enable Support for automatic EC temporary key parameter selection. */
-	SSL_CTX_set_ecdh_auto(ctx, 1);
+	SSL_CTX_set_ecdh_auto(pThis->ctx, 1);
 	#else
 	pThis->pEngine->dbgprint((char*)"relpTcpInitTLS: openssl to old, cannot use SSL_CTX_set_ecdh_auto."
 		"Using SSL_CTX_set_tmp_ecdh with NID_X9_62_prime256v1/() instead.\n");
-	SSL_CTX_set_tmp_ecdh(ctx, EC_KEY_new_by_curve_name(NID_X9_62_prime256v1));
+	SSL_CTX_set_tmp_ecdh(pThis->ctx, EC_KEY_new_by_curve_name(NID_X9_62_prime256v1));
 
 	#endif
 
-	SSL_CTX_set_timeout(ctx, 30);	/* Default Session Timeout, TODO: Make configureable */
-	SSL_CTX_set_mode(ctx, SSL_MODE_AUTO_RETRY);
+	SSL_CTX_set_timeout(pThis->ctx, 30);	/* Default Session Timeout, TODO: Make configureable */
+	SSL_CTX_set_mode(pThis->ctx, SSL_MODE_AUTO_RETRY);
 
 	/* After CA Cert Init, set default VERIFY Options for OpenSSL CTX - and CALLBACK */
-	SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, relpTcpVerifyCb_ossl);
+	SSL_CTX_set_verify(pThis->ctx, SSL_VERIFY_NONE, relpTcpVerifyCb_ossl);
 
 	/* Init CA Certificate first */
 	if(	pThis->caCertFile != NULL ) {
-		if (SSL_CTX_load_verify_locations(ctx, pThis->caCertFile, NULL) != 1) {
+		if (SSL_CTX_load_verify_locations(pThis->ctx, pThis->caCertFile, NULL) != 1) {
 			callOnErr(pThis, (char*)"relpTcpInitTLS: Error, CA certificate could not be accessed."
 					" Is the file at the right path? And do we have the permissions?\n",
 					RELP_RET_ERR_TLS_SETUP);
@@ -1367,6 +1393,10 @@ relpTcpInitTLS(relpTcp_t *const pThis)
 		pThis->pEngine->dbgprint((char*)"relpTcpInitTLS: CA certificate MISSING\n");
 	}
 finalize_it:
+	if(iRet != RELP_RET_OK) {
+		SSL_CTX_free(pThis->ctx);
+		pThis->ctx = NULL;
+	}
 	LEAVE_RELPFUNC;
 }
 
@@ -1617,13 +1647,12 @@ relpTcpSetSslConfCmd_ossl(relpTcp_t *const pThis, char *tlsConfigCmd)
 			}
 			SSL_CONF_CTX_set_flags(cctx, SSL_CONF_FLAG_FILE);
 			SSL_CONF_CTX_set_flags(cctx, SSL_CONF_FLAG_SHOW_ERRORS);
-			/* Apply connection-specific settings to the SSL object when it
-			 * exists. Only listener setup has no SSL object yet and must
-			 * configure the shared context. */
+			/* Apply connection settings to the SSL object when it exists.
+			 * Listener setup configures its own context instead. */
 			if (pThis->ssl != NULL) {
 				SSL_CONF_CTX_set_ssl(cctx, pThis->ssl);
 			} else {
-				SSL_CONF_CTX_set_ssl_ctx(cctx, ctx);
+				SSL_CONF_CTX_set_ssl_ctx(cctx, pThis->ctx);
 			}
 
 			do
@@ -1704,7 +1733,7 @@ relpTcpAcceptConnReqInitTLS_ossl(relpTcp_t *const pThis, relpSrv_t *const pSrv)
 	pThis->pEngine->dbgprint((char*)"relpTcpAcceptConnReqInitTLS_ossl: "
 		"Accepting connection for [%p] ... \n", (void *)pThis);
 
-	if(!(pThis->ssl = SSL_new(ctx))) {
+	if(!(pThis->ssl = SSL_new(pSrv->pTcp->ctx))) {
 		relpTcpLastSSLErrorMsg(0, pThis, "relpTcpAcceptConnReqInitTLS_ossl");
 	}
 
@@ -1792,19 +1821,7 @@ relpTcpConnectTLSInit_ossl(relpTcp_t *const pThis)
 
 	CHKRet(relpTcpClearNonBlocking(pThis));
 
-	if(called_openssl_global_init == 0) {
-		pthread_mutex_init(&mutSsl, NULL);
-		pthread_mutex_lock(&mutSsl);
-		/* Init OpenSSL lib */
-		CHKRet(relpTcpInitTLS(pThis));
-		called_openssl_global_init = 1;
-		pthread_mutex_unlock(&mutSsl);
-	} else {
-		pthread_mutex_lock(&mutSsl);
-		/*Increment OpenSSL Usage by 1*/
-		called_openssl_global_init++;
-		pthread_mutex_unlock(&mutSsl);
-	}
+	CHKRet(relpTcpInitTLS(pThis));
 
 	/*if we reach this point we are in tls mode */
 	pThis->pEngine->dbgprint((char*)"relpTcpConnectTLSInit: TLS Mode\n");
@@ -1814,7 +1831,7 @@ relpTcpConnectTLSInit_ossl(relpTcp_t *const pThis)
 	 */
 	pThis->sslState = osslClient;
 
-	if(!(pThis->ssl = SSL_new(ctx))) {
+	if(!(pThis->ssl = SSL_new(pThis->ctx))) {
 		relpTcpLastSSLErrorMsg(0, pThis, "relpTcpConnectTLSInit");
 		ABORT_FINALIZE(RELP_RET_IO_ERR);
 	}
@@ -1836,6 +1853,9 @@ relpTcpConnectTLSInit_ossl(relpTcp_t *const pThis)
 	CHKRet(relpTcpTLSSetPrio(pThis));
 
 	SSL_set_ex_data(pThis->ssl, 0, (void*)pThis);
+	if(pThis->authmode == eRelpAuthMode_CertValid
+	   || pThis->authmode == eRelpAuthMode_Name)
+		SSL_set_verify(pThis->ssl, SSL_VERIFY_PEER, relpTcpVerifyCb_ossl);
 
 	/* Create BIO from ptcp socket! */
 	conn = relpTcpNewSocketBio_ossl(pThis->sock);
@@ -1880,6 +1900,8 @@ finalize_it:
 		} else if(conn != NULL) {
 			BIO_free(conn);
 		}
+		SSL_CTX_free(pThis->ctx);
+		pThis->ctx = NULL;
 	}
 	LEAVE_RELPFUNC;
 }
@@ -1891,19 +1913,7 @@ relpTcpLstnInitTLS_ossl(relpTcp_t *const pThis)
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
 
-	if(called_openssl_global_init == 0) {
-		pthread_mutex_init(&mutSsl, NULL);
-		pthread_mutex_lock(&mutSsl);
-		/* Init OpenSSL lib */
-		CHKRet(relpTcpInitTLS(pThis));
-		called_openssl_global_init = 1;
-		pthread_mutex_unlock(&mutSsl);
-	} else {
-		pthread_mutex_lock(&mutSsl);
-		/*Increment OpenSSL Usage by 1*/
-		called_openssl_global_init++;
-		pthread_mutex_unlock(&mutSsl);
-	}
+	CHKRet(relpTcpInitTLS(pThis));
 
 	/* Set TLS Options if configured */
 	CHKRet(relpTcpSetSslConfCmd_ossl(pThis, pThis->tlsConfigCmd));
@@ -1911,35 +1921,17 @@ relpTcpLstnInitTLS_ossl(relpTcp_t *const pThis)
 	pThis->pEngine->dbgprint((char*)"relpTcpLstnInitTLS openssl init done \n");
 
 finalize_it:
+	if(iRet != RELP_RET_OK) {
+		SSL_CTX_free(pThis->ctx);
+		pThis->ctx = NULL;
+	}
 	LEAVE_RELPFUNC;
 }
 
 static void
 relpTcpExitTLS_ossl(void)
 {
-	if(called_openssl_global_init == 1) {
-		pthread_mutex_lock(&mutSsl);
-		if (ctx != NULL) {
-			SSL_CTX_free(ctx);
-			ctx = NULL;
-		}
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
-		ENGINE_cleanup();
-#endif
-		ERR_free_strings();
-		EVP_cleanup();
-		CRYPTO_cleanup_all_ex_data();
-		/* Reset global init state*/
-		called_openssl_global_init = 0;
-
-		pthread_mutex_unlock(&mutSsl);
-		pthread_mutex_destroy(&mutSsl);
-	} else if (called_openssl_global_init > 0) {
-		pthread_mutex_lock(&mutSsl);
-		/* OpenSSL library still in use */
-		called_openssl_global_init--;
-		pthread_mutex_unlock(&mutSsl);
-	}
+	/* OpenSSL's process-wide state may still be used by another engine. */
 }
 
 RELP_DIAG_ALLOW_INT_TO_PTR_END
@@ -2462,6 +2454,7 @@ relpTcpChkPeerName_gtls(relpTcp_t *const pThis, void *vcert)
 
 	bFoundPositiveMatch = 0;
 	iAllNames = 0;
+	allNames[0] = '\0';
 
 	/* first search through the dNSName subject alt names */
 	iAltName = 0;
@@ -3236,6 +3229,48 @@ relpTcpSend_ossl(LIBRELP_ATTR_UNUSED relpTcp_t *const pThis, LIBRELP_ATTR_UNUSED
  * been written.
  * rgerhards, 2008-03-19
  */
+#if !defined(MSG_NOSIGNAL) && !defined(SO_NOSIGPIPE)
+/* Suppress only the SIGPIPE generated by this send, without changing the
+ * process-wide signal disposition or consuming one already pending. */
+static ssize_t
+sendNoSigpipe(const int sock, const void *const buf, const size_t len)
+{
+	sigset_t block, oldmask, pending;
+	const struct timespec nowait = {0, 0};
+	ssize_t written;
+	int savedErrno;
+	int r;
+
+	sigemptyset(&block);
+	sigaddset(&block, SIGPIPE);
+	r = pthread_sigmask(SIG_BLOCK, &block, &oldmask);
+	if(r != 0) {
+		errno = r;
+		return -1;
+	}
+	if(sigpending(&pending) != 0) {
+		savedErrno = errno;
+		pthread_sigmask(SIG_SETMASK, &oldmask, NULL);
+		errno = savedErrno;
+		return -1;
+	}
+
+	written = send(sock, buf, len, 0);
+	savedErrno = errno;
+	if(written == -1 && savedErrno == EPIPE && !sigismember(&pending, SIGPIPE)) {
+		while(sigtimedwait(&block, NULL, &nowait) == -1 && errno == EINTR)
+			;
+	}
+	r = pthread_sigmask(SIG_SETMASK, &oldmask, NULL);
+	if(r != 0) {
+		errno = r;
+		return -1;
+	}
+	errno = savedErrno;
+	return written;
+}
+#endif
+
 relpRetVal LIBRELP_ATTR_NONNULL()
 relpTcpSend(relpTcp_t *const pThis, relpOctet_t *const pBuf, ssize_t *const pLenBuf)
 {
@@ -3251,7 +3286,17 @@ relpTcpSend(relpTcp_t *const pThis, relpOctet_t *const pBuf, ssize_t *const pLen
 		}
 	} else {
 		pThis->pEngine->dbgprint((char*)"relpTcpSend: send data: '%.*s'\n", (int) *pLenBuf, pBuf);
+#ifdef MSG_NOSIGNAL
+		written = send(pThis->sock, pBuf, *pLenBuf, MSG_NOSIGNAL);
+#elif defined(SO_NOSIGPIPE)
+		const int noSigPipe = 1;
+		if(setsockopt(pThis->sock, SOL_SOCKET, SO_NOSIGPIPE,
+				&noSigPipe, sizeof(noSigPipe)) != 0)
+			ABORT_FINALIZE(RELP_RET_IO_ERR);
 		written = send(pThis->sock, pBuf, *pLenBuf, 0);
+#else
+		written = sendNoSigpipe(pThis->sock, pBuf, *pLenBuf);
+#endif
 		const int errno_save = errno;
 		pThis->pEngine->dbgprint((char*)"relpTcpSend: sock %d, lenbuf %zd, send returned %d [errno %d]\n",
 			(int)pThis->sock, *pLenBuf, (int) written, errno_save);

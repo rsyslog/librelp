@@ -23,7 +23,8 @@ startup_receiver -T -a "name" -x ${srcdir}/tls-certs/ossl-ca.pem \
 ../libtool --mode=execute $valgrind ./send $TLSLIB -t 127.0.0.1 -p $TESTPORT \
 	-m "testmessage" -T -a "name" -x ${srcdir}/tls-certs/ca.pem \
 	-y ${srcdir}/tls-certs/cert.pem -z ${srcdir}/tls-certs/key.pem \
-	-P "server.testbench.rsyslog.com" -e $TESTDIR/$errorlog $OPT_VERBOSE
+	-P "server.testbench.rsyslog.com" -e $TESTDIR/$errorlog $OPT_VERBOSE \
+	> $TESTDIR/sender.log 2>&1
 sender_status=$?
 
 stop_receiver
@@ -36,5 +37,5 @@ if grep -q "SSL_new" $valgrind_log; then
 	cat $valgrind_log
 	exit 1
 fi
-check_output "authentication error.*signed certificate in certificate chain" $TESTDIR/$errorlog -z
+check_output "authentication error.*signed certificate in certificate chain" $TESTDIR/sender.log -z
 terminate

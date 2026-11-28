@@ -115,6 +115,10 @@ relpSessConstruct(relpSess_t **ppThis, relpEngine_t *pEngine, int connType, void
 	pThis->stateCmdSyslog = pEngine->stateCmdSyslog;
 	if(connType == RELP_SRV_CONN) {
 		pThis->pSrv = (relpSrv_t*) pParent;
+		struct timespec now;
+		pThis->acceptedAt = pThis->lastActivity = (time_t)-1;
+		if(clock_gettime(CLOCK_MONOTONIC, &now) == 0)
+			pThis->acceptedAt = pThis->lastActivity = now.tv_sec;
 	} else {
 		pThis->pClt = (relpClt_t*) pParent;
 	}

@@ -123,6 +123,8 @@ finalize_it:
  * this shall NOT happen. Mode 0 is used for session reestablishment,
  * when the unacked list needs to be retransmitted.
  * rgerhards, 2008-03-19
+ * In mode 1 the function takes ownership of pThis: on any error the sendbuf
+ * is destructed here, so the caller must not use it after a failed call.
  * The timeout handler may be one second off. This currently is good
  * enough for our needs, but we may revisit this if we make larger
  * changes to the lib. -- rgerhards, 2013-04-10
@@ -175,7 +177,6 @@ relpSendbufSendAll(relpSendbuf_t *pThis, relpSess_t *pSess, int bAddToUnacked)
 	 */
 	if(bAddToUnacked) {
 		if((iRet = relpSessAddUnacked(pSess, pThis)) != RELP_RET_OK) {
-			relpSendbufDestruct(&pThis);
 			FINALIZE;
 		}
 pSess->pEngine->dbgprint((char*)"sendbuf added to unacked list\n");
@@ -197,5 +198,7 @@ pSess->pEngine->dbgprint((char*)"sendbuf added to unacked list\n");
 else pSess->pEngine->dbgprint((char*)"sendbuf NOT added to unacked list\n");
 
 finalize_it:
+	if(iRet != RELP_RET_OK && bAddToUnacked)
+		relpSendbufDestruct(&pThis);
 	LEAVE_RELPFUNC;
 }
