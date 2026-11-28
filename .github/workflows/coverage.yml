@@ -29,9 +29,8 @@ on:
 
 jobs:
   asan:
-    # Builds directly on the runner host (needs sudo apt-get), which the
-    # shared private runners do not allow; private copies rely on the
-    # container jobs instead.
+    # Builds directly on the runner host. Private copies run the
+    # container-based equivalent in private_container.yml instead.
     if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-latest
     timeout-minutes: 50
@@ -78,9 +77,8 @@ jobs:
           cat tests/test-suite.log
 
   test:
-    # Builds directly on the runner host (needs sudo apt-get), which the
-    # shared private runners do not allow; private copies rely on the
-    # container jobs instead.
+    # Builds directly on the runner host. Private copies run the
+    # container-based equivalent in private_container.yml instead.
     if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-latest
     timeout-minutes: 50

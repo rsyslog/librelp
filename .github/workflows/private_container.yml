@@ -1,0 +1,38 @@
+# Container-based replacements for the host-build jobs (coverage asan,
+# no_tls, distcheck) in private copies of this repository. Those jobs
+# install packages on the runner host, which the shared self-hosted runners
+# of private copies must not do. Public repositories do not run this.
+---
+name: private container checks
+
+on:
+  pull_request:
+  push:
+
+permissions:
+  contents: read
+
+jobs:
+  private_container:
+    if: ${{ github.event.repository.private && !github.event.pull_request.head.repo.fork }}
+    runs-on: ${{ vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured' }}
+    timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      matrix:
+        check: [asan, no_tls, distcheck]
+    name: private ${{ matrix.check }}
+    steps:
+      - name: git checkout project
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: run check in dev container
+        env:
+          CHECK: ${{ matrix.check }}
+          DEV_CONTAINER: rsyslog/rsyslog_dev_base_ubuntu:24.04
+          RSYSLOG_CONTAINER_UID: ""
+        run: |
+          chmod -R go+rw .
+          devtools/devcontainer.sh --rm devtools/ci-private-check.sh "$CHECK"
