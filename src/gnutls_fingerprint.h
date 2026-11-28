@@ -1,5 +1,14 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 
+/* GnuTLS certificate fingerprint pin verification (interface).
+ *
+ * Copyright 2026 by Adiscon GmbH.
+ *
+ * This file is part of librelp.
+ *
+ * Licensed under the Apache License, Version 2.0.
+ * See COPYING.ASL20 for the license text.
+ */
 #ifndef RELP_GNUTLS_FINGERPRINT_H_INCLUDED
 #define RELP_GNUTLS_FINGERPRINT_H_INCLUDED
 
