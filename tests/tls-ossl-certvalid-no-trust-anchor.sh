@@ -39,7 +39,7 @@ fi
 # alert, and the expected line is then missing although nothing went wrong.
 for _ in $(seq 1 100); do
 	grep -q "Server handshake failed" "$errorlog" 2>/dev/null && break
-	sleep 0.1
+	./msleep 100
 done
 stop_receiver
 check_output "Server handshake failed" "$errorlog"
