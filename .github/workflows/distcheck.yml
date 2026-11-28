@@ -29,7 +29,10 @@ on:
 
 jobs:
   check_run:
-    runs-on: ${{ github.event.repository.private && !github.event.pull_request.head.repo.fork && (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-latest' }}
+    # Builds directly on the runner host. Private copies run the
+    # container-based equivalent in private_container.yml instead.
+    if: ${{ !github.event.repository.private }}
+    runs-on: ubuntu-latest
     timeout-minutes: 50
 
     steps:

@@ -204,6 +204,7 @@ EXTRA_DIST=$(TESTS) \
 	client-source-reconnect.sh \
 	session-callbacks.sh \
 	test-framework.sh \
+	known_issues.supp \
 	receive.c \
 	send.c \
 	tls-ossl-fd-reuse.c \
