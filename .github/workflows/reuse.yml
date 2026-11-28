@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Rainer Gerhards and Others
+#
+# Check that every file carries license and copyright information
+# according to the REUSE specification (https://reuse.software).
+---
+name: REUSE compliance
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  reuse_lint:
+    runs-on: ${{ github.event.repository.private && !github.event.pull_request.head.repo.fork && (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-latest' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install reuse
+        run: pip install reuse
+
+      - name: Run reuse lint
+        run: reuse lint

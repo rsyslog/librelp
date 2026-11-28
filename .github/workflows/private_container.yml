@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Rainer Gerhards and Others
+#
 # Container-based replacements for the host-build jobs (coverage asan,
 # no_tls, distcheck) in private copies of this repository. Those jobs
 # install packages on the runner host, which the shared self-hosted runners
