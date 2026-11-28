@@ -1,1 +1,7 @@
-nothing yet
+librelp - a library for the Reliable Event Logging Protocol (RELP)
+
+RELP provides reliable delivery of event messages over TCP, optionally
+protected by TLS (GnuTLS or OpenSSL). The protocol is described in
+doc/relp.md.
+
+License: Apache License, Version 2.0 (see COPYING and COPYING.ASL20).
