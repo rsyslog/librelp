@@ -14,9 +14,10 @@ permissions:
 
 jobs:
   no_tls_check:
-    # Builds directly on the runner host (needs sudo apt-get), which the
-    # shared private runners do not allow; private copies rely on the
-    # container jobs instead.
+    # Builds directly on the runner host, which needs the full build
+    # toolchain installed there; the shared private runners only provide
+    # Docker. Private copies therefore skip this no-TLS check (no container
+    # job builds without TLS, so tls-request-no-tls does not run there).
     if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
