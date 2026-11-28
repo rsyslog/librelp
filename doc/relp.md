@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
 # RELP - The Reliable Event Logging Protocol
 
 This is the specification for the reliable event logging protocol, called

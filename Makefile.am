@@ -7,4 +7,6 @@ pkgconfig_DATA = relp.pc
 
 # Note: version-info is set in ./src/Makefile.am!
 
-EXTRA_DIST = COPYING.ASL20
+EXTRA_DIST = COPYING.ASL20 \
+	LICENSES/Apache-2.0.txt \
+	REUSE.toml

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Rainer Gerhards and Others
+#
 # Build librelp without any TLS library and run the testbench.
 # Purpose: exercise code paths that only exist in no-TLS builds, most
 # notably tests/tls-request-no-tls (a TLS request must make the server

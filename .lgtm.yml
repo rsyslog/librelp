@@ -1,6 +1,0 @@
-extraction:
-  cpp:
-    configure:
-      command:
-        - autoreconf -fvi
-        - ./configure --enable-tls-openssl
