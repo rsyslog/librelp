@@ -1,5 +1,14 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 
+/* Local source address binding for RELP client connections.
+ *
+ * Copyright 2026 by Adiscon GmbH.
+ *
+ * This file is part of librelp.
+ *
+ * Licensed under the Apache License, Version 2.0.
+ * See COPYING.ASL20 for the license text.
+ */
 #include "config.h"
 #include <errno.h>
 #include <netdb.h>
