@@ -10,6 +10,8 @@ fi
 # Keep the default certificate directory empty, but point SSL_CERT_FILE at the
 # fixture CA. Without an explicit -x, only an implementation that incorrectly
 # loads ownCertFile or OpenSSL default paths can trust these peer certificates.
+# Oracle: the sender must fail, and the receiver must log that it aborted the
+# server-side handshake.
 mkdir -p "${TESTDIR}/empty-ca-dir"
 export SSL_CERT_DIR="${TESTDIR}/empty-ca-dir"
 export SSL_CERT_FILE="${srcdir}/tls-certs/ossl-ca.pem"
@@ -31,6 +33,14 @@ if ./send -l openssl -t 127.0.0.1 -p "$TESTPORT" -m "testmessage" \
 	exit 1
 fi
 
+# The sender's failure says nothing about when the receiver handles the
+# client's alert. Wait (up to 10 s, for slow CI) until the receiver has logged
+# the aborted handshake; stopping it earlier can kill it before it reads the
+# alert, and the expected line is then missing although nothing went wrong.
+for _ in $(seq 1 100); do
+	grep -q "Server handshake failed" "$errorlog" 2>/dev/null && break
+	./msleep 100
+done
 stop_receiver
 check_output "Server handshake failed" "$errorlog"
 terminate

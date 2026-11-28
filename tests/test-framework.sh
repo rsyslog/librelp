@@ -249,6 +249,7 @@ printf "============================================================\n"
 export TESTPORT=$(get_free_port)
 export DYNNAME=lrtb_${TESTPORT}.
 export TESTDIR=lrtb_${TESTPORT}
-mkdir $TESTDIR
+rm -rf "$TESTDIR" # error files are opened in append mode: start empty
+mkdir "$TESTDIR"
 export OUTFILE=${TESTDIR}/librelp.out.log
 export RECEIVE_PIDFILE=${DYNNAME}receive.pid
