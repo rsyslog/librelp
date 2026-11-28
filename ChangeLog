@@ -1,11 +1,89 @@
 ----------------------------------------------------------------------
-Version 1.15.0 - unreleased
+Version 2.0.0 - 2026-11-28
+librelp is now completely licensed under the Apache License 2.0. Apart
+from the license change, this release contains the improvements made
+since 1.14.0. The API is extended but stays backward compatible; existing
+binaries keep working without recompilation (the soname is unchanged).
 
-- licensing: librelp is now completely under the Apache License 2.0
-  The remaining files (src/tcp.c, src/tcp.h, src/relpsess.c, build files,
-  tests and the RELP specification) moved to Apache-2.0; COPYING and
-  README now state the license. Earlier releases keep the licenses they
-  were published under.
+NOTE: 2.0 is the last release series that supports old OpenSSL versions
+(OpenSSL 1.0.2 and 1.1.0). Support for them will be removed in 2.1.
+
+Licensing:
+- librelp is now completely under the Apache License 2.0 (SPDX: Apache-2.0)
+  Earlier releases keep the licenses they were published under. Converted
+  in this release (all previously GPL-3.0-or-later or commercial):
+  - src/librelp.h (#337)
+  - src/relpframe.h (#332), src/relpframe.c (#335)
+  - src/relp.c (#333)
+  - src/relpsrv.c, src/relpsrv.h (#334)
+  - src/relpclt.c, src/relpclt.h (#336)
+  - src/relpsess.h (#340), src/relpsess.c (#343)
+  - src/tcp.c, src/tcp.h (#342)
+  Where external contributions could not be cleared, the affected code was
+  replaced; the provenance of each file is documented in the commit
+  messages. Thanks to Michael Biebl for agreeing to relicense his
+  contributions.
+- RELP specification (doc/relp.md): moved from the GNU FDL 1.3 to
+  Apache-2.0; doc/gfdl.html was removed (#343)
+- build files (configure.ac, Makefile.am files, relp.pc.in), tests and
+  devtools scripts now carry SPDX identifiers (#343); the example programs
+  and test tools did already (#338)
+- COPYING and README now state the Apache-2.0 license (#345)
+- standard license header added to src/gnutls_fingerprint.h,
+  src/sourcebind.c and src/sourcebind.h (#347)
+- the repository is REUSE compliant (REUSE spec 3.3): REUSE.toml for files
+  that cannot carry a header, license text in LICENSES/Apache-2.0.txt
+  (COPYING.ASL20 stays), and a "reuse lint" CI check (#348)
+
+Behaviour changes:
+- server: session limits with new public setters (#344)
+  BEHAVIOUR CHANGE: a server now accepts at most 500 sessions across all
+  listeners, an incomplete session open must finish within 30 seconds,
+  and an established session is closed after 3600 seconds without a
+  complete frame. The defaults can be changed with the new functions
+  relpEngineSetMaxSessions(), relpEngineSetOpenTimeout() and
+  relpEngineSetIdleTimeout().
+- OpenSSL: clients that authenticate the server (auth modes "certvalid"
+  and "name") now require certificate chain verification. Each client and
+  listener uses its own SSL context and trust store (#344).
+  BEHAVIOUR CHANGE: a server certificate that does not verify against the
+  configured CA is rejected in these modes.
+- server: a listener configured for TLS no longer starts in a build
+  without TLS support; it previously fell back to plain TCP (#313, #339)
+- server: client-only commands are rejected, and syslog messages are not
+  acknowledged if the host callback is missing or reports an error (#344)
+
+Other changes:
+- GnuTLS: new certificate fingerprint matcher (#330)
+  The pin syntax is unchanged. Pins are compared as bytes, each digest is
+  computed once per handshake, the old limit of ten digest names is gone,
+  and malformed pins no longer prevent a valid pin from matching.
+- tcp: plain TCP sends no longer terminate the process with SIGPIPE when
+  the peer has gone (#344)
+- tcp: the select() fallback rejects descriptors outside FD_SETSIZE; epoll
+  registration failures and pending send queues are cleaned up (#344)
+- tcp: connect timeout uses the monotonic clock and resumes after EINTR;
+  poll() errors are reported as I/O errors instead of timeouts (#342)
+- tcp: relpTcpWaitWriteable() computed the remaining wait time wrongly
+  (up to one second off); fixed (#342)
+- server: fix default listen port (the port number was passed as a
+  pointer) and a listener leak when startup fails (#334)
+- frame: oversized payloads are planned before allocation; an invalid
+  oversize mode now aborts the session in all builds (#335)
+- engine: more robust strerror handling and TLS library selection (#333)
+- client: the connect timeout is kept as an optional override of the
+  default; the public behaviour is unchanged (#336)
+- librelp.h: the public header is self-contained and can be included from
+  C++ (#337)
+- testbench: new tests for session limits, syslog callback failures,
+  SIGPIPE on plain TCP, untrusted servers with OpenSSL, GnuTLS fingerprint
+  policy and SHA256 fingerprints (#330, #344); fixes for out-of-tree builds
+  (distcheck, #346); include the POSIX headers used by the test receiver
+  (#331, thanks to Ray Wong)
+- CI: new job for builds without TLS; private copies of the repository run
+  their jobs on self-hosted runners or in containers, and fork pull
+  requests stay off self-hosted runners (#339, #341, #346); obsolete
+  Travis and LGTM configuration removed (#348)
 ----------------------------------------------------------------------
 Version 1.14.0 - 2026-11-26
 This release contains important security fixes for TLS users (see the
